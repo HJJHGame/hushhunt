@@ -4,8 +4,9 @@
 
 ## 현재 상태 (1단계)
 
-- 평지 맵 + 1인칭 이동 (6명이 돌아다닐 크기, 약 60x60m)
-- 분위기: 어둡고 축축한 숲 (안개, 어두운 조명, 나무 기둥 오브젝트)
+- 평지 맵 + 1인칭 이동 (6명이 돌아다닐 크기, 약 200x200m)
+- 분위기: 슬렌더맨 같은 공포 숲 (짙은 안개, 어두운 밤, 키 크고 가는 소나무 실루엣 160그루 + 바위, 낡은 울타리 소품)
+- 걸을 때 발소리 (나뭇잎 밟는 소리, 코드가 런타임에 생성)
 - 미니맵: 화면 오른쪽 위에 맵 전체가 보이고, 중앙 화살표가 플레이어 위치/방향
 - 아직 없는 것: 총, 발소리 표시, 타이머, 승패 판정, 네트워크
 
@@ -16,7 +17,7 @@
 3. Unity Hub → Add → Add project from disk → 클론한 폴더 선택
 4. 프로젝트 열기. 버전 다르다고 뜨면 설치된 Unity 6으로 열기 선택해도 됨
 5. 처음 열 때 `Assets/Scenes/Main.unity` 가 자동 생성됨 (SetupScene 스크립트가 만들어줌)
-   - 이미 씬이 만들어진 뒤 새 기능이 추가되면 메뉴 Hush Hunt > Setup Main Scene 으로 재생성
+   - 씬 생성 코드가 바뀌면 다음에 열 때 자동으로 재생성됨 (수동: 메뉴 Hush Hunt > Setup Main Scene)
 6. Play 버튼 누르면 바로 걸어다닐 수 있음
 
 ## 조작
@@ -28,6 +29,7 @@
 ## 구조
 
 - `Assets/Scripts/FirstPersonController.cs` - 1인칭 이동/시점
+- `Assets/Scripts/Footsteps.cs` - 발소리 (나뭇잎 소리를 코드로 생성해 재생)
 - `Assets/Scripts/Minimap.cs` - 미니맵 (탑다운 카메라 + 화면 오른쪽 위 표시 + 플레이어 화살표)
 - `Assets/Editor/SetupScene.cs` - 첫 실행 때 맵 씬 자동 생성 (에디터 전용)
 - `Packages/manifest.json`, `ProjectSettings/ProjectVersion.txt` - Unity 프로젝트 인식용

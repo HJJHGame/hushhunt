@@ -1,0 +1,100 @@
+using UnityEngine;
+
+// 걸을 때 발소리: 나뭇잎 밟는 소리를 런타임에 절차적으로 만들어 재생한다.
+// 외부 오디오 에셋 없이 노이즈 버스트 + 크래클로 낙엽 바스락거리는 느낌을 낸다.
+[RequireComponent(typeof(CharacterController))]
+public class Footsteps : MonoBehaviour
+{
+    public float stepLength = 1.6f; // 발소리 한 번당 이동 거리(m)
+    public float volume = 0.55f;
+
+    CharacterController controller;
+    AudioSource source;
+    AudioClip[] steps;
+    float distanceSinceStep;
+    Vector3 lastPosition;
+    readonly System.Random rng = new System.Random();
+
+    void Awake()
+    {
+        controller = GetComponent<CharacterController>();
+        source = gameObject.AddComponent<AudioSource>();
+        source.spatialBlend = 0f; // 2D: 자기 발소리라 공간감 없이
+        source.playOnAwake = false;
+
+        // 같은 소리 반복이 티 나지 않게 변형 4개를 미리 만든다
+        steps = new AudioClip[4];
+        for (int i = 0; i < steps.Length; i++)
+            steps[i] = MakeLeafStep(i);
+
+        lastPosition = transform.position;
+    }
+
+    void Update()
+    {
+        Vector3 pos = transform.position;
+        Vector3 delta = pos - lastPosition;
+        delta.y = 0f;
+        lastPosition = pos;
+
+        if (controller.isGrounded)
+        {
+            distanceSinceStep += delta.magnitude;
+            if (distanceSinceStep >= stepLength)
+            {
+                distanceSinceStep = 0f;
+                source.pitch = 0.85f + (float)rng.NextDouble() * 0.3f;
+                float v = volume * (0.8f + (float)rng.NextDouble() * 0.4f);
+                source.PlayOneShot(steps[rng.Next(steps.Length)], v);
+            }
+        }
+        else
+        {
+            distanceSinceStep = stepLength * 0.5f; // 공중에서는 거리가 안 쌓이게
+        }
+    }
+
+    // 낙엽 바스락 소리: 빠르게 감쇠하는 노이즈 + 임의 시점의 짧은 크래클 몇 번
+    static AudioClip MakeLeafStep(int seed)
+    {
+        const int rate = 44100;
+        float length = 0.22f;
+        int n = (int)(rate * length);
+        var samples = new float[n];
+        var r = new System.Random(1234 + seed);
+
+        float decay = 14f + (float)r.NextDouble() * 6f;
+        for (int i = 0; i < n; i++)
+        {
+            float t = i / (float)rate;
+            float noise = (float)r.NextDouble() * 2f - 1f;
+            samples[i] = noise * Mathf.Exp(-t * decay);
+        }
+
+        int crackles = 3 + r.Next(3);
+        for (int c = 0; c < crackles; c++)
+        {
+            int start = r.Next(0, n / 2);
+            int len = rate / 400 + r.Next(rate / 200);
+            float amp = 0.6f + (float)r.NextDouble() * 0.4f;
+            for (int i = 0; i < len && start + i < n; i++)
+            {
+                float t = i / (float)len;
+                samples[start + i] += ((float)r.NextDouble() * 2f - 1f) * (1f - t) * amp;
+            }
+        }
+
+        // 클리핑 방지 정규화 + 아주 짧은 어택
+        float max = 0.001f;
+        for (int i = 0; i < n; i++) max = Mathf.Max(max, Mathf.Abs(samples[i]));
+        for (int i = 0; i < n; i++)
+        {
+            float t = i / (float)rate;
+            samples[i] = samples[i] / max * 0.9f * Mathf.Clamp01(t / 0.01f);
+        }
+
+        var clip = AudioClip.Create("LeafStep" + seed, n, 1, rate, false);
+        clip.SetData(samples, 0);
+        return clip;
+    }
+}
