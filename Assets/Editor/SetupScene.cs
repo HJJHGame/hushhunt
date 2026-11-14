@@ -212,7 +212,7 @@ public static class SetupScene
     // 밑면 반지름 1, 높이 1인 단위 원뿔 메시. 에셋으로 저장해야 씬 저장 후에도 유지된다.
     static Mesh MakeConeMesh()
     {
-        const string path = "Assets/Meshes/PineCone.mesh";
+        const string path = "Assets/Meshes/PineCone.asset";
         var existing = AssetDatabase.LoadAssetAtPath<Mesh>(path);
         if (existing != null) return existing;
 
