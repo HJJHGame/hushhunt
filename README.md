@@ -12,6 +12,8 @@
 
 ## 휴가 때 여는 법 (Unity 6)
 
+> 주의: Unity Hub에서 "New project"로 만들지 말 것. 반드시 이 저장소(또는 ZIP을 푼 hushhunt-main 폴더)를 Add project from disk로 추가. 선택할 폴더 안에 Assets, Packages, ProjectSettings가 바로 보여야 함. 열었을 때 Assets에 Scripts, Editor 폴더가 있고 Scripts/FirstPersonController.cs가 보이면 정상. Tutorials, TextMesh Pro 폴더가 보이면 잘못 연 것(Unity 템플릿).
+
 1. PC에 Unity Hub 설치 → Unity 6 LTS (6000.0.x 아무 버전) 설치
 2. 이 저장소 클론
 3. Unity Hub → Add → Add project from disk → 클론한 폴더 선택
