@@ -62,7 +62,7 @@ public static class SetupScene
         ground.transform.localScale = new Vector3(20f, 1f, 20f);
         ground.GetComponent<Renderer>().sharedMaterial = groundMat;
 
-        // 큰 소나무들: 갈색 원기둥 기둥 + 짙은 초록 원뿔 3단.
+        // 큰 소나무들: 갈색 원기둥 기둥 + 짙은 초록 원뿔 3단. 키 크고 가는 실루엣.
         // 유니티에 원뿔 프리미티브가 없어서 단위 원뿔 메시를 만들어 에셋으로 저장해 쓴다.
         var trunkMat = MakeMaterial("Trunk", new Color(0.10f, 0.07f, 0.05f));
         var pineMat = MakeMaterial("Pine", new Color(0.03f, 0.09f, 0.05f));
@@ -81,6 +81,57 @@ public static class SetupScene
             float scale = 0.9f + (float)rand.NextDouble() * 0.7f; // 0.9~1.6배 크기
             MakePineTree(new Vector3(x, 0f, z), scale, trunkMat, pineMat, coneMesh);
             placed++;
+        }
+
+        // 바위와 낡은 나무 울타리 (슬렌더 분위기 소품)
+        var rockMat = MakeMaterial("Rock", new Color(0.08f, 0.09f, 0.09f));
+        var fenceMat = MakeMaterial("Fence", new Color(0.09f, 0.07f, 0.05f));
+        for (int i = 0; i < 25; i++)
+        {
+            float x = (float)(rand.NextDouble() * 190.0 - 95.0);
+            float z = (float)(rand.NextDouble() * 190.0 - 95.0);
+            if (new Vector2(x, z).magnitude < 5f) continue;
+
+            float s = 0.5f + (float)rand.NextDouble() * 1.5f;
+            var rock = GameObject.CreatePrimitive(PrimitiveType.Sphere);
+            rock.name = "Rock";
+            rock.transform.position = new Vector3(x, s * 0.25f, z); // 살짝 묻힌 모양
+            rock.transform.localScale = new Vector3(s * 1.4f, s * 0.8f, s);
+            rock.transform.rotation = Quaternion.Euler(0f, (float)rand.NextDouble() * 360f, 0f);
+            rock.GetComponent<Renderer>().sharedMaterial = rockMat;
+        }
+
+        // 낡은 울타리 두 토막: 삐뚤빼뚤한 기둥들 + 가로대 두 줄
+        for (int f = 0; f < 2; f++)
+        {
+            float fx = (float)(rand.NextDouble() * 140.0 - 70.0);
+            float fz = (float)(rand.NextDouble() * 140.0 - 70.0);
+            if (new Vector2(fx, fz).magnitude < 6f) { f--; continue; }
+
+            var fence = new GameObject("Old Fence");
+            fence.transform.position = new Vector3(fx, 0f, fz);
+            fence.transform.rotation = Quaternion.Euler(0f, (float)rand.NextDouble() * 360f, 0f);
+
+            int posts = 5 + rand.Next(3);
+            for (int p = 0; p < posts; p++)
+            {
+                var post = GameObject.CreatePrimitive(PrimitiveType.Cube);
+                post.name = "Post";
+                post.transform.SetParent(fence.transform);
+                post.transform.localPosition = new Vector3(p * 1.4f, 0.55f, 0f);
+                post.transform.localScale = new Vector3(0.12f, 1.1f, 0.12f);
+                post.transform.localRotation = Quaternion.Euler((float)(rand.NextDouble() * 10.0 - 5.0), 0f, (float)(rand.NextDouble() * 14.0 - 7.0));
+                post.GetComponent<Renderer>().sharedMaterial = fenceMat;
+            }
+            for (int rl = 0; rl < 2; rl++)
+            {
+                var rail = GameObject.CreatePrimitive(PrimitiveType.Cube);
+                rail.name = "Rail";
+                rail.transform.SetParent(fence.transform);
+                rail.transform.localPosition = new Vector3((posts - 1) * 1.4f * 0.5f, 0.45f + rl * 0.45f, 0.06f);
+                rail.transform.localScale = new Vector3(posts * 1.4f, 0.08f, 0.05f);
+                rail.GetComponent<Renderer>().sharedMaterial = fenceMat;
+            }
         }
 
         // 플레이어: CharacterController + 카메라 자식 + 발소리
