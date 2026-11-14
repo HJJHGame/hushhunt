@@ -90,6 +90,19 @@ public static class SetupScene
         var fpc = player.AddComponent<FirstPersonController>();
         fpc.cameraPivot = camGo.transform;
 
+        // 미니맵: 플레이어를 따라가는 탑다운 카메라.
+        // 화면 오른쪽 위 표시와 플레이어 화살표는 Minimap 스크립트가 OnGUI로 처리.
+        var minimapGo = new GameObject("MinimapCamera");
+        var minimapCam = minimapGo.AddComponent<Camera>();
+        minimapCam.orthographic = true;
+        minimapCam.orthographicSize = 30f; // 60x60m 맵 전체가 들어옴
+        minimapCam.clearFlags = CameraClearFlags.SolidColor;
+        minimapCam.backgroundColor = new Color(0.02f, 0.03f, 0.02f);
+        minimapCam.nearClipPlane = 1f;
+        minimapCam.transform.position = player.transform.position + Vector3.up * 45f;
+        minimapCam.transform.rotation = Quaternion.Euler(90f, 0f, 0f);
+        minimapGo.AddComponent<Minimap>().target = player.transform;
+
         EditorSceneManager.SaveScene(scene, ScenePath);
 
         // 빌드 설정에 씬 추가
