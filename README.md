@@ -1,3 +1,7 @@
+<p align="center">
+  <img src="https://avatars.githubusercontent.com/u/356486182?s=400&u=68bec5d8b36610aa6d013ae753eff31d785c5077&v=4" alt="HushHunt" width="360" />
+</p>
+
 # Hush Hunt
 
 3:3 비대칭 온라인 데스매치. 안개 짙은 밤의 숲에서 숨는 팀과 잡는 팀이 서로를 사냥합니다. 데스매치 + 숨바꼭질 + 술래잡기. (프로토타입, 가제)
