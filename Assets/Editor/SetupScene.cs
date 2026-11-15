@@ -36,6 +36,9 @@ public static class SetupScene
         Directory.CreateDirectory("Assets/Scenes");
         Directory.CreateDirectory("Assets/Materials");
         Directory.CreateDirectory("Assets/Meshes");
+        // 방금 만든 폴더를 에셋 DB에 반영해야 CreateAsset/SaveScene이
+        // "Parent directory must exist before creating asset" 오류 없이 동작한다.
+        AssetDatabase.Refresh();
 
         var scene = EditorSceneManager.NewScene(NewSceneSetup.EmptyScene, NewSceneMode.Single);
 
