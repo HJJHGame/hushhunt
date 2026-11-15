@@ -1,15 +1,13 @@
 using UnityEditor;
 using UnityEngine;
 
-// Unity 6.3부터 프로젝트 설정이 새로 생성될 때 Active Input Handling 기본값이
-// "Input System (New)"라서 기존 Input.GetAxis/GetKey 코드가 InvalidOperationException을 낸다.
-// (6.0까지는 기본값이 Both였다.) 이 프로젝트는 레거시 Input Manager를 쓰므로,
-// 첫 실행 때 자동으로 Both로 바꾸고 에디터를 한 번 재시작해서 바로 Play가 되게 한다.
-// 수동 적용: 메뉴 Hush Hunt > Fix Active Input Handling
+// 이 프로젝트의 Input.GetAxis/GetKey 코드를 위해 레거시 입력을 활성화한다.
+// activeInputHandler는 공개 PlayerSettings API가 아닌 직렬화된 설정이다.
 [InitializeOnLoad]
 public static class InputHandlingSetup
 {
-    const int Both = 2; // PlayerSettings.activeInputHandler: 0=레거시, 1=신규, 2=Both
+    const int Both = 2; // 0=Input Manager, 1=Input System, 2=Both
+    const string SettingsPath = "ProjectSettings/ProjectSettings.asset";
 
     static InputHandlingSetup()
     {
@@ -24,17 +22,36 @@ public static class InputHandlingSetup
 
     static void Ensure(bool manual)
     {
-        if (PlayerSettings.activeInputHandler == Both)
+        var assets = AssetDatabase.LoadAllAssetsAtPath(SettingsPath);
+        if (assets == null || assets.Length == 0 || assets[0] == null)
         {
-            if (manual) Debug.Log("[Hush Hunt] Active Input Handling이 이미 Both입니다.");
+            Debug.LogError("[Hush Hunt] Player settings could not be loaded: " + SettingsPath);
             return;
         }
 
-        PlayerSettings.activeInputHandler = Both;
-        AssetDatabase.SaveAssets(); // ProjectSettings.asset 을 디스크에 기록
+        using (var settings = new SerializedObject(assets[0]))
+        {
+            var inputHandler = settings.FindProperty("activeInputHandler");
+            if (inputHandler == null)
+            {
+                Debug.LogError("[Hush Hunt] activeInputHandler was not found in Player settings.");
+                return;
+            }
 
-        // 입력 백엔드는 에디터 시작 시 초기화되므로 변경 적용에 재시작이 필요하다.
-        Debug.Log("[Hush Hunt] Active Input Handling을 Both로 변경했습니다. 적용을 위해 에디터를 한 번 재시작합니다.");
+            if (inputHandler.intValue == Both)
+            {
+                if (manual) Debug.Log("[Hush Hunt] Active Input Handling is already Both.");
+                return;
+            }
+
+            inputHandler.intValue = Both;
+            settings.ApplyModifiedPropertiesWithoutUndo();
+        }
+
+        AssetDatabase.SaveAssets();
+
+        // 입력 백엔드 변경은 에디터를 다시 열어 적용한다. 재실행 시 위 검사에서 종료된다.
+        Debug.Log("[Hush Hunt] Active Input Handling set to Both. Restarting the editor once to apply it.");
         EditorApplication.delayCall += () =>
             EditorApplication.OpenProject(System.IO.Directory.GetCurrentDirectory());
     }
