@@ -14,13 +14,14 @@
 
 > 주의: Unity Hub에서 "New project"로 만들지 말 것. 반드시 이 저장소(또는 ZIP을 푼 hushhunt-main 폴더)를 Add project from disk로 추가. 선택할 폴더 안에 Assets, Packages, ProjectSettings가 바로 보여야 함. 열었을 때 Assets에 Scripts, Editor 폴더가 있고 Scripts/FirstPersonController.cs가 보이면 정상. Tutorials, TextMesh Pro 폴더가 보이면 잘못 연 것(Unity 템플릿).
 
-1. PC에 Unity Hub 설치 → Unity 6 LTS (6000.0.x 아무 버전) 설치
+1. PC에 Unity Hub 설치 → Unity 6.3 LTS (6000.3.x 아무 버전) 설치
 2. 이 저장소 클론
 3. Unity Hub → Add → Add project from disk → 클론한 폴더 선택
-4. 프로젝트 열기. 버전 다르다고 뜨면 설치된 Unity 6으로 열기 선택해도 됨
+4. 프로젝트 열기. 버전 다르다고 뜨면 설치된 Unity 6.3으로 열기 선택해도 됨
 5. 처음 열 때 `Assets/Scenes/Main.unity` 가 자동 생성됨 (SetupScene 스크립트가 만들어줌)
    - 씬 생성 코드가 바뀌면 다음에 열 때 자동으로 재생성됨 (수동: 메뉴 Hush Hunt > Setup Main Scene)
-6. Play 버튼 누르면 바로 걸어다닐 수 있음
+6. 처음 열 때 입력 설정(Active Input Handling)이 자동으로 Both로 바뀌면서 에디터가 한 번 재시작될 수 있음 (6.3 기본값은 New라 기존 입력 코드가 안 먹어서 자동 수정해주는 스크립트가 있음)
+7. Play 버튼 누르면 바로 걸어다닐 수 있음
 
 ## 조작
 
@@ -34,4 +35,5 @@
 - `Assets/Scripts/Footsteps.cs` - 발소리 (나뭇잎 소리를 코드로 생성해 재생)
 - `Assets/Scripts/Minimap.cs` - 미니맵 (탑다운 카메라 + 화면 오른쪽 위 표시 + 플레이어 화살표)
 - `Assets/Editor/SetupScene.cs` - 첫 실행 때 맵 씬 자동 생성 (에디터 전용)
+- `Assets/Editor/InputHandlingSetup.cs` - Active Input Handling 자동 Both 설정 (에디터 전용)
 - `Packages/manifest.json`, `ProjectSettings/ProjectVersion.txt` - Unity 프로젝트 인식용
