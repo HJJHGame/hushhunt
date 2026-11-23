@@ -74,6 +74,13 @@ public class FirstPersonController : MonoBehaviour
         controller.Move(velocity * Time.deltaTime);
     }
 
+    // 에디터/창 포커스를 잃으면 커서 잠금이 풀린다. 돌아올 때 다시 잠가야
+    // 마우스가 게임 창 밖으로 나가는 일이 없다.
+    void OnApplicationFocus(bool hasFocus)
+    {
+        if (hasFocus) LockCursor(true);
+    }
+
     void LockCursor(bool locked)
     {
         Cursor.lockState = locked ? CursorLockMode.Locked : CursorLockMode.None;
