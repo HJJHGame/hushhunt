@@ -11,7 +11,7 @@ using UnityEngine;
 public static class SetupScene
 {
     const string ScenePath = "Assets/Scenes/Main.unity";
-    const int SceneVersion = 3; // 씬 구성을 바꾸면 1 올린다
+    const int SceneVersion = 4; // 씬 구성을 바꾸면 1 올린다
     const string VersionKey = "HushHunt.SceneVersion";
 
     static SetupScene()
@@ -137,6 +137,13 @@ public static class SetupScene
             }
         }
 
+        // 맵 가장자리 보이지 않는 벽: 200x200m 경계(±100m)를 콜라이더로 둘러 낙하 방지.
+        // 렌더러가 없어서 화면과 미니맵에는 보이지 않는다.
+        MakeEdgeWall(new Vector3(0f, 2f, 100f), new Vector3(202f, 4f, 1f));
+        MakeEdgeWall(new Vector3(0f, 2f, -100f), new Vector3(202f, 4f, 1f));
+        MakeEdgeWall(new Vector3(100f, 2f, 0f), new Vector3(1f, 4f, 202f));
+        MakeEdgeWall(new Vector3(-100f, 2f, 0f), new Vector3(1f, 4f, 202f));
+
         // 플레이어: CharacterController + 카메라 자식 + 발소리
         var player = new GameObject("Player");
         player.transform.position = new Vector3(0f, 1.1f, 0f);
@@ -181,6 +188,14 @@ public static class SetupScene
         EditorBuildSettings.scenes = new[] { new EditorBuildSettingsScene(ScenePath, true) };
 
         Debug.Log("[Hush Hunt] Main scene created at " + ScenePath + " (v" + SceneVersion + ")");
+    }
+
+    // 보이지 않는 가장자리 벽 하나: BoxCollider만 있는 빈 오브젝트.
+    static void MakeEdgeWall(Vector3 center, Vector3 size)
+    {
+        var wall = new GameObject("Edge Wall");
+        wall.transform.position = center;
+        wall.AddComponent<BoxCollider>().size = size;
     }
 
     // 소나무 한 그루: 기둥 위에 원뿔 3단 (아래로 갈수록 넓음). 총 높이 약 9.5m x scale.
