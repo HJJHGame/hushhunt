@@ -2,6 +2,7 @@ using UnityEngine;
 
 // 걸을 때 발소리: 나뭇잎 밟는 소리를 런타임에 절차적으로 만들어 재생한다.
 // 외부 오디오 에셋 없이 노이즈 버스트 + 크래클로 낙엽 바스락거리는 느낌을 낸다.
+[DefaultExecutionOrder(100)]
 [RequireComponent(typeof(CharacterController))]
 public class Footsteps : MonoBehaviour
 {
@@ -11,7 +12,12 @@ public class Footsteps : MonoBehaviour
     CharacterController controller;
     AudioSource source;
     AudioClip[] steps;
+    public float GaitPhase { get; private set; } = Mathf.PI * 0.5f;
+    public bool IsWalking { get; private set; }
+    public Vector3 LocalMoveDirection { get; private set; }
+
     float distanceSinceStep;
+    int contactParity;
     Vector3 lastPosition;
     readonly System.Random rng = new System.Random();
 
@@ -30,28 +36,37 @@ public class Footsteps : MonoBehaviour
         lastPosition = transform.position;
     }
 
-    void Update()
+    // 이동(Update)이 끝난 뒤 한 곳에서 발소리와 다리의 박자를 계산한다.
+    void LateUpdate()
     {
-        Vector3 pos = transform.position;
-        Vector3 delta = pos - lastPosition;
+        Vector3 delta = transform.position - lastPosition;
+        lastPosition = transform.position;
         delta.y = 0f;
-        lastPosition = pos;
+        float distance = delta.magnitude;
+        float length = Mathf.Max(0.2f, stepLength);
+        IsWalking = controller.isGrounded && distance > 0.0001f && distance < 2f;
+        LocalMoveDirection = IsWalking ? transform.InverseTransformDirection(delta / distance) : Vector3.zero;
 
-        if (controller.isGrounded)
+        if (IsWalking)
         {
-            distanceSinceStep += delta.magnitude;
-            if (distanceSinceStep >= stepLength)
+            distanceSinceStep += distance;
+            int contacts = Mathf.FloorToInt(distanceSinceStep / length);
+            if (contacts > 0)
             {
-                distanceSinceStep = 0f;
+                // 프레임마다 나머지를 버리면 낮은 FPS에서 박자가 느려진다.
+                distanceSinceStep -= contacts * length;
+                contactParity = (contactParity + contacts) % 2;
                 source.pitch = 0.85f + (float)rng.NextDouble() * 0.3f;
                 float v = volume * (0.8f + (float)rng.NextDouble() * 0.4f);
                 source.PlayOneShot(steps[rng.Next(steps.Length)], v);
             }
         }
-        else
+        else if (!controller.isGrounded || distance >= 2f)
         {
-            distanceSinceStep = stepLength * 0.5f; // 공중에서는 거리가 안 쌓이게
+            distanceSinceStep = length * 0.5f;
         }
+        // 매 pi마다 반대쪽 발 접지. 소리와 포즈가 이 위상을 공유한다.
+        GaitPhase = (contactParity + distanceSinceStep / length) * Mathf.PI;
     }
 
     // 낙엽 바스락 소리: 빠르게 감쇠하는 노이즈 + 임의 시점의 짧은 크래클 몇 번
