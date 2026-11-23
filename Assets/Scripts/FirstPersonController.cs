@@ -28,6 +28,10 @@ public class FirstPersonController : MonoBehaviour
 
     void Start()
     {
+        // 모델 머리 중심 y=0.66, 얼굴 앞쪽 z=0.10. 발바닥(-1) 기준 눈높이 1.72m.
+        // 기존 씬에도 적용되도록 시작할 때 맞춘다.
+        if (cameraPivot != null)
+            cameraPivot.localPosition = new Vector3(0f, 0.72f, 0.10f);
         LockCursor(true);
     }
 
