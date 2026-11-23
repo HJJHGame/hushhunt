@@ -11,7 +11,7 @@ using UnityEngine;
 public static class SetupScene
 {
     const string ScenePath = "Assets/Scenes/Main.unity";
-    const int SceneVersion = 5; // 씬 구성을 바꾸면 1 올린다
+    const int SceneVersion = 6; // 씬 구성을 바꾸면 1 올린다
     const string VersionKey = "HushHunt.SceneVersion";
 
     static SetupScene()
@@ -85,6 +85,7 @@ public static class SetupScene
         var coneMesh = MakeConeMesh();
 
         var rand = new System.Random(42);
+        var props = new List<Vector3>(); // x, z, 대략 반경: 집 배치 때 겹침 방지용
         int placed = 0;
         int attempts = 0;
         while (placed < 160 && attempts < 600)
@@ -96,6 +97,7 @@ public static class SetupScene
 
             float scale = 0.9f + (float)rand.NextDouble() * 0.7f; // 0.9~1.6배 크기
             MakePineTree(new Vector3(x, 0f, z), scale, trunkMat, pineMat, coneMesh);
+            props.Add(new Vector3(x, z, 2.5f));
             placed++;
         }
 
@@ -115,6 +117,7 @@ public static class SetupScene
             rock.transform.localScale = new Vector3(s * 1.4f, s * 0.8f, s);
             rock.transform.rotation = Quaternion.Euler(0f, (float)rand.NextDouble() * 360f, 0f);
             rock.GetComponent<Renderer>().sharedMaterial = rockMat;
+            props.Add(new Vector3(x, z, s * 0.7f + 0.5f));
         }
 
         // 낡은 울타리 두 토막: 삐뚤빼뚤한 기둥들 + 가로대 두 줄
@@ -148,6 +151,53 @@ public static class SetupScene
                 rail.transform.localScale = new Vector3(posts * 1.4f, 0.08f, 0.05f);
                 rail.GetComponent<Renderer>().sharedMaterial = fenceMat;
             }
+            props.Add(new Vector3(fx, fz, posts * 0.7f + 1f));
+        }
+
+        // 집들: 크기가 다른 속 빈 집 6채를 맵 곳곳에 배치한다.
+        // 문(폭 1.4m, 높이 2.4m)으로 출입 가능. 스폰 지점/다른 집/나무/바위/울타리와 안 겹치게.
+        var houseMat = MakeMaterial("House", new Color(0.09f, 0.07f, 0.06f));
+        var roofMat = MakeMaterial("Roof", new Color(0.05f, 0.05f, 0.07f));
+        var houseRects = new List<Vector4>(); // x, z, 반폭, 반깊이
+        int housesPlaced = 0;
+        int houseAttempts = 0;
+        while (housesPlaced < 6 && houseAttempts < 300)
+        {
+            houseAttempts++;
+            float hw = 3f + (float)rand.NextDouble() * 3f; // 반폭 3~6m -> 폭 6~12m
+            float hd = 3f + (float)rand.NextDouble() * 3f;
+            float range = 86f - Mathf.Max(hw, hd);         // 경계 벽과 여유 확보
+            float hx = (float)(rand.NextDouble() * 2.0) * range - range;
+            float hz = (float)(rand.NextDouble() * 2.0) * range - range;
+
+            if (new Vector2(hx, hz).magnitude < 8f + Mathf.Max(hw, hd)) continue; // 스폰 비우기
+
+            bool overlaps = false;
+            foreach (var r in houseRects)
+            {
+                if (Mathf.Abs(hx - r.x) < hw + r.z + 3f && Mathf.Abs(hz - r.y) < hd + r.w + 3f)
+                {
+                    overlaps = true;
+                    break;
+                }
+            }
+            if (overlaps) continue;
+
+            float houseRadius = Mathf.Sqrt(hw * hw + hd * hd);
+            foreach (var p in props)
+            {
+                if (Vector2.Distance(new Vector2(hx, hz), new Vector2(p.x, p.y)) < houseRadius + p.z + 1f)
+                {
+                    overlaps = true;
+                    break;
+                }
+            }
+            if (overlaps) continue;
+
+            float wallH = 3.5f + (float)rand.NextDouble() * 1.5f; // 벽 높이 3.5~5m
+            MakeHouse(new Vector3(hx, 0f, hz), hw * 2f, hd * 2f, wallH, houseMat, roofMat);
+            houseRects.Add(new Vector4(hx, hz, hw, hd));
+            housesPlaced++;
         }
 
         // 맵 가장자리 벽: 200x200m 경계(±100m)를 어두운 벽 네 면으로 둘러싼다.
@@ -179,17 +229,9 @@ public static class SetupScene
         fpc.cameraPivot = camGo.transform;
         player.AddComponent<Footsteps>();
 
-        // 미니맵: 플레이어를 따라가는 탑다운 카메라.
-        // 화면 오른쪽 위 표시와 플레이어 화살표는 Minimap 스크립트가 OnGUI로 처리.
-        var minimapGo = new GameObject("MinimapCamera");
-        var minimapCam = minimapGo.AddComponent<Camera>();
-        minimapCam.orthographic = true;
-        minimapCam.orthographicSize = 100f; // 200x200m 맵 전체가 들어옴
-        minimapCam.clearFlags = CameraClearFlags.SolidColor;
-        minimapCam.backgroundColor = new Color(0.02f, 0.03f, 0.02f);
-        minimapCam.nearClipPlane = 1f;
-        minimapCam.transform.position = player.transform.position + Vector3.up * 45f;
-        minimapCam.transform.rotation = Quaternion.Euler(90f, 0f, 0f);
+        // 미니맵: 실제 맵 데이터(경계/집/플레이어)를 그대로 그리는 오버레이.
+        // 오른쪽 위 작은 지도가 기본, M 키로 큰 지도를 연다.
+        var minimapGo = new GameObject("Minimap");
         minimapGo.AddComponent<Minimap>().target = player.transform;
 
         // 라운드 진행 관리자: 숨는 시간 -> 수색 타이머 -> 종료까지 한 판의 흐름
@@ -202,6 +244,41 @@ public static class SetupScene
         EditorBuildSettings.scenes = new[] { new EditorBuildSettingsScene(ScenePath, true) };
 
         Debug.Log("[Hush Hunt] Main scene created at " + ScenePath + " (v" + SceneVersion + ")");
+    }
+
+    // 속 빈 집 한 채: 벽 4면(앞벽에 문 개구부) + 지붕 슬래브. 축 정렬, 문은 +Z 방향.
+    static void MakeHouse(Vector3 pos, float w, float d, float wallH, Material wallMat, Material roofMat)
+    {
+        var house = new GameObject("House");
+        house.transform.position = pos;
+
+        const float t = 0.3f;     // 벽 두께
+        const float doorW = 1.4f; // 문 폭 (플레이어 반경 0.4m보다 넉넉히)
+        const float doorH = 2.4f; // 문 높이 (플레이어 키 2m보다 넉넉히)
+
+        // 앞벽(+Z): 문 개구부 좌우 두 조각 + 문 위 상인방
+        float sideW = (w - doorW) * 0.5f;
+        MakeBox(house.transform, new Vector3(-(w + doorW) * 0.25f, wallH * 0.5f, (d - t) * 0.5f), new Vector3(sideW, wallH, t), wallMat);
+        MakeBox(house.transform, new Vector3((w + doorW) * 0.25f, wallH * 0.5f, (d - t) * 0.5f), new Vector3(sideW, wallH, t), wallMat);
+        MakeBox(house.transform, new Vector3(0f, (doorH + wallH) * 0.5f, (d - t) * 0.5f), new Vector3(doorW, wallH - doorH, t), wallMat);
+        // 뒷벽(-Z)
+        MakeBox(house.transform, new Vector3(0f, wallH * 0.5f, -(d - t) * 0.5f), new Vector3(w, wallH, t), wallMat);
+        // 좌우벽 (앞뒤 벽 사이에 맞춤)
+        MakeBox(house.transform, new Vector3(-(w - t) * 0.5f, wallH * 0.5f, 0f), new Vector3(t, wallH, d - 2f * t), wallMat);
+        MakeBox(house.transform, new Vector3((w - t) * 0.5f, wallH * 0.5f, 0f), new Vector3(t, wallH, d - 2f * t), wallMat);
+        // 지붕 슬래브 (살짝 넓게 덮음)
+        MakeBox(house.transform, new Vector3(0f, wallH + 0.15f, 0f), new Vector3(w + 0.6f, 0.3f, d + 0.6f), roofMat);
+
+        house.AddComponent<HouseFootprint>().size = new Vector2(w, d);
+    }
+
+    static void MakeBox(Transform parent, Vector3 localPos, Vector3 size, Material mat)
+    {
+        var box = GameObject.CreatePrimitive(PrimitiveType.Cube);
+        box.transform.SetParent(parent);
+        box.transform.localPosition = localPos;
+        box.transform.localScale = size;
+        box.GetComponent<Renderer>().sharedMaterial = mat;
     }
 
     // 가장자리 벽 하나: 큐브 프리미티브(메시 + BoxCollider)에 어두운 재질.
