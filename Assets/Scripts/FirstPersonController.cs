@@ -21,6 +21,9 @@ public class FirstPersonController : MonoBehaviour
     void Awake()
     {
         controller = GetComponent<CharacterController>();
+        // 기존 씬도 재생성 없이 다리/발 모델을 표시한다.
+        if (GetComponent<PlayerBody>() == null)
+            gameObject.AddComponent<PlayerBody>();
     }
 
     void Start()
