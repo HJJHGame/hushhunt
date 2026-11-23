@@ -17,7 +17,6 @@ public class FirstPersonController : MonoBehaviour
     CharacterController controller;
     float verticalVelocity;
     float pitch;
-    bool cursorLocked = true; // 원하는 잠금 상태. 시작하면 잠금.
 
     void Awake()
     {
@@ -31,20 +30,13 @@ public class FirstPersonController : MonoBehaviour
 
     void Update()
     {
-        if (Input.GetKeyDown(KeyCode.Escape))
-            cursorLocked = false;
-        else if (Input.GetMouseButtonDown(0) && !cursorLocked)
-            cursorLocked = true;
-
-        // 잠금이 외부 요인(창 포커스 이동, 에디터, 원격 데스크톱)으로 조용히 풀리면
-        // 커서는 보이지 않는 채 자유 커서가 되어 창 끝에서 마우스 회전이 멈춘다.
-        // 매 프레임 원하는 상태로 다시 건다.
-        bool isLocked = Cursor.lockState == CursorLockMode.Locked;
-        if (isLocked != cursorLocked)
-            LockCursor(cursorLocked);
-
         Look();
         Move();
+
+        if (Input.GetKeyDown(KeyCode.Escape))
+            LockCursor(false);
+        else if (Input.GetMouseButtonDown(0) && Cursor.lockState != CursorLockMode.Locked)
+            LockCursor(true);
     }
 
     void Look()
@@ -82,16 +74,8 @@ public class FirstPersonController : MonoBehaviour
         controller.Move(velocity * Time.deltaTime);
     }
 
-    // 에디터/창 포커스를 잃으면 커서 잠금이 풀린다. 돌아올 때 다시 잠가야
-    // 마우스가 게임 창 밖으로 나가는 일이 없다.
-    void OnApplicationFocus(bool hasFocus)
-    {
-        if (hasFocus) LockCursor(true);
-    }
-
     void LockCursor(bool locked)
     {
-        cursorLocked = locked;
         Cursor.lockState = locked ? CursorLockMode.Locked : CursorLockMode.None;
         Cursor.visible = !locked;
     }
