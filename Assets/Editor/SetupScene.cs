@@ -11,16 +11,25 @@ using UnityEngine;
 public static class SetupScene
 {
     const string ScenePath = "Assets/Scenes/Main.unity";
-    const int SceneVersion = 4; // 씬 구성을 바꾸면 1 올린다
+    const int SceneVersion = 5; // 씬 구성을 바꾸면 1 올린다
     const string VersionKey = "HushHunt.SceneVersion";
 
     static SetupScene()
     {
-        EditorApplication.delayCall += () =>
+        EditorApplication.delayCall += () => EnsureIfNeeded();
+        // 플레이 모드 진입 시에도 도메인 리로드로 이 생성자가 다시 실행되는데,
+        // 플레이 중에는 씬을 다시 만들 수 없으므로 에디터로 돌아왔을 때도 확인한다.
+        EditorApplication.playModeStateChanged += change =>
         {
-            bool outdated = EditorPrefs.GetInt(VersionKey, 0) < SceneVersion;
-            EnsureScene(outdated);
+            if (change == PlayModeStateChange.EnteredEditMode)
+                EnsureIfNeeded();
         };
+    }
+
+    static void EnsureIfNeeded()
+    {
+        bool outdated = EditorPrefs.GetInt(VersionKey, 0) < SceneVersion;
+        EnsureScene(outdated);
     }
 
     [MenuItem("Hush Hunt/Setup Main Scene")]
@@ -31,6 +40,10 @@ public static class SetupScene
 
     static void EnsureScene(bool force)
     {
+        // 플레이 모드(또는 진입 직전)에서는 EditorSceneManager.NewScene/SaveScene을
+        // 쓸 수 없다 (InvalidOperationException). 에디터 모드일 때만 만든다.
+        if (EditorApplication.isPlayingOrWillChangePlaymode) return;
+
         if (!force && File.Exists(ScenePath)) return;
 
         Directory.CreateDirectory("Assets/Scenes");
@@ -137,12 +150,13 @@ public static class SetupScene
             }
         }
 
-        // 맵 가장자리 보이지 않는 벽: 200x200m 경계(±100m)를 콜라이더로 둘러 낙하 방지.
-        // 렌더러가 없어서 화면과 미니맵에는 보이지 않는다.
-        MakeEdgeWall(new Vector3(0f, 2f, 100f), new Vector3(202f, 4f, 1f));
-        MakeEdgeWall(new Vector3(0f, 2f, -100f), new Vector3(202f, 4f, 1f));
-        MakeEdgeWall(new Vector3(100f, 2f, 0f), new Vector3(1f, 4f, 202f));
-        MakeEdgeWall(new Vector3(-100f, 2f, 0f), new Vector3(1f, 4f, 202f));
+        // 맵 가장자리 벽: 200x200m 경계(±100m)를 어두운 벽 네 면으로 둘러싼다.
+        // 땅과 같은 재질이라 안개 속에서 지형처럼 보이고, 미니맵에는 맵 경계로 보인다.
+        // 벽 안쪽 면이 ±99m라 플레이어는 절대 맵 밖으로 못 나간다.
+        MakeEdgeWall(new Vector3(0f, 2f, 99.5f), new Vector3(201f, 4f, 1f), groundMat);
+        MakeEdgeWall(new Vector3(0f, 2f, -99.5f), new Vector3(201f, 4f, 1f), groundMat);
+        MakeEdgeWall(new Vector3(99.5f, 2f, 0f), new Vector3(1f, 4f, 201f), groundMat);
+        MakeEdgeWall(new Vector3(-99.5f, 2f, 0f), new Vector3(1f, 4f, 201f), groundMat);
 
         // 플레이어: CharacterController + 카메라 자식 + 발소리
         var player = new GameObject("Player");
@@ -190,12 +204,14 @@ public static class SetupScene
         Debug.Log("[Hush Hunt] Main scene created at " + ScenePath + " (v" + SceneVersion + ")");
     }
 
-    // 보이지 않는 가장자리 벽 하나: BoxCollider만 있는 빈 오브젝트.
-    static void MakeEdgeWall(Vector3 center, Vector3 size)
+    // 가장자리 벽 하나: 큐브 프리미티브(메시 + BoxCollider)에 어두운 재질.
+    static void MakeEdgeWall(Vector3 center, Vector3 size, Material mat)
     {
-        var wall = new GameObject("Edge Wall");
+        var wall = GameObject.CreatePrimitive(PrimitiveType.Cube);
+        wall.name = "Edge Wall";
         wall.transform.position = center;
-        wall.AddComponent<BoxCollider>().size = size;
+        wall.transform.localScale = size;
+        wall.GetComponent<Renderer>().sharedMaterial = mat;
     }
 
     // 소나무 한 그루: 기둥 위에 원뿔 3단 (아래로 갈수록 넓음). 총 높이 약 9.5m x scale.
