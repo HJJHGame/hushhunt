@@ -1,27 +1,22 @@
 using UnityEngine;
 
-// 미니맵: 탑다운 카메라가 플레이어를 따라가며 RenderTexture로 찍고,
-// OnGUI로 화면 오른쪽 위에 그린다. 중앙 화살표가 플레이어 위치/방향.
-// 별도 UI 패키지 없이 imgui 모듈만으로 동작한다.
-[RequireComponent(typeof(Camera))]
+// 미니맵: 카메라 렌더링이 아니라 실제 맵 데이터를 그대로 그린다.
+// 월드 좌표(-100~100m)를 지도 좌표로 변환해 맵 경계, 집(HouseFootprint),
+// 플레이어 위치/방향을 표시한다. 나무/돌/울타리는 표시하지 않는다.
+// 기본은 오른쪽 위 작은 지도, M 키로 화면 중앙의 큰 지도를 연다.
 public class Minimap : MonoBehaviour
 {
-    public Transform target;   // 따라갈 플레이어
-    public float height = 45f; // 맵 위 카메라 높이
-    public int size = 220;     // 미니맵 한 변 픽셀
+    public Transform target;           // 플레이어
+    public int smallSize = 220;        // 작은 지도 한 변 (px)
+    public float bigSizeRatio = 0.75f; // 큰 지도: 화면 높이 대비 비율
+    public float worldHalf = 100f;     // 맵 절반 크기 (m): 경계가 -100~100
 
-    RenderTexture rt;
     Texture2D arrowTex;
-
-    bool fogWasEnabled;
-    UnityEngine.Rendering.AmbientMode ambientModeWas;
-    Color ambientColorWas;
+    HouseFootprint[] houses;
+    bool bigMap;
 
     void Awake()
     {
-        rt = new RenderTexture(256, 256, 24);
-        GetComponent<Camera>().targetTexture = rt;
-
         // 위를 향하는 삼각형 화살표 텍스처 (런타임 생성)
         const int a = 64;
         arrowTex = new Texture2D(a, a, TextureFormat.RGBA32, false);
@@ -40,53 +35,75 @@ public class Minimap : MonoBehaviour
         arrowTex.Apply();
     }
 
-    void LateUpdate()
+    void Start()
     {
-        if (target == null) return;
-        transform.position = target.position + Vector3.up * height;
-        transform.rotation = Quaternion.Euler(90f, 0f, 0f); // 북쪽(+Z)이 위
+        // 씬에 실제 배치된 집들을 찾아 둔다 (집과 지도가 같은 데이터를 공유)
+        houses = FindObjectsByType<HouseFootprint>(FindObjectsSortMode.None);
     }
 
-    // 안개와 어두운 앰비언트는 메인 시점용이라 미니맵 찍을 때만 잠시 바꾼다.
-    void OnPreRender()
+    void Update()
     {
-        fogWasEnabled = RenderSettings.fog;
-        RenderSettings.fog = false;
-        ambientModeWas = RenderSettings.ambientMode;
-        ambientColorWas = RenderSettings.ambientLight;
-        RenderSettings.ambientMode = UnityEngine.Rendering.AmbientMode.Flat;
-        RenderSettings.ambientLight = new Color(0.5f, 0.55f, 0.5f);
-    }
-
-    void OnPostRender()
-    {
-        RenderSettings.fog = fogWasEnabled;
-        RenderSettings.ambientMode = ambientModeWas;
-        RenderSettings.ambientLight = ambientColorWas;
+        if (Input.GetKeyDown(KeyCode.M))
+            bigMap = !bigMap;
     }
 
     void OnGUI()
     {
-        if (rt == null || Event.current.type != EventType.Repaint) return;
+        if (Event.current.type != EventType.Repaint) return;
 
-        float pad = 16f;
-        var frame = new Rect(Screen.width - size - pad, pad, size, size);
+        int size = bigMap ? Mathf.RoundToInt(Screen.height * bigSizeRatio) : smallSize;
+        float x = bigMap ? (Screen.width - size) * 0.5f : Screen.width - size - 16f;
+        float y = bigMap ? (Screen.height - size) * 0.5f : 16f;
+        var map = new Rect(x, y, size, size);
 
-        // 테두리
-        GUI.color = new Color(0f, 0f, 0f, 0.6f);
-        GUI.DrawTexture(new Rect(frame.x - 4, frame.y - 4, frame.width + 8, frame.height + 8), Texture2D.whiteTexture);
+        // 배경 + 테두리. 지도의 사각 가장자리가 곧 실제 맵 경계(±100m)다.
+        GUI.color = new Color(0f, 0f, 0f, bigMap ? 0.85f : 0.6f);
+        GUI.DrawTexture(new Rect(map.x - 4f, map.y - 4f, map.width + 8f, map.height + 8f), Texture2D.whiteTexture);
+        GUI.color = new Color(0.04f, 0.05f, 0.04f, bigMap ? 0.95f : 0.85f);
+        GUI.DrawTexture(map, Texture2D.whiteTexture);
+
+        // 집들
+        GUI.color = new Color(0.5f, 0.4f, 0.28f, 1f);
+        if (houses != null)
+        {
+            foreach (var h in houses)
+            {
+                if (h == null) continue;
+                Vector2 c = WorldToMap(h.transform.position, map);
+                float w = h.size.x / (worldHalf * 2f) * map.width;
+                float d = h.size.y / (worldHalf * 2f) * map.height;
+                GUI.DrawTexture(new Rect(c.x - w * 0.5f, c.y - d * 0.5f, w, d), Texture2D.whiteTexture);
+            }
+        }
+
+        // 플레이어 위치 + 바라보는 방향
         GUI.color = Color.white;
-        GUI.DrawTexture(frame, rt);
-
-        // 플레이어는 항상 미니맵 중앙. 방향만 화살표 회전으로 표시.
         if (target != null)
         {
-            var pivot = new Vector2(frame.x + frame.width / 2f, frame.y + frame.height / 2f);
+            Vector2 p = WorldToMap(target.position, map);
             var prev = GUI.matrix;
-            GUIUtility.RotateAroundPivot(target.eulerAngles.y, pivot);
-            float s = 26f;
-            GUI.DrawTexture(new Rect(pivot.x - s / 2f, pivot.y - s / 2f, s, s), arrowTex);
+            GUIUtility.RotateAroundPivot(target.eulerAngles.y, p);
+            float s = bigMap ? 34f : 24f;
+            GUI.DrawTexture(new Rect(p.x - s * 0.5f, p.y - s * 0.5f, s, s), arrowTex);
             GUI.matrix = prev;
         }
+
+        if (bigMap)
+        {
+            var style = new GUIStyle(GUI.skin.label)
+            {
+                alignment = TextAnchor.MiddleCenter,
+                fontSize = 14
+            };
+            GUI.Label(new Rect(map.x, map.yMax + 6f, map.width, 22f), "M 키로 닫기", style);
+        }
+    }
+
+    // 월드 좌표 -> 지도 픽셀. +Z(북쪽)가 위, +X가 오른쪽.
+    Vector2 WorldToMap(Vector3 world, Rect map)
+    {
+        float u = Mathf.InverseLerp(-worldHalf, worldHalf, world.x);
+        float v = Mathf.InverseLerp(-worldHalf, worldHalf, world.z);
+        return new Vector2(map.x + u * map.width, map.y + (1f - v) * map.height);
     }
 }
