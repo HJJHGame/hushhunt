@@ -1,0 +1,134 @@
+using UnityEngine;
+using UnityEngine.Rendering;
+
+// 프리미티브 임시 캐릭터. 로컬 플레이어는 다리/발만 보이고 상체는 그림자만 남긴다.
+// 이후 원격 캐릭터에는 SetFirstPerson(false)를 호출하면 전신을 표시할 수 있다.
+[RequireComponent(typeof(CharacterController))]
+public class PlayerBody : MonoBehaviour
+{
+    public bool firstPerson = true;
+    public float strideLength = 2.4f;
+    public float legSwing = 24f;
+
+    CharacterController controller;
+    Transform modelRoot, leftLeg, rightLeg, leftArm, rightArm;
+    Renderer[] upperBody;
+    Material clothes, boots, skin;
+    Vector3 previousPosition;
+    float phase;
+    Vector2 swing;
+    bool appliedFirstPerson;
+
+    void Awake()
+    {
+        controller = GetComponent<CharacterController>();
+        clothes = MakeMaterial("Player clothes", new Color(0.24f, 0.31f, 0.37f));
+        boots = MakeMaterial("Player boots", new Color(0.09f, 0.10f, 0.12f));
+        skin = MakeMaterial("Player skin", new Color(0.55f, 0.42f, 0.33f));
+
+        var root = new GameObject("Character Model").transform;
+        modelRoot = root;
+        root.SetParent(transform, false);
+        // Controller 높이 2m, 중심 0: 발바닥 -1m, 카메라 +0.6m.
+        var torso = Part(root, "Torso", PrimitiveType.Cube,
+            new Vector3(0f, 0.15f, -0.06f), new Vector3(0.48f, 0.60f, 0.28f), clothes);
+        var head = Part(root, "Head", PrimitiveType.Sphere,
+            new Vector3(0f, 0.66f, -0.06f), new Vector3(0.32f, 0.36f, 0.32f), skin);
+        leftLeg = Limb(root, "Left Leg", new Vector3(-0.17f, -0.12f, 0f), 0.72f, 0.20f, clothes);
+        rightLeg = Limb(root, "Right Leg", new Vector3(0.17f, -0.12f, 0f), 0.72f, 0.20f, clothes);
+        Part(leftLeg, "Left Boot", PrimitiveType.Cube,
+            new Vector3(0f, -0.80f, 0.10f), new Vector3(0.23f, 0.16f, 0.42f), boots);
+        Part(rightLeg, "Right Boot", PrimitiveType.Cube,
+            new Vector3(0f, -0.80f, 0.10f), new Vector3(0.23f, 0.16f, 0.42f), boots);
+        leftArm = Limb(root, "Left Arm", new Vector3(-0.34f, 0.40f, -0.06f), 0.60f, 0.16f, clothes);
+        rightArm = Limb(root, "Right Arm", new Vector3(0.34f, 0.40f, -0.06f), 0.60f, 0.16f, clothes);
+        upperBody = new[] { torso, head, leftArm.GetComponentInChildren<Renderer>(), rightArm.GetComponentInChildren<Renderer>() };
+        SetFirstPerson(firstPerson);
+    }
+
+    void OnEnable()
+    {
+        previousPosition = transform.position;
+    }
+
+    void LateUpdate()
+    {
+        if (firstPerson != appliedFirstPerson) SetFirstPerson(firstPerson);
+
+        Vector3 delta = transform.position - previousPosition;
+        previousPosition = transform.position;
+        delta.y = 0f;
+        float distance = delta.magnitude;
+        Vector2 desired = Vector2.zero;
+        // 입력키가 아니라 실제 이동을 사용: 벽에 막히면 제자리 걸음을 하지 않는다.
+        // 순간이동/재스폰은 걸음으로 취급하지 않는다.
+        if (controller.isGrounded && distance > 0.0001f && distance < 2f)
+        {
+            phase = Mathf.Repeat(phase + distance / Mathf.Max(0.4f, strideLength) * Mathf.PI * 2f, Mathf.PI * 2f);
+            Vector3 local = transform.InverseTransformDirection(delta / distance);
+            float amount = Mathf.Sin(phase) * legSwing;
+            desired = new Vector2(local.z * amount, -local.x * amount);
+        }
+        swing = Vector2.Lerp(swing, desired, 1f - Mathf.Exp(-18f * Time.deltaTime));
+        leftLeg.localRotation = Quaternion.Euler(swing.x, 0f, swing.y);
+        rightLeg.localRotation = Quaternion.Euler(-swing.x, 0f, -swing.y);
+        leftArm.localRotation = Quaternion.Euler(-swing.x * 0.6f, 0f, -swing.y * 0.4f);
+        rightArm.localRotation = Quaternion.Euler(swing.x * 0.6f, 0f, swing.y * 0.4f);
+    }
+
+    // 로컬 1인칭 카메라가 머리/몸통 안쪽을 보지 않도록 상체만 숨긴다.
+    // 원격 모델 표시 전환 지점이며 네트워크 동기화 자체는 아직 포함하지 않는다.
+    public void SetFirstPerson(bool value)
+    {
+        firstPerson = value;
+        appliedFirstPerson = value;
+        if (upperBody == null) return;
+        foreach (var part in upperBody)
+            if (part != null) part.shadowCastingMode = value ? ShadowCastingMode.ShadowsOnly : ShadowCastingMode.On;
+    }
+
+    static Transform Limb(Transform parent, string name, Vector3 hip, float length, float width, Material material)
+    {
+        var pivot = new GameObject(name).transform;
+        pivot.SetParent(parent, false);
+        pivot.localPosition = hip;
+        Part(pivot, name + " Mesh", PrimitiveType.Cube,
+            new Vector3(0f, -length * 0.5f, 0f), new Vector3(width, length, width), material);
+        return pivot;
+    }
+
+    static Renderer Part(Transform parent, string name, PrimitiveType shape, Vector3 position, Vector3 scale, Material material)
+    {
+        var part = GameObject.CreatePrimitive(shape);
+        part.name = name;
+        part.transform.SetParent(parent, false);
+        part.transform.localPosition = position;
+        part.transform.localScale = scale;
+        // 시각 전용. 충돌 판정은 기존 CharacterController만 사용한다.
+        var collider = part.GetComponent<Collider>();
+        collider.enabled = false;
+        Object.Destroy(collider);
+        var renderer = part.GetComponent<Renderer>();
+        renderer.sharedMaterial = material;
+        return renderer;
+    }
+
+    static Material MakeMaterial(string name, Color color)
+    {
+        var material = new Material(Shader.Find("Standard"));
+        material.name = name;
+        material.color = color;
+        // 어두운 숲에서도 발 윤곽이 보일 정도의 약한 자체 발광.
+        material.EnableKeyword("_EMISSION");
+        material.SetColor("_EmissionColor", color * 0.12f);
+        return material;
+    }
+
+    void OnDestroy()
+    {
+        if (modelRoot != null) Destroy(modelRoot.gameObject);
+        if (clothes != null) Destroy(clothes);
+        if (boots != null) Destroy(boots);
+        if (skin != null) Destroy(skin);
+    }
+}
