@@ -3,25 +3,23 @@ using UnityEngine.Rendering;
 
 // 프리미티브 임시 캐릭터. 로컬 플레이어는 다리/발만 보이고 상체는 그림자만 남긴다.
 // 이후 원격 캐릭터에는 SetFirstPerson(false)를 호출하면 전신을 표시할 수 있다.
+[DefaultExecutionOrder(200)]
 [RequireComponent(typeof(CharacterController))]
 public class PlayerBody : MonoBehaviour
 {
     public bool firstPerson = true;
-    public float strideLength = 2.4f;
     public float legSwing = 24f;
 
-    CharacterController controller;
+    Footsteps footsteps;
     Transform modelRoot, leftLeg, rightLeg, leftArm, rightArm;
     Renderer[] upperBody;
     Material clothes, boots, skin;
-    Vector3 previousPosition;
-    float phase;
     Vector2 swing;
     bool appliedFirstPerson;
 
     void Awake()
     {
-        controller = GetComponent<CharacterController>();
+        footsteps = GetComponent<Footsteps>();
         clothes = MakeMaterial("Player clothes", new Color(0.24f, 0.31f, 0.37f));
         boots = MakeMaterial("Player boots", new Color(0.09f, 0.10f, 0.12f));
         skin = MakeMaterial("Player skin", new Color(0.55f, 0.42f, 0.33f));
@@ -46,30 +44,22 @@ public class PlayerBody : MonoBehaviour
         SetFirstPerson(firstPerson);
     }
 
-    void OnEnable()
-    {
-        previousPosition = transform.position;
-    }
-
     void LateUpdate()
     {
         if (firstPerson != appliedFirstPerson) SetFirstPerson(firstPerson);
+        if (footsteps == null) footsteps = GetComponent<Footsteps>();
 
-        Vector3 delta = transform.position - previousPosition;
-        previousPosition = transform.position;
-        delta.y = 0f;
-        float distance = delta.magnitude;
-        Vector2 desired = Vector2.zero;
-        // 입력키가 아니라 실제 이동을 사용: 벽에 막히면 제자리 걸음을 하지 않는다.
-        // 순간이동/재스폰은 걸음으로 취급하지 않는다.
-        if (controller.isGrounded && distance > 0.0001f && distance < 2f)
+        if (footsteps != null && footsteps.IsWalking)
         {
-            phase = Mathf.Repeat(phase + distance / Mathf.Max(0.4f, strideLength) * Mathf.PI * 2f, Mathf.PI * 2f);
-            Vector3 local = transform.InverseTransformDirection(delta / distance);
-            float amount = Mathf.Sin(phase) * legSwing;
-            desired = new Vector2(local.z * amount, -local.x * amount);
+            Vector3 local = footsteps.LocalMoveDirection;
+            float amount = Mathf.Cos(footsteps.GaitPhase) * legSwing;
+            // 이동 중에는 보간하지 않는다. 발소리 순간에 포즈가 지연되지 않게.
+            swing = new Vector2(local.z * amount, -local.x * amount);
         }
-        swing = Vector2.Lerp(swing, desired, 1f - Mathf.Exp(-18f * Time.deltaTime));
+        else
+        {
+            swing = Vector2.Lerp(swing, Vector2.zero, 1f - Mathf.Exp(-18f * Time.deltaTime));
+        }
         leftLeg.localRotation = Quaternion.Euler(swing.x, 0f, swing.y);
         rightLeg.localRotation = Quaternion.Euler(-swing.x, 0f, -swing.y);
         leftArm.localRotation = Quaternion.Euler(-swing.x * 0.6f, 0f, -swing.y * 0.4f);
