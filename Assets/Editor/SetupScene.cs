@@ -11,7 +11,7 @@ using UnityEngine;
 public static class SetupScene
 {
     const string ScenePath = "Assets/Scenes/Main.unity";
-    const int SceneVersion = 2; // 씬 구성을 바꾸면 1 올린다
+    const int SceneVersion = 3; // 씬 구성을 바꾸면 1 올린다
     const string VersionKey = "HushHunt.SceneVersion";
 
     static SetupScene()
@@ -170,6 +170,9 @@ public static class SetupScene
         minimapCam.transform.position = player.transform.position + Vector3.up * 45f;
         minimapCam.transform.rotation = Quaternion.Euler(90f, 0f, 0f);
         minimapGo.AddComponent<Minimap>().target = player.transform;
+
+        // 라운드 진행 관리자: 숨는 시간 -> 수색 타이머 -> 종료까지 한 판의 흐름
+        new GameObject("GameManager").AddComponent<GameManager>();
 
         EditorSceneManager.SaveScene(scene, ScenePath);
         EditorPrefs.SetInt(VersionKey, SceneVersion);
