@@ -11,7 +11,7 @@ using UnityEngine;
 public static class SetupScene
 {
     const string ScenePath = "Assets/Scenes/Main.unity";
-    const int SceneVersion = 7; // 씬 구성을 바꾸면 1 올린다
+    const int SceneVersion = 8; // 씬 구성을 바꾸면 1 올린다
     const string VersionKey = "HushHunt.SceneVersion";
 
     static SetupScene()
@@ -69,7 +69,7 @@ public static class SetupScene
         light.type = LightType.Directional;
         light.color = new Color(0.6f, 0.7f, 0.85f);
         light.intensity = 0.6f;
-        lightGo.transform.rotation = Quaternion.Euler(50f, -30f, 0f);
+        lightGo.transform.rotation = Quaternion.Euler(32f, -30f, 0f); // 낮게 걸린 달: 그림자가 길고 하늘에서 달이 보인다
 
         // 땅: 내장 Plane(10x10m)을 20배 -> 200x200m, 어두운 흙색
         var groundMat = MakeMaterial("Ground", new Color(0.05f, 0.06f, 0.05f));
@@ -154,10 +154,55 @@ public static class SetupScene
             props.Add(new Vector3(fx, fz, posts * 0.7f + 1f));
         }
 
+        // 쓰러진 통나무와 그루터기: 숲 바닥에 변화를 주고, 낮은 엄폐물/점프 장애물이 된다.
+        var logMat = MakeMaterial("Log", new Color(0.08f, 0.06f, 0.045f));
+        for (int i = 0; i < 22; i++)
+        {
+            float x = (float)(rand.NextDouble() * 186.0 - 93.0);
+            float z = (float)(rand.NextDouble() * 186.0 - 93.0);
+            if (new Vector2(x, z).magnitude < 7f) continue;
+
+            float len = 2.5f + (float)rand.NextDouble() * 3f;
+            float rad = 0.25f + (float)rand.NextDouble() * 0.2f;
+            float yaw = (float)rand.NextDouble() * 360f;
+            var log = GameObject.CreatePrimitive(PrimitiveType.Cylinder);
+            log.name = "Fallen Log";
+            log.transform.position = new Vector3(x, rad * 0.9f, z);
+            log.transform.rotation = Quaternion.Euler(0f, yaw, 0f) * Quaternion.Euler(0f, 0f, 90f);
+            log.transform.localScale = new Vector3(rad * 2f, len * 0.5f, rad * 2f);
+            log.GetComponent<Renderer>().sharedMaterial = logMat;
+            props.Add(new Vector3(x, z, len * 0.5f + 0.5f));
+        }
+        for (int i = 0; i < 30; i++)
+        {
+            float x = (float)(rand.NextDouble() * 186.0 - 93.0);
+            float z = (float)(rand.NextDouble() * 186.0 - 93.0);
+            if (new Vector2(x, z).magnitude < 7f) continue;
+
+            float hh = 0.25f + (float)rand.NextDouble() * 0.2f;   // 절반 높이
+            float rr = 0.3f + (float)rand.NextDouble() * 0.25f;    // 반지름
+            var stump = GameObject.CreatePrimitive(PrimitiveType.Cylinder);
+            stump.name = "Stump";
+            stump.transform.position = new Vector3(x, hh * 0.9f, z);
+            stump.transform.localScale = new Vector3(rr * 2f, hh, rr * 2f);
+            stump.GetComponent<Renderer>().sharedMaterial = logMat;
+            props.Add(new Vector3(x, z, rr + 0.5f));
+        }
+
         // 집들: 크기가 다른 속 빈 집 6채를 맵 곳곳에 배치한다.
         // 문(폭 1.4m, 높이 2.4m)으로 출입 가능. 스폰 지점/다른 집/나무/바위/울타리와 안 겹치게.
-        var houseMat = MakeMaterial("House", new Color(0.09f, 0.07f, 0.06f));
+        var wallMats = new[]
+        {
+            MakeMaterial("House A", new Color(0.09f, 0.07f, 0.06f)),
+            MakeMaterial("House B", new Color(0.07f, 0.07f, 0.075f)),
+            MakeMaterial("House C", new Color(0.10f, 0.08f, 0.05f)),
+        };
         var roofMat = MakeMaterial("Roof", new Color(0.05f, 0.05f, 0.07f));
+        var trimMat = MakeMaterial("Trim", new Color(0.04f, 0.03f, 0.025f));
+        var floorMat = MakeMaterial("Floor", new Color(0.07f, 0.05f, 0.035f));
+        var furnMat = MakeMaterial("Furniture", new Color(0.08f, 0.06f, 0.04f));
+        var clothMat = MakeMaterial("Cloth", new Color(0.13f, 0.05f, 0.05f));
+        var gableMesh = MakeGableMesh();
         var houseRects = new List<Vector4>(); // x, z, 반폭, 반깊이
         int housesPlaced = 0;
         int houseAttempts = 0;
@@ -195,7 +240,8 @@ public static class SetupScene
             if (overlaps) continue;
 
             float wallH = 3.5f + (float)rand.NextDouble() * 1.5f; // 벽 높이 3.5~5m
-            MakeHouse(new Vector3(hx, 0f, hz), hw * 2f, hd * 2f, wallH, houseMat, roofMat);
+            MakeHouse(new Vector3(hx, 0f, hz), hw * 2f, hd * 2f, wallH,
+                wallMats[rand.Next(wallMats.Length)], roofMat, trimMat, floorMat, furnMat, clothMat, gableMesh, rand);
             houseRects.Add(new Vector4(hx, hz, hw, hd));
             housesPlaced++;
         }
@@ -258,7 +304,7 @@ public static class SetupScene
         foreach (var t in Object.FindObjectsByType<Transform>(FindObjectsSortMode.None))
         {
             string n = t.name;
-            if (n == "Ground" || n == "Rock" || n == "Edge Wall" || n == "Old Fence" || n == "House")
+            if (n == "Ground" || n == "Rock" || n == "Edge Wall" || n == "Old Fence" || n == "House" || n == "Fallen Log" || n == "Stump")
             {
                 foreach (var child in t.GetComponentsInChildren<Transform>(true))
                     GameObjectUtility.SetStaticEditorFlags(child.gameObject, flags);
@@ -266,37 +312,186 @@ public static class SetupScene
         }
     }
 
-    // 속 빈 집 한 채: 벽 4면(앞벽에 문 개구부) + 지붕 슬래브. 축 정렬, 문은 +Z 방향.
-    static void MakeHouse(Vector3 pos, float w, float d, float wallH, Material wallMat, Material roofMat)
+    // 속 빈 집 한 채: 벽 + 문 개구부(+Z) + 양옆 창문 + 박공 지붕 + 문틀/현관 + 나무 바닥 + 가구.
+    // 창문은 높이 1.1m라 총/시선은 통하지만 사람은 지나갈 수 없다.
+    static void MakeHouse(Vector3 pos, float w, float d, float wallH,
+        Material wallMat, Material roofMat, Material trimMat, Material floorMat,
+        Material furnMat, Material clothMat, Mesh gableMesh, System.Random rand)
     {
         var house = new GameObject("House");
         house.transform.position = pos;
+        var hp = house.transform;
 
         const float t = 0.3f;     // 벽 두께
         const float doorW = 1.4f; // 문 폭 (플레이어 반경 0.4m보다 넉넉히)
         const float doorH = 2.4f; // 문 높이 (플레이어 키 2m보다 넉넉히)
 
+        // 나무 바닥
+        MakeBox(hp, new Vector3(0f, 0.03f, 0f), new Vector3(w - 2f * t, 0.06f, d - 2f * t), floorMat);
+
         // 앞벽(+Z): 문 개구부 좌우 두 조각 + 문 위 상인방
         float sideW = (w - doorW) * 0.5f;
-        MakeBox(house.transform, new Vector3(-(w + doorW) * 0.25f, wallH * 0.5f, (d - t) * 0.5f), new Vector3(sideW, wallH, t), wallMat);
-        MakeBox(house.transform, new Vector3((w + doorW) * 0.25f, wallH * 0.5f, (d - t) * 0.5f), new Vector3(sideW, wallH, t), wallMat);
-        MakeBox(house.transform, new Vector3(0f, (doorH + wallH) * 0.5f, (d - t) * 0.5f), new Vector3(doorW, wallH - doorH, t), wallMat);
+        MakeBox(hp, new Vector3(-(w + doorW) * 0.25f, wallH * 0.5f, (d - t) * 0.5f), new Vector3(sideW, wallH, t), wallMat);
+        MakeBox(hp, new Vector3((w + doorW) * 0.25f, wallH * 0.5f, (d - t) * 0.5f), new Vector3(sideW, wallH, t), wallMat);
+        MakeBox(hp, new Vector3(0f, (doorH + wallH) * 0.5f, (d - t) * 0.5f), new Vector3(doorW, wallH - doorH, t), wallMat);
         // 뒷벽(-Z)
-        MakeBox(house.transform, new Vector3(0f, wallH * 0.5f, -(d - t) * 0.5f), new Vector3(w, wallH, t), wallMat);
-        // 좌우벽 (앞뒤 벽 사이에 맞춤)
-        MakeBox(house.transform, new Vector3(-(w - t) * 0.5f, wallH * 0.5f, 0f), new Vector3(t, wallH, d - 2f * t), wallMat);
-        MakeBox(house.transform, new Vector3((w - t) * 0.5f, wallH * 0.5f, 0f), new Vector3(t, wallH, d - 2f * t), wallMat);
-        // 지붕 슬래브 (살짝 넓게 덮음)
-        MakeBox(house.transform, new Vector3(0f, wallH + 0.15f, 0f), new Vector3(w + 0.6f, 0.3f, d + 0.6f), roofMat);
+        MakeBox(hp, new Vector3(0f, wallH * 0.5f, -(d - t) * 0.5f), new Vector3(w, wallH, t), wallMat);
+        // 좌우벽 (앞뒤 벽 사이에 맞춤), 각각 창문 하나
+        MakeSideWall(hp, -(w - t) * 0.5f, d - 2f * t, wallH, t, wallMat, trimMat, -1f);
+        MakeSideWall(hp, (w - t) * 0.5f, d - 2f * t, wallH, t, wallMat, trimMat, 1f);
+
+        // 문틀(기둥 2 + 상인방)과 현관 계단
+        float frontZ = d * 0.5f + 0.04f;
+        MakeBox(hp, new Vector3(-(doorW * 0.5f + 0.07f), doorH * 0.5f, frontZ), new Vector3(0.14f, doorH, 0.10f), trimMat);
+        MakeBox(hp, new Vector3((doorW * 0.5f + 0.07f), doorH * 0.5f, frontZ), new Vector3(0.14f, doorH, 0.10f), trimMat);
+        MakeBox(hp, new Vector3(0f, doorH + 0.07f, frontZ), new Vector3(doorW + 0.28f, 0.14f, 0.10f), trimMat);
+        MakeBox(hp, new Vector3(0f, 0.08f, d * 0.5f + 0.55f), new Vector3(doorW + 1.2f, 0.16f, 1.1f), trimMat);
+
+        // 반쯤 열린 문짝 (절반 정도의 집에만): 경첩 쪽에서 안쪽으로 80도 열려 있다.
+        if (rand.NextDouble() < 0.5)
+        {
+            var hinge = new GameObject("Door").transform;
+            hinge.SetParent(hp, false);
+            hinge.localPosition = new Vector3(-doorW * 0.5f + 0.02f, 0f, d * 0.5f - t - 0.05f);
+            hinge.localRotation = Quaternion.Euler(0f, 80f, 0f);
+            MakeBox(hinge, new Vector3((doorW - 0.1f) * 0.5f, doorH * 0.5f - 0.05f, 0f), new Vector3(doorW - 0.1f, doorH - 0.1f, 0.06f), trimMat);
+        }
+
+        // 박공 지붕: 경사 슬래브 2장 + 양끝 삼각형. 용마루는 X축 방향.
+        float rise = Mathf.Min(2.4f, d * 0.32f);
+        float halfD = d * 0.5f;
+        float slope = rise / halfD;
+        const float overhang = 0.3f;
+        float eaveY = wallH - slope * overhang;
+        float ridgeY = wallH + rise + 0.05f;
+        float dz = halfD + overhang;
+        float dy = ridgeY - eaveY;
+        float slabLen = Mathf.Sqrt(dz * dz + dy * dy);
+        float ang = Mathf.Atan2(dy, dz) * Mathf.Rad2Deg;
+        var roofMid = new Vector3(0f, (ridgeY + eaveY) * 0.5f, dz * 0.5f);
+        var slabSize = new Vector3(w + 0.6f, 0.16f, slabLen);
+        MakeBoxRot(hp, roofMid, slabSize, Quaternion.Euler(ang, 0f, 0f), roofMat);
+        MakeBoxRot(hp, new Vector3(roofMid.x, roofMid.y, -roofMid.z), slabSize, Quaternion.Euler(-ang, 0f, 0f), roofMat);
+        MakeGable(hp, new Vector3(-(w * 0.5f - t * 0.5f), wallH, 0f), d, rise, gableMesh, wallMat);
+        MakeGable(hp, new Vector3((w * 0.5f - t * 0.5f), wallH, 0f), d, rise, gableMesh, wallMat);
+
+        Furnish(hp, w, d, t, rand, furnMat, clothMat);
 
         house.AddComponent<HouseFootprint>().size = new Vector2(w, d);
+    }
+
+    // Z축 방향 옆벽 한 장. 가운데에 창문 구멍을 낸다. outward는 바깥쪽 방향(-1/+1).
+    static void MakeSideWall(Transform parent, float x, float length, float wallH, float t,
+        Material wallMat, Material trimMat, float outward)
+    {
+        const float winW = 1.3f, sill = 1.0f, winH = 1.1f;
+        if (length < winW + 1.2f || wallH < sill + winH + 0.8f)
+        {
+            MakeBox(parent, new Vector3(x, wallH * 0.5f, 0f), new Vector3(t, wallH, length), wallMat);
+            return;
+        }
+
+        float topH = wallH - sill - winH;
+        float sideLen = (length - winW) * 0.5f;
+        float off = (winW + sideLen) * 0.5f;
+        // 창 아래 / 창 위 / 창 좌우
+        MakeBox(parent, new Vector3(x, sill * 0.5f, 0f), new Vector3(t, sill, length), wallMat);
+        MakeBox(parent, new Vector3(x, sill + winH + topH * 0.5f, 0f), new Vector3(t, topH, length), wallMat);
+        MakeBox(parent, new Vector3(x, sill + winH * 0.5f, off), new Vector3(t, winH, sideLen), wallMat);
+        MakeBox(parent, new Vector3(x, sill + winH * 0.5f, -off), new Vector3(t, winH, sideLen), wallMat);
+        // 바깥쪽 창턱
+        MakeBox(parent, new Vector3(x + outward * (t * 0.5f + 0.1f), sill - 0.03f, 0f), new Vector3(0.24f, 0.07f, winW + 0.3f), trimMat);
+    }
+
+    // 박공 삼각형 (양면). 단위 삼각형 메시를 집 깊이/지붕 높이에 맞게 늘려 쓴다.
+    static void MakeGable(Transform parent, Vector3 localPos, float depth, float rise, Mesh mesh, Material mat)
+    {
+        var go = new GameObject("Gable");
+        go.transform.SetParent(parent, false);
+        go.transform.localPosition = localPos;
+        go.transform.localRotation = Quaternion.Euler(0f, 90f, 0f);
+        go.transform.localScale = new Vector3(depth, rise, 1f);
+        go.AddComponent<MeshFilter>().sharedMesh = mesh;
+        go.AddComponent<MeshRenderer>().sharedMaterial = mat;
+    }
+
+    // 집 안 가구: 침대, 탁자, 상자, 선반. 문 앞 통로는 비워 둔다. 숨을 곳/엄폐물이 된다.
+    static void Furnish(Transform house, float w, float d, float t, System.Random rand, Material wood, Material cloth)
+    {
+        float ix = w * 0.5f - t - 0.3f; // 안쪽 사용 가능 반폭
+        float iz = d * 0.5f - t - 0.3f;
+
+        // 침대 (뒤쪽 모서리 한쪽)
+        float side = rand.NextDouble() < 0.5 ? -1f : 1f;
+        MakeBox(house, new Vector3(side * (ix - 0.5f), 0.2f, -iz + 1.0f), new Vector3(1.0f, 0.4f, 2.0f), wood);
+        MakeBox(house, new Vector3(side * (ix - 0.5f), 0.46f, -iz + 1.2f), new Vector3(0.9f, 0.14f, 1.5f), cloth);
+
+        // 탁자 (뒤쪽 절반 안에서 임의 위치)
+        float tx = Mathf.Lerp(-ix + 0.8f, ix - 0.8f, (float)rand.NextDouble());
+        float tz = Mathf.Lerp(-iz + 0.6f, -0.3f, (float)rand.NextDouble());
+        if (Mathf.Abs(tx - side * (ix - 0.5f)) < 1.4f) tx = -side * (ix - 1.2f); // 침대와 겹치지 않게
+        MakeBox(house, new Vector3(tx, 0.76f, tz), new Vector3(1.2f, 0.08f, 0.8f), wood);
+        float[] lx = { -0.52f, 0.52f };
+        float[] lz = { -0.32f, 0.32f };
+        foreach (float ox in lx)
+            foreach (float oz in lz)
+                MakeBox(house, new Vector3(tx + ox, 0.36f, tz + oz), new Vector3(0.08f, 0.72f, 0.08f), wood);
+
+        // 상자 2~3개 (뒷벽 쪽)
+        int crates = 2 + rand.Next(2);
+        for (int i = 0; i < crates; i++)
+        {
+            float cs = 0.55f + (float)rand.NextDouble() * 0.35f;
+            float cx = Mathf.Lerp(-ix + 0.4f, ix - 0.4f, (float)rand.NextDouble());
+            MakeBox(house, new Vector3(cx, cs * 0.5f, -iz + cs * 0.5f), new Vector3(cs, cs, cs), wood);
+        }
+
+        // 선반 (창문 위치를 피해 옆벽 앞/뒤쪽)
+        if (rand.NextDouble() < 0.7)
+        {
+            float shelfSide = -side;
+            float sz = (rand.NextDouble() < 0.5 ? -1f : 1f) * Mathf.Min(iz - 0.8f, 1.3f + (float)rand.NextDouble());
+            if (Mathf.Abs(sz) < 1.0f) sz = Mathf.Sign(sz == 0f ? 1f : sz) * 1.2f;
+            MakeBox(house, new Vector3(shelfSide * (ix - 0.15f), 0.9f, sz), new Vector3(0.3f, 1.8f, 1.2f), wood);
+        }
+    }
+
+    // 회전이 있는 박스 (지붕 경사면용)
+    static void MakeBoxRot(Transform parent, Vector3 localPos, Vector3 size, Quaternion localRot, Material mat)
+    {
+        var box = GameObject.CreatePrimitive(PrimitiveType.Cube);
+        box.transform.SetParent(parent, false);
+        box.transform.localPosition = localPos;
+        box.transform.localRotation = localRot;
+        box.transform.localScale = size;
+        box.GetComponent<Renderer>().sharedMaterial = mat;
+    }
+
+    // 밑변 1, 높이 1의 양면 삼각형 메시 (박공벽용). 에셋으로 저장해야 씬 저장 후에도 유지된다.
+    static Mesh MakeGableMesh()
+    {
+        const string path = "Assets/Meshes/GableTri.asset";
+        var existing = AssetDatabase.LoadAssetAtPath<Mesh>(path);
+        if (existing != null) return existing;
+
+        var mesh = new Mesh { name = "GableTri" };
+        mesh.SetVertices(new List<Vector3>
+        {
+            new Vector3(-0.5f, 0f, 0f), new Vector3(0.5f, 0f, 0f), new Vector3(0f, 1f, 0f),
+            new Vector3(-0.5f, 0f, 0f), new Vector3(0.5f, 0f, 0f), new Vector3(0f, 1f, 0f),
+        });
+        mesh.SetTriangles(new List<int> { 0, 1, 2, 3, 5, 4 }, 0);
+        mesh.RecalculateNormals();
+        AssetDatabase.CreateAsset(mesh, path);
+        return mesh;
     }
 
     static void MakeBox(Transform parent, Vector3 localPos, Vector3 size, Material mat)
     {
         var box = GameObject.CreatePrimitive(PrimitiveType.Cube);
-        box.transform.SetParent(parent);
+        box.transform.SetParent(parent, false);
         box.transform.localPosition = localPos;
+        box.transform.localRotation = Quaternion.identity;
         box.transform.localScale = size;
         box.GetComponent<Renderer>().sharedMaterial = mat;
     }
@@ -382,6 +577,7 @@ public static class SetupScene
             AssetDatabase.CreateAsset(mat, path);
         }
         mat.color = color;
+        if (mat.HasProperty("_Glossiness")) mat.SetFloat("_Glossiness", 0.08f); // 플라스틱처럼 번들거리지 않게
         EditorUtility.SetDirty(mat);
         return mat;
     }
