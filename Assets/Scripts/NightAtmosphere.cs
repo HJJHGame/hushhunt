@@ -21,7 +21,7 @@ public class NightAtmosphere : MonoBehaviour
         RenderSettings.fogDensity = 0.028f;
 
         // 달빛: 차가운 색 + 그림자. 나무/집/캐릭터가 땅에 그림자를 드리운다.
-        foreach (var l in FindObjectsOfType<Light>())
+        foreach (var l in FindObjectsByType<Light>(FindObjectsSortMode.None))
         {
             if (l.type != LightType.Directional) continue;
             l.color = new Color(0.55f, 0.68f, 0.95f);
