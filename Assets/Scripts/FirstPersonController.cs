@@ -34,6 +34,9 @@ public class FirstPersonController : MonoBehaviour
         // 밤 조명(그림자/환경광/안개)도 기존 씬에 자동 적용.
         if (GetComponent<NightAtmosphere>() == null)
             gameObject.AddComponent<NightAtmosphere>();
+        // 바닥 텍스처(흙/이끼/낙엽)도 기존 씬에 자동 적용.
+        if (GetComponent<GroundTexture>() == null)
+            gameObject.AddComponent<GroundTexture>();
     }
 
     void Start()
