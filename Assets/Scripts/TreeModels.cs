@@ -46,7 +46,10 @@ public class TreeModels : MonoBehaviour
             var go = Instantiate(prefab, t);
             go.name = "TreeModel";
             go.transform.localPosition = Vector3.zero;
-            go.transform.localRotation = Quaternion.Euler(0f, (float)rand.NextDouble() * 360f, 0f);
+            // 방향은 제각각, 살짝 기울어진 나무로 획일적인 줄맞춤 느낌을 없앤다.
+            float tiltX = (float)(rand.NextDouble() * 6.0 - 3.0);
+            float tiltZ = (float)(rand.NextDouble() * 6.0 - 3.0);
+            go.transform.localRotation = Quaternion.Euler(tiltX, (float)rand.NextDouble() * 360f, tiltZ);
             go.transform.localScale = Vector3.one;
 
             foreach (var c in go.GetComponentsInChildren<Collider>()) Destroy(c);
@@ -59,7 +62,9 @@ public class TreeModels : MonoBehaviour
             if (b.size.y > 0.001f)
             {
                 float target = 9.5f * oldScale;
-                go.transform.localScale = Vector3.one * (target / b.size.y);
+                float k = target / b.size.y;
+                float girth = 0.9f + (float)rand.NextDouble() * 0.25f; // 굵기 변화
+                go.transform.localScale = new Vector3(k * girth, k, k * girth);
 
                 // 모델 원점이 밑바닥이 아니어도 땅에 박히거나 뜨지 않게 가장 낮은 점을 땅에 맞춘다.
                 var nb = rends[0].bounds;
