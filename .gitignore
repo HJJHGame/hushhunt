@@ -34,3 +34,10 @@ Thumbs.db
 sysinfo.txt
 *.stackdump
 crashlytics-build.properties
+
+# Unity extras
+[Rr]ecordings/
+*.apk
+*.aab
+*.unitypackage
+*.app
