@@ -40,7 +40,22 @@ public class PlayerBody : MonoBehaviour
             new Vector3(0f, -0.80f, 0.10f), new Vector3(0.23f, 0.16f, 0.42f), boots);
         leftArm = Limb(root, "Left Arm", new Vector3(-0.34f, 0.40f, -0.06f), 0.60f, 0.16f, clothes);
         rightArm = Limb(root, "Right Arm", new Vector3(0.34f, 0.40f, -0.06f), 0.60f, 0.16f, clothes);
-        upperBody = new[] { torso, head, leftArm.GetComponentInChildren<Renderer>(), rightArm.GetComponentInChildren<Renderer>() };
+        // 후드, 배낭, 벨트, 손: 1인칭에선 그림자만 남지만 다른 플레이어 눈에는 윤곽이 또렷해진다.
+        var hood = Part(root, "Hood", PrimitiveType.Sphere,
+            new Vector3(0f, 0.70f, -0.12f), new Vector3(0.38f, 0.40f, 0.40f), clothes);
+        var pack = Part(root, "Backpack", PrimitiveType.Cube,
+            new Vector3(0f, 0.18f, -0.30f), new Vector3(0.36f, 0.46f, 0.18f), boots);
+        var belt = Part(root, "Belt", PrimitiveType.Cube,
+            new Vector3(0f, -0.13f, -0.06f), new Vector3(0.50f, 0.07f, 0.30f), boots);
+        var leftHand = Part(leftArm, "Left Hand", PrimitiveType.Cube,
+            new Vector3(0f, -0.64f, 0f), new Vector3(0.14f, 0.14f, 0.14f), skin);
+        var rightHand = Part(rightArm, "Right Hand", PrimitiveType.Cube,
+            new Vector3(0f, -0.64f, 0f), new Vector3(0.14f, 0.14f, 0.14f), skin);
+        upperBody = new[]
+        {
+            torso, head, hood, pack, belt, leftHand, rightHand,
+            leftArm.GetComponentInChildren<Renderer>(), rightArm.GetComponentInChildren<Renderer>()
+        };
         SetFirstPerson(firstPerson);
     }
 
