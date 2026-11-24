@@ -17,6 +17,7 @@ public class FirstPersonController : MonoBehaviour
     CharacterController controller;
     float verticalVelocity;
     float pitch;
+    bool escaped; // Esc로 직접 커서를 푼 상태
 
     void Awake()
     {
@@ -24,6 +25,9 @@ public class FirstPersonController : MonoBehaviour
         // 기존 씬도 재생성 없이 다리/발 모델을 표시한다.
         if (GetComponent<PlayerBody>() == null)
             gameObject.AddComponent<PlayerBody>();
+        // 크로스헤어도 기존 씬에 자동으로 붙인다.
+        if (GetComponent<Crosshair>() == null)
+            gameObject.AddComponent<Crosshair>();
     }
 
     void Start()
@@ -41,9 +45,15 @@ public class FirstPersonController : MonoBehaviour
         Move();
 
         if (Input.GetKeyDown(KeyCode.Escape))
+        {
+            escaped = true;
             LockCursor(false);
+        }
         else if (Input.GetMouseButtonDown(0) && Cursor.lockState != CursorLockMode.Locked)
+        {
+            escaped = false;
             LockCursor(true);
+        }
     }
 
     void Look()
@@ -79,6 +89,13 @@ public class FirstPersonController : MonoBehaviour
 
         Vector3 velocity = dir * speed + Vector3.up * verticalVelocity;
         controller.Move(velocity * Time.deltaTime);
+    }
+
+    // 창 포커스를 얻을 때(게임 시작 직후 포함) 다시 잠가서 커서를 숨긴다.
+    void OnApplicationFocus(bool focused)
+    {
+        if (focused && !escaped)
+            LockCursor(true);
     }
 
     void LockCursor(bool locked)
