@@ -11,7 +11,7 @@ using UnityEngine;
 public static class SetupScene
 {
     const string ScenePath = "Assets/Scenes/Main.unity";
-    const int SceneVersion = 6; // 씬 구성을 바꾸면 1 올린다
+    const int SceneVersion = 7; // 씬 구성을 바꾸면 1 올린다
     const string VersionKey = "HushHunt.SceneVersion";
 
     static SetupScene()
@@ -58,8 +58,8 @@ public static class SetupScene
         // 분위기: 슬렌더맨 같은 공포 숲 - 짙은 안개, 키 크고 가는 나무 실루엣
         RenderSettings.fog = true;
         RenderSettings.fogMode = FogMode.Exponential;
-        RenderSettings.fogColor = new Color(0.09f, 0.11f, 0.13f); // 안개가 살짝 밝아야 나무가 실루엣으로 보임
-        RenderSettings.fogDensity = 0.035f;
+        RenderSettings.fogColor = new Color(0.07f, 0.10f, 0.14f); // 안개가 살짝 밝아야 나무가 실루엣으로 보임 (NightAtmosphere와 같은 값)
+        RenderSettings.fogDensity = 0.028f;
         RenderSettings.ambientMode = UnityEngine.Rendering.AmbientMode.Flat;
         RenderSettings.ambientLight = new Color(0.05f, 0.06f, 0.08f);
 
@@ -223,6 +223,8 @@ public static class SetupScene
         var playerCam = camGo.AddComponent<Camera>();
         playerCam.clearFlags = CameraClearFlags.SolidColor; // 스카이박스 대신 안개색 배경 (밤 하늘)
         playerCam.backgroundColor = new Color(0.06f, 0.08f, 0.10f);
+        playerCam.nearClipPlane = 0.1f;
+        playerCam.farClipPlane = 150f; // 짙은 안개로 먼 곳은 안 보이므로 그리지 않는다 (성능)
         camGo.AddComponent<AudioListener>();
 
         var fpc = player.AddComponent<FirstPersonController>();
@@ -237,6 +239,8 @@ public static class SetupScene
         // 라운드 진행 관리자: 숨는 시간 -> 수색 타이머 -> 종료까지 한 판의 흐름
         new GameObject("GameManager").AddComponent<GameManager>();
 
+        MarkStatic();
+
         EditorSceneManager.SaveScene(scene, ScenePath);
         EditorPrefs.SetInt(VersionKey, SceneVersion);
 
@@ -244,6 +248,22 @@ public static class SetupScene
         EditorBuildSettings.scenes = new[] { new EditorBuildSettingsScene(ScenePath, true) };
 
         Debug.Log("[Hush Hunt] Main scene created at " + ScenePath + " (v" + SceneVersion + ")");
+    }
+
+    // 움직이지 않는 오브젝트(땅/집/바위/울타리/경계벽)는 정적 배칭 대상으로 표시해 렌더링 비용을 줄인다.
+    // 나무는 시작할 때 모델로 교체되므로 제외한다.
+    static void MarkStatic()
+    {
+        const StaticEditorFlags flags = StaticEditorFlags.BatchingStatic | StaticEditorFlags.OccludeeStatic;
+        foreach (var t in Object.FindObjectsByType<Transform>(FindObjectsSortMode.None))
+        {
+            string n = t.name;
+            if (n == "Ground" || n == "Rock" || n == "Edge Wall" || n == "Old Fence" || n == "House")
+            {
+                foreach (var child in t.GetComponentsInChildren<Transform>(true))
+                    GameObjectUtility.SetStaticEditorFlags(child.gameObject, flags);
+            }
+        }
     }
 
     // 속 빈 집 한 채: 벽 4면(앞벽에 문 개구부) + 지붕 슬래브. 축 정렬, 문은 +Z 방향.

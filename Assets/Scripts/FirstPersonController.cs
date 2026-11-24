@@ -98,6 +98,10 @@ public class FirstPersonController : MonoBehaviour
 
         Vector3 velocity = dir * speed + Vector3.up * verticalVelocity;
         controller.Move(velocity * Time.deltaTime);
+
+        // 점프 중 천장(집 지붕 안쪽 등)에 머리를 부딪히면 위로 계속 밀리지 않고 바로 떨어진다.
+        if ((controller.collisionFlags & CollisionFlags.Above) != 0 && verticalVelocity > 0f)
+            verticalVelocity = 0f;
     }
 
     // 창 포커스를 얻을 때(게임 시작 직후 포함) 다시 잠가서 커서를 숨긴다.

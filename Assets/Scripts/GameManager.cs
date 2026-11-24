@@ -20,6 +20,9 @@ public class GameManager : MonoBehaviour
 
     float bannerUntil = -1f;
 
+    // OnGUI마다 GUIStyle을 새로 만들면 GC가 계속 쌓이므로 처음 한 번만 만든다.
+    static GUIStyle timerStyle, titleStyle, subStyle;
+
     void Start()
     {
         CurrentPhase = Phase.Hiding;
@@ -90,29 +93,35 @@ public class GameManager : MonoBehaviour
     // 수색 중 화면 위쪽 중앙의 남은 시간
     static void DrawTimer(string text)
     {
-        var style = new GUIStyle(GUI.skin.label)
+        if (timerStyle == null)
         {
-            alignment = TextAnchor.MiddleCenter,
-            fontSize = 28,
-            fontStyle = FontStyle.Bold
-        };
-        DrawShadowed(new Rect(0f, 12f, Screen.width, 40f), text, style);
+            timerStyle = new GUIStyle(GUI.skin.label)
+            {
+                alignment = TextAnchor.MiddleCenter,
+                fontSize = 28,
+                fontStyle = FontStyle.Bold
+            };
+        }
+        DrawShadowed(new Rect(0f, 12f, Screen.width, 40f), text, timerStyle);
     }
 
     // 화면 위쪽 1/4 지점의 큰 안내 (제목 + 부제). 정중앙 크로스헤어와 겹치지 않게 위로 올렸다.
     static void DrawCenter(string title, string subtitle)
     {
-        var titleStyle = new GUIStyle(GUI.skin.label)
+        if (titleStyle == null)
         {
-            alignment = TextAnchor.MiddleCenter,
-            fontSize = 34,
-            fontStyle = FontStyle.Bold
-        };
-        var subStyle = new GUIStyle(GUI.skin.label)
-        {
-            alignment = TextAnchor.MiddleCenter,
-            fontSize = 18
-        };
+            titleStyle = new GUIStyle(GUI.skin.label)
+            {
+                alignment = TextAnchor.MiddleCenter,
+                fontSize = 34,
+                fontStyle = FontStyle.Bold
+            };
+            subStyle = new GUIStyle(GUI.skin.label)
+            {
+                alignment = TextAnchor.MiddleCenter,
+                fontSize = 18
+            };
+        }
 
         DrawShadowed(new Rect(0f, Screen.height * 0.25f - 60f, Screen.width, 50f), title, titleStyle);
         DrawShadowed(new Rect(0f, Screen.height * 0.25f - 10f, Screen.width, 30f), subtitle, subStyle);

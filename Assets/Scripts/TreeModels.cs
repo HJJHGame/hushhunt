@@ -11,9 +11,17 @@ public class TreeModels : MonoBehaviour
         if (prefabs == null || prefabs.Length == 0) return;
 
         var rand = new System.Random(11);
-        foreach (var t in FindObjectsOfType<Transform>())
+        var all = FindObjectsByType<Transform>(FindObjectsSortMode.None);
+        var pines = new System.Collections.Generic.List<Transform>();
+        foreach (var cand in all) if (cand.name == "Pine Tree") pines.Add(cand);
+        // 검색 순서가 실행마다 달라도 같은 숲이 나오도록 위치로 정렬한다.
+        pines.Sort((p1, p2) =>
         {
-            if (t.name != "Pine Tree") continue;
+            int cmp = p1.position.x.CompareTo(p2.position.x);
+            return cmp != 0 ? cmp : p1.position.z.CompareTo(p2.position.z);
+        });
+        foreach (var t in pines)
+        {
 
             // 기존 원뿔 나무의 재질(씬의 어두운 색)을 그대로 써서 안개/밤 분위기와 맞춘다.
             Material leafMat = null, barkMat = null;
@@ -52,6 +60,11 @@ public class TreeModels : MonoBehaviour
             {
                 float target = 9.5f * oldScale;
                 go.transform.localScale = Vector3.one * (target / b.size.y);
+
+                // 모델 원점이 밑바닥이 아니어도 땅에 박히거나 뜨지 않게 가장 낮은 점을 땅에 맞춘다.
+                var nb = rends[0].bounds;
+                for (int i = 1; i < rends.Length; i++) nb.Encapsulate(rends[i].bounds);
+                go.transform.position += Vector3.up * (t.position.y - nb.min.y);
             }
 
             // 재질: 이름에 wood/bark 가 있으면 줄기색, 나머지는 잎색.
