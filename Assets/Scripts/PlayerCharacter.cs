@@ -82,6 +82,17 @@ public class PlayerCharacter : MonoBehaviour
             model.transform.position += Vector3.up * (footY - b.min.y);
         }
 
+        // 1인칭 시점 보정:
+        // - 몸 모델을 살짝 뒤로 빼서 카메라가 몸/후드 안쪽에 들어가지 않게 한다.
+        // - 눈 높이를 실제 모델 키에 맞춘다(발바닥 기준 약 92%). 기존 2m 프리미티브 몸
+        //   기준 값(0.72)은 1.8m 모델에서는 후드 안쪽에 해당해 내부 면이 보였다.
+        model.transform.localPosition += new Vector3(0f, 0f, -0.12f);
+        if (firstPerson && fpc != null && fpc.cameraPivot != null)
+        {
+            float eyeY = -controller.height * 0.5f + targetHeight * 0.92f;
+            fpc.cameraPivot.localPosition = new Vector3(0f, eyeY, 0.12f);
+        }
+
         // 팔레트 텍스처: 임포트 설정과 무관하게 코드에서 확실하게 연결한다.
         var tex = Resources.Load<Texture2D>("Character/rogue_texture");
         runtimeMat = new Material(Shader.Find("Standard"));
@@ -99,6 +110,7 @@ public class PlayerCharacter : MonoBehaviour
 
         // 머리 뼈: 1인칭에서는 숨긴다 (카메라가 머리 안에 있으므로)
         headBone = FindDeep(model.transform, "head");
+        if (headBone == null) headBone = FindDeep(model.transform, "Head");
 
         var animator = model.GetComponent<Animator>();
         if (animator == null) animator = model.AddComponent<Animator>();
@@ -126,6 +138,9 @@ public class PlayerCharacter : MonoBehaviour
     void LateUpdate()
     {
         if (firstPerson != appliedFirstPerson) ApplyFirstPerson();
+        // 애니메이션 클립에 뼈 스케일 키가 있으면 머리 숨김이 매 프레임 되돌아갈 수 있어 계속 강제한다.
+        if (firstPerson && headBone != null && headBone.localScale.x > 0.001f)
+            headBone.localScale = Vector3.one * 0.0001f;
         if (!graph.IsValid()) return;
 
         // 클립이 끝까지 가면 멈추지 않게 수동으로 감는다 (임포트 루프 설정과 무관하게)
