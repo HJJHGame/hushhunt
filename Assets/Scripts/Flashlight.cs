@@ -14,6 +14,8 @@ public class Flashlight : MonoBehaviour
     Light lamp;
     AudioSource clickSource;
     AudioClip clickClip;
+    Material lensMat;
+    readonly System.Collections.Generic.List<Material> propMats = new System.Collections.Generic.List<Material>();
     float dipUntil;
 
     public bool IsOn { get { return lamp != null && lamp.enabled; } }
@@ -26,9 +28,18 @@ public class Flashlight : MonoBehaviour
         if (pivot == null && Camera.main != null) pivot = Camera.main.transform;
         if (pivot == null) { enabled = false; return; }
 
+        // 왼손에 들린 손전등 모형: 카메라 왼쪽 아래에 간단한 프리미티브로 만든다.
+        // KayKit 전신 애니메이션은 팔을 크게 흔들어 손 뼈에 붙이면 화면 밖으로 벗어나므로
+        // 1인칭 소품 표준처럼 카메라 피벗에 붙인다.
+        var prop = new GameObject("Flashlight Prop");
+        prop.transform.SetParent(pivot, false);
+        prop.transform.localPosition = new Vector3(-0.24f, -0.19f, 0.38f);
+        prop.transform.localRotation = Quaternion.identity;
+        BuildProp(prop.transform);
+
         var go = new GameObject("Flashlight");
-        go.transform.SetParent(pivot, false);
-        go.transform.localPosition = new Vector3(0.2f, -0.18f, 0.25f);
+        go.transform.SetParent(prop.transform, false);
+        go.transform.localPosition = new Vector3(0f, 0f, 0.13f);
         go.transform.localRotation = Quaternion.identity;
 
         lamp = go.AddComponent<Light>();
@@ -61,7 +72,8 @@ public class Flashlight : MonoBehaviour
             clickSource.PlayOneShot(clickClip, 0.6f);
         }
 
-        if (!lamp.enabled) return;
+        if (!lamp.enabled) { SetLens(false); return; }
+        SetLens(true);
 
         if (Time.time < dipUntil)
         {
@@ -76,9 +88,53 @@ public class Flashlight : MonoBehaviour
         }
     }
 
+    // 켜지면 렌즈가 발광하고 꺼지면 꺼진다.
+    void SetLens(bool on)
+    {
+        if (lensMat != null)
+            lensMat.SetColor("_EmissionColor", on ? new Color(1f, 0.93f, 0.7f) * 1.6f : Color.black);
+    }
+
+    void BuildProp(Transform root)
+    {
+        // 몸통: 길이 16cm, 지름 3cm의 어두운 금속 통
+        var bodyMat = new Material(Shader.Find("Standard"));
+        bodyMat.color = new Color(0.13f, 0.13f, 0.14f);
+        bodyMat.SetFloat("_Glossiness", 0.55f);
+        propMats.Add(bodyMat);
+        AddPart(root, "Body", new Vector3(0f, 0f, 0f), new Vector3(0.03f, 0.08f, 0.03f), bodyMat);
+
+        // 머리(베젤): 지름 5cm, 살짝 넓어진다
+        AddPart(root, "Head", new Vector3(0f, 0f, 0.09f), new Vector3(0.05f, 0.03f, 0.05f), bodyMat);
+
+        // 렌즈: 손전등 상태에 따라 발광한다
+        lensMat = new Material(Shader.Find("Standard"));
+        lensMat.EnableKeyword("_EMISSION");
+        propMats.Add(lensMat);
+        AddPart(root, "Lens", new Vector3(0f, 0f, 0.122f), new Vector3(0.042f, 0.006f, 0.042f), lensMat);
+
+        // 모형 그림자는 끈다 (손전등 빛에 자기 그림자가 생기는 것 방지)
+        foreach (var r in root.GetComponentsInChildren<Renderer>())
+            r.shadowCastingMode = UnityEngine.Rendering.ShadowCastingMode.Off;
+    }
+
+    static void AddPart(Transform root, string name, Vector3 pos, Vector3 scale, Material mat)
+    {
+        var part = GameObject.CreatePrimitive(PrimitiveType.Cylinder);
+        part.name = name;
+        Destroy(part.GetComponent<Collider>()); // 프리미티브 기본 콜라이더는 필요 없다
+        part.transform.SetParent(root, false);
+        part.transform.localRotation = Quaternion.Euler(90f, 0f, 0f); // 통 길이 방향을 앞(Z)으로
+        part.transform.localPosition = pos;
+        part.transform.localScale = scale;
+        part.GetComponent<Renderer>().sharedMaterial = mat;
+    }
+
     void OnDestroy()
     {
         if (clickClip != null) Destroy(clickClip);
+        foreach (var m in propMats) if (m != null) Destroy(m);
+        propMats.Clear();
     }
 
     static AudioClip MakeClick()
