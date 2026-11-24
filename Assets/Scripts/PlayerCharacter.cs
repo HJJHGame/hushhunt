@@ -3,7 +3,7 @@ using UnityEngine.Animations;
 using UnityEngine.Playables;
 
 // 리깅된 캐릭터 + 애니메이션 상태 머신.
-// 우선순위: 사실적 인간 모델(Grab3D Soldier, CC0, Assets/Resources/CharacterReal) →
+// 우선순위: 사실적 인간 모델(Grab3D Ninja, CC0, Assets/Resources/CharacterReal) →
 // KayKit Rogue Hooded(CC0, Assets/Resources/Character) → 프리미티브 몸(PlayerBody).
 // 씬 수정 없이 시작할 때 적용된다.
 // 1인칭에서는 머리 뼈를 숨겨 카메라가 머리 안쪽을 보지 않게 하고,
@@ -44,16 +44,16 @@ public class PlayerCharacter : MonoBehaviour
         fpc = GetComponent<FirstPersonController>();
         controller = GetComponent<CharacterController>();
 
-        // 사실적 인간 모델(Grab3D Soldier, CC0)을 우선 쓰고, 없으면 KayKit 도적,
+        // 사실적 인간 모델(Grab3D Ninja, CC0)을 우선 쓰고, 없으면 KayKit 도적,
         // 그것도 없으면 프리미티브 몸으로 되돌아간다.
         bool realistic = false;
         idleSpeed = 1f;
-        var prefab = Resources.Load<GameObject>("CharacterReal/soldier-rigged");
+        var prefab = Resources.Load<GameObject>("CharacterReal/ninja-rigged");
         if (prefab != null)
         {
             // 리깅 FBX 안에 walk/run 클립이 함께 들어 있다 (idle 클립은 없음).
-            clipWalk = LoadClip("CharacterReal/soldier-rigged", "walk");
-            clipRun = LoadClip("CharacterReal/soldier-rigged", "run");
+            clipWalk = LoadClip("CharacterReal/ninja-rigged", "walk");
+            clipRun = LoadClip("CharacterReal/ninja-rigged", "run");
             if (clipWalk != null && clipRun != null)
             {
                 realistic = true;
