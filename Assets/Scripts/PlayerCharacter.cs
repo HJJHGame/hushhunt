@@ -2,9 +2,10 @@ using UnityEngine;
 using UnityEngine.Animations;
 using UnityEngine.Playables;
 
-// 리깅된 캐릭터 (KayKit Rogue Hooded, CC0) + 애니메이션 상태 머신.
-// 모델과 클립은 Assets/Resources/Character 에서 불러온다. 씬 수정 없이 시작할 때 적용되고,
-// 에셋이 없으면 기존 프리미티브 몸(PlayerBody)으로 되돌아간다.
+// 리깅된 캐릭터 + 애니메이션 상태 머신.
+// 우선순위: 사실적 인간 모델(Grab3D Soldier, CC0, Assets/Resources/CharacterReal) →
+// KayKit Rogue Hooded(CC0, Assets/Resources/Character) → 프리미티브 몸(PlayerBody).
+// 씬 수정 없이 시작할 때 적용된다.
 // 1인칭에서는 머리 뼈를 숨겨 카메라가 머리 안쪽을 보지 않게 하고,
 // 아래를 보면 실제 걷는 다리가 보인다. 멀티플레이어 원격 캐릭터에는 SetFirstPerson(false).
 [DefaultExecutionOrder(200)]
@@ -13,6 +14,7 @@ public class PlayerCharacter : MonoBehaviour
 {
     public bool firstPerson = true;
     public float targetHeight = 1.8f; // 캐릭터 키 (m). 모델 원본 크기와 무관하게 맞춘다.
+    public float modelYawOffset = 0f; // 모델이 뒤를 보고 걸으면 180으로 조정
 
     const float FadeSeconds = 0.18f;
 
@@ -34,6 +36,7 @@ public class PlayerCharacter : MonoBehaviour
 
     AnimationClip clipIdle, clipWalk, clipWalkBack, clipStrafeL, clipStrafeR, clipRun, clipAir;
     string currentState = "";
+    float idleSpeed = 1f; // 사실적 모델은 idle 클립이 없어 걷기를 느리게 재생한다
 
     void Start()
     {
@@ -41,14 +44,42 @@ public class PlayerCharacter : MonoBehaviour
         fpc = GetComponent<FirstPersonController>();
         controller = GetComponent<CharacterController>();
 
-        var prefab = Resources.Load<GameObject>("Character/Rogue_Hooded");
-        clipIdle = LoadClip("Character/Rig_Medium_General", "Idle_A");
-        clipWalk = LoadClip("Character/Rig_Medium_MovementBasic", "Walking_A");
-        clipWalkBack = LoadClip("Character/Rig_Medium_MovementAdvanced", "Walking_Backwards");
-        clipStrafeL = LoadClip("Character/Rig_Medium_MovementAdvanced", "Running_Strafe_Left");
-        clipStrafeR = LoadClip("Character/Rig_Medium_MovementAdvanced", "Running_Strafe_Right");
-        clipRun = LoadClip("Character/Rig_Medium_MovementBasic", "Running_A");
-        clipAir = LoadClip("Character/Rig_Medium_MovementBasic", "Jump_Idle");
+        // 사실적 인간 모델(Grab3D Soldier, CC0)을 우선 쓰고, 없으면 KayKit 도적,
+        // 그것도 없으면 프리미티브 몸으로 되돌아간다.
+        bool realistic = false;
+        idleSpeed = 1f;
+        var prefab = Resources.Load<GameObject>("CharacterReal/soldier-rigged");
+        if (prefab != null)
+        {
+            // 리깅 FBX 안에 walk/run 클립이 함께 들어 있다 (idle 클립은 없음).
+            clipWalk = LoadClip("CharacterReal/soldier-rigged", "walk");
+            clipRun = LoadClip("CharacterReal/soldier-rigged", "run");
+            if (clipWalk != null && clipRun != null)
+            {
+                realistic = true;
+                clipIdle = clipWalk; // idle 대용: 걷기를 아주 느리게 재생해 미세한 움직임만 남긴다
+                clipWalkBack = clipWalk;
+                clipStrafeL = clipWalk;
+                clipStrafeR = clipWalk;
+                clipAir = clipWalk;
+                idleSpeed = 0.06f;
+            }
+            else
+            {
+                prefab = null; // 클립이 안 읽히면 KayKit 경로로
+            }
+        }
+        if (!realistic)
+        {
+            prefab = Resources.Load<GameObject>("Character/Rogue_Hooded");
+            clipIdle = LoadClip("Character/Rig_Medium_General", "Idle_A");
+            clipWalk = LoadClip("Character/Rig_Medium_MovementBasic", "Walking_A");
+            clipWalkBack = LoadClip("Character/Rig_Medium_MovementAdvanced", "Walking_Backwards");
+            clipStrafeL = LoadClip("Character/Rig_Medium_MovementAdvanced", "Running_Strafe_Left");
+            clipStrafeR = LoadClip("Character/Rig_Medium_MovementAdvanced", "Running_Strafe_Right");
+            clipRun = LoadClip("Character/Rig_Medium_MovementBasic", "Running_A");
+            clipAir = LoadClip("Character/Rig_Medium_MovementBasic", "Jump_Idle");
+        }
 
         if (prefab == null || clipIdle == null || clipWalk == null || clipRun == null)
         {
@@ -66,6 +97,8 @@ public class PlayerCharacter : MonoBehaviour
         var model = Instantiate(prefab, transform, false);
         model.name = "Character Model";
         modelRoot = model.transform;
+        if (modelYawOffset != 0f)
+            model.transform.localRotation = Quaternion.Euler(0f, modelYawOffset, 0f);
 
         // 모델 원본 단위가 달라도 되도록 높이를 재서 목표 키에 맞춘다.
         var rends = model.GetComponentsInChildren<Renderer>(true);
@@ -93,6 +126,18 @@ public class PlayerCharacter : MonoBehaviour
             fpc.cameraPivot.localPosition = new Vector3(0f, eyeY, 0.12f);
         }
 
+        if (realistic)
+        {
+            // 사실적 모델은 FBX에 포함된 PBR 머티리얼/텍스처를 그대로 쓴다.
+            foreach (var r in rends)
+            {
+                // 카메라 밖으로 나가도 그림자가 유지되게 (1인칭에서 자기 그림자용)
+                var smr = r as SkinnedMeshRenderer;
+                if (smr != null) smr.updateWhenOffscreen = true;
+            }
+        }
+        else
+        {
         // 팔레트 텍스처: 임포트 설정과 무관하게 코드에서 확실하게 연결한다.
         var tex = Resources.Load<Texture2D>("Character/rogue_texture");
         runtimeMat = new Material(Shader.Find("Standard"));
@@ -106,6 +151,7 @@ public class PlayerCharacter : MonoBehaviour
             // 카메라 밖으로 나가도 그림자가 유지되게 (1인칭에서 자기 그림자용)
             var smr = r as SkinnedMeshRenderer;
             if (smr != null) smr.updateWhenOffscreen = true;
+        }
         }
 
         // 머리 뼈: 1인칭에서는 숨긴다 (카메라가 머리 안에 있으므로)
@@ -197,7 +243,7 @@ public class PlayerCharacter : MonoBehaviour
 
         float playSpeed = nominal > 0.1f && state != "idle" && state != "air"
             ? Mathf.Clamp(speed / nominal, 0.6f, 1.7f)
-            : 1f;
+            : (state == "idle" ? idleSpeed : 1f);
         CrossTo(clip, state, playSpeed);
     }
 
