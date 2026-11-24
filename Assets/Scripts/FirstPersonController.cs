@@ -28,6 +28,9 @@ public class FirstPersonController : MonoBehaviour
         // 크로스헤어도 기존 씬에 자동으로 붙인다.
         if (GetComponent<Crosshair>() == null)
             gameObject.AddComponent<Crosshair>();
+        // 소나무를 실제 3D 모델로 교체 (모델이 없으면 기존 나무 유지).
+        if (GetComponent<TreeModels>() == null)
+            gameObject.AddComponent<TreeModels>();
     }
 
     void Start()
