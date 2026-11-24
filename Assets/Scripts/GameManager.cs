@@ -99,7 +99,7 @@ public class GameManager : MonoBehaviour
         DrawShadowed(new Rect(0f, 12f, Screen.width, 40f), text, style);
     }
 
-    // 화면 중앙의 큰 안내 (제목 + 부제)
+    // 화면 위쪽 1/4 지점의 큰 안내 (제목 + 부제). 정중앙 크로스헤어와 겹치지 않게 위로 올렸다.
     static void DrawCenter(string title, string subtitle)
     {
         var titleStyle = new GUIStyle(GUI.skin.label)
@@ -114,8 +114,8 @@ public class GameManager : MonoBehaviour
             fontSize = 18
         };
 
-        DrawShadowed(new Rect(0f, Screen.height * 0.5f - 60f, Screen.width, 50f), title, titleStyle);
-        DrawShadowed(new Rect(0f, Screen.height * 0.5f - 10f, Screen.width, 30f), subtitle, subStyle);
+        DrawShadowed(new Rect(0f, Screen.height * 0.25f - 60f, Screen.width, 50f), title, titleStyle);
+        DrawShadowed(new Rect(0f, Screen.height * 0.25f - 10f, Screen.width, 30f), subtitle, subStyle);
     }
 
     // 검은 그림자를 한 번 깔고 흰 글씨를 올려 어두운 배경에서도 읽히게 한다.
