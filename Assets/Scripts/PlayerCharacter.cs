@@ -49,6 +49,8 @@ public class PlayerCharacter : MonoBehaviour
         bool realistic = false;
         idleSpeed = 1f;
         var prefab = Resources.Load<GameObject>("CharacterReal/ninja-rigged");
+        if (prefab == null)
+            Debug.LogWarning("[PlayerCharacter] 닌자 모델 로드 실패: Resources/CharacterReal/ninja-rigged 를 찾지 못함");
         if (prefab != null)
         {
             // 리깅 FBX 안에 walk/run 클립이 함께 들어 있다 (idle 클립은 없음).
@@ -66,6 +68,11 @@ public class PlayerCharacter : MonoBehaviour
             }
             else
             {
+                // 어떤 클립이 들어 있는지 그대로 찍어 사용자가 보낼 수 있게 한다.
+                var names = new System.Text.StringBuilder();
+                foreach (var c in Resources.LoadAll<AnimationClip>("CharacterReal/ninja-rigged"))
+                    names.Append(c.name).Append(' ');
+                Debug.LogWarning("[PlayerCharacter] 닌자 walk/run 클립 로드 실패. 실제 클립 목록: " + names);
                 prefab = null; // 클립이 안 읽히면 KayKit 경로로
             }
         }
@@ -127,6 +134,7 @@ public class PlayerCharacter : MonoBehaviour
         {
             var cam = fpc.cameraPivot.GetComponent<Camera>();
             if (cam != null) cam.nearClipPlane = 0.05f;
+            else Debug.LogWarning("[PlayerCharacter] cameraPivot에서 Camera를 찾지 못함");
             if (firstPerson)
             {
                 float eyeY = -controller.height * 0.5f + targetHeight * 0.92f;
@@ -136,19 +144,36 @@ public class PlayerCharacter : MonoBehaviour
 
         if (realistic)
         {
-            // 사실적 모델은 FBX에 포함된 PBR 머티리얼/텍스처를 그대로 쓴다.
+            // Grab3D FBX는 텍스처를 포함하지 않고 제작자 PC의 절대 경로만 참조한다.
+            // 그대로 두면 몸 전체가 회색으로 보이므로, 같은 패키지(GLB)에서 뽑은
+            // 텍스처를 Resources에서 읽어 연결한다.
+            var baseTex = Resources.Load<Texture2D>("CharacterReal/ninja_basecolor");
+            var normalTex = Resources.Load<Texture2D>("CharacterReal/ninja_normal");
+            if (baseTex == null)
+                Debug.LogWarning("[PlayerCharacter] 닌자 텍스처 로드 실패: Resources/CharacterReal/ninja_basecolor");
             foreach (var r in rends)
             {
                 // 카메라 밖으로 나가도 그림자가 유지되게 (1인칭에서 자기 그림자용)
                 var smr = r as SkinnedMeshRenderer;
                 if (smr != null) smr.updateWhenOffscreen = true;
-                // 텍스처가 임포트되지 않아 밝은 회색으로 나오면 어두운 색으로 대체한다.
                 var m = r.sharedMaterial;
-                if (m != null && m.mainTexture == null && m.color.grayscale > 0.4f)
+                if (m == null) continue;
+                if (m.mainTexture == null)
                 {
                     var inst = r.material; // 인스턴스화해 원본 에셋은 건드리지 않는다
-                    inst.color = new Color(0.23f, 0.25f, 0.2f);
+                    if (baseTex != null)
+                    {
+                        inst.mainTexture = baseTex;
+                        inst.color = Color.white;
+                        if (normalTex != null) inst.SetTexture("_BumpMap", normalTex);
+                    }
+                    else if (m.color.grayscale > 0.4f)
+                    {
+                        // 텍스처마저 없으면 밝은 회색 대신 어두운 색으로라도.
+                        inst.color = new Color(0.23f, 0.25f, 0.2f);
+                    }
                     runtimeMats.Add(inst);
+                    Debug.Log("[PlayerCharacter] 머티리얼 무텍스처 감지 -> 텍스처 연결: " + r.name + " / " + m.name);
                 }
             }
         }
@@ -173,6 +198,14 @@ public class PlayerCharacter : MonoBehaviour
         // 머리 뼈: 1인칭에서는 숨긴다 (카메라가 머리 안에 있으므로)
         headBone = FindDeep(model.transform, "head");
         if (headBone == null) headBone = FindDeep(model.transform, "Head");
+        // 머리 뼈를 못 찾으면 1인칭에서 머리/두건 안쪽이 보여 화면이 회색이 된다.
+        // 실제 뼈 이름을 알 수 있게 위층 뼈 이름을 그대로 찍는다.
+        if (headBone == null)
+        {
+            var bones = new System.Text.StringBuilder();
+            DumpNames(model.transform, bones, 0, 3, 40);
+            Debug.LogWarning("[PlayerCharacter] 머리 뼈(head/Head) 탐색 실패. 모델 구조: " + bones);
+        }
 
         var animator = model.GetComponent<Animator>();
         if (animator == null) animator = model.AddComponent<Animator>();
@@ -193,6 +226,12 @@ public class PlayerCharacter : MonoBehaviour
         current = 0;
         currentState = "idle";
         graph.Play();
+
+        Debug.Log("[PlayerCharacter] 모델 적용: " + (realistic ? "닌자(사실적)" : "KayKit 도적")
+            + " / 스케일 " + model.transform.localScale.x.ToString("F4")
+            + " / 클립 idle=" + (clipIdle != null ? clipIdle.name : "없음")
+            + " walk=" + (clipWalk != null ? clipWalk.name : "없음")
+            + " run=" + (clipRun != null ? clipRun.name : "없음"));
 
         appliedFirstPerson = !firstPerson; // LateUpdate에서 강제 적용
     }
@@ -313,6 +352,13 @@ public class PlayerCharacter : MonoBehaviour
             if (found != null) return found;
         }
         return null;
+    }
+
+    static void DumpNames(Transform t, System.Text.StringBuilder sb, int depth, int maxDepth, int budget)
+    {
+        if (depth > maxDepth || budget <= 0) return;
+        sb.Append(new string('>', depth)).Append(t.name).Append(' ');
+        foreach (Transform c in t) DumpNames(c, sb, depth + 1, maxDepth, budget - 1);
     }
 
     static AnimationClip LoadClip(string resourcePath, string clipName)
