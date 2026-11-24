@@ -14,6 +14,7 @@ public class Minimap : MonoBehaviour
     Texture2D arrowTex;
     HouseFootprint[] houses;
     GUIStyle hintStyle;
+    GUIStyle northStyle;
     bool bigMap;
 
     void Awake()
@@ -63,8 +64,16 @@ public class Minimap : MonoBehaviour
         GUI.color = new Color(0.04f, 0.05f, 0.04f, bigMap ? 0.95f : 0.85f);
         GUI.DrawTexture(map, Texture2D.whiteTexture);
 
-        // 집들
-        GUI.color = new Color(0.5f, 0.4f, 0.28f, 1f);
+        // 격자: 50m 간격. 거리 감각을 잡는 데 도움이 된다.
+        GUI.color = new Color(1f, 1f, 1f, bigMap ? 0.10f : 0.06f);
+        for (int i = 1; i < 4; i++)
+        {
+            float f = i / 4f;
+            GUI.DrawTexture(new Rect(map.x + f * map.width, map.y, 1f, map.height), Texture2D.whiteTexture);
+            GUI.DrawTexture(new Rect(map.x, map.y + f * map.height, map.width, 1f), Texture2D.whiteTexture);
+        }
+
+        // 집들 (어두운 윤곽 + 안쪽 채움)
         if (houses != null)
         {
             foreach (var h in houses)
@@ -73,6 +82,9 @@ public class Minimap : MonoBehaviour
                 Vector2 c = WorldToMap(h.transform.position, map);
                 float w = h.size.x / (worldHalf * 2f) * map.width;
                 float d = h.size.y / (worldHalf * 2f) * map.height;
+                GUI.color = new Color(0.12f, 0.09f, 0.06f, 1f);
+                GUI.DrawTexture(new Rect(c.x - w * 0.5f - 1.5f, c.y - d * 0.5f - 1.5f, w + 3f, d + 3f), Texture2D.whiteTexture);
+                GUI.color = new Color(0.5f, 0.4f, 0.28f, 1f);
                 GUI.DrawTexture(new Rect(c.x - w * 0.5f, c.y - d * 0.5f, w, d), Texture2D.whiteTexture);
             }
         }
@@ -88,6 +100,20 @@ public class Minimap : MonoBehaviour
             GUI.DrawTexture(new Rect(p.x - s * 0.5f, p.y - s * 0.5f, s, s), arrowTex);
             GUI.matrix = prev;
         }
+
+        // 북쪽 표시
+        if (northStyle == null)
+        {
+            northStyle = new GUIStyle(GUI.skin.label)
+            {
+                alignment = TextAnchor.UpperCenter,
+                fontStyle = FontStyle.Bold
+            };
+        }
+        northStyle.fontSize = bigMap ? 18 : 13;
+        GUI.color = new Color(1f, 1f, 1f, 0.7f);
+        GUI.Label(new Rect(map.x, map.y + 1f, map.width, 24f), "N", northStyle);
+        GUI.color = Color.white;
 
         if (bigMap)
         {
