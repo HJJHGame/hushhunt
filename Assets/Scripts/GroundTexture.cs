@@ -7,6 +7,9 @@ public class GroundTexture : MonoBehaviour
     const int Size = 256;
     const float TilesAcrossGround = 70f; // 200m 땅에 70번 반복 = 타일 하나가 약 2.9m
 
+    Texture2D tex;
+    Material mat;
+
     void Start()
     {
         var ground = GameObject.Find("Ground");
@@ -14,14 +17,20 @@ public class GroundTexture : MonoBehaviour
         var rend = ground.GetComponent<Renderer>();
         if (rend == null) return;
 
-        var tex = BuildTexture();
-        var mat = new Material(Shader.Find("Standard"));
+        tex = BuildTexture();
+        mat = new Material(Shader.Find("Standard"));
         mat.mainTexture = tex;
         mat.mainTextureScale = new Vector2(TilesAcrossGround, TilesAcrossGround);
         mat.color = Color.white;
         mat.SetFloat("_Glossiness", 0.05f); // 젖은 흙이지만 반짝이지 않게
         mat.SetFloat("_Metallic", 0f);
         rend.material = mat;
+    }
+
+    void OnDestroy()
+    {
+        if (mat != null) Destroy(mat);
+        if (tex != null) Destroy(tex);
     }
 
     // 가장자리가 이어지는(타일링) 노이즈: 네 방향 오프셋 샘플을 섞는다.
