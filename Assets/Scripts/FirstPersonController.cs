@@ -31,6 +31,9 @@ public class FirstPersonController : MonoBehaviour
         // 소나무를 실제 3D 모델로 교체 (모델이 없으면 기존 나무 유지).
         if (GetComponent<TreeModels>() == null)
             gameObject.AddComponent<TreeModels>();
+        // 밤 조명(그림자/환경광/안개)도 기존 씬에 자동 적용.
+        if (GetComponent<NightAtmosphere>() == null)
+            gameObject.AddComponent<NightAtmosphere>();
     }
 
     void Start()
