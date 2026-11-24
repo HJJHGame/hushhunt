@@ -14,6 +14,11 @@ public class Crosshair : MonoBehaviour
         ring = BuildRing(size, thickness);
     }
 
+    void OnDestroy()
+    {
+        if (ring != null) Destroy(ring);
+    }
+
     void OnGUI()
     {
         if (Event.current.type != EventType.Repaint) return;
