@@ -1,12 +1,13 @@
 using UnityEngine;
 
 // 손전등 (F 키). 카메라에 붙은 스포트라이트. 가끔 깜빡인다.
-// 어둠 속에서 보이게 해주지만 빛이 켜져 있으면 멀리서도 눈에 띈다는 점이 PvP 숨바꼭질의 긴장 요소.
+// 그림자를 켜서 빛이 벽과 나무를 통과하지 않게 한다: 어둠 속에서 보이게 해주지만
+// 빛이 켜져 있으면 멀리서도 눈에 띈다는 점이 PvP 숨바꼭질의 긴장 요소.
 public class Flashlight : MonoBehaviour
 {
     public KeyCode toggleKey = KeyCode.F;
     public bool startOn = true;
-    public float intensity = 2.4f;
+    public float intensity = 2.6f;
     public float range = 38f;
     public float spotAngle = 55f;
 
@@ -37,7 +38,10 @@ public class Flashlight : MonoBehaviour
         lamp.innerSpotAngle = spotAngle * 0.5f;
         lamp.intensity = intensity;
         lamp.color = new Color(1f, 0.93f, 0.78f);
-        lamp.shadows = LightShadows.None;
+        // 스포트라이트 하나의 그림자라 비용이 크지 않고, 빛의 존재감이 크게 달라진다.
+        lamp.shadows = LightShadows.Soft;
+        lamp.shadowStrength = 0.95f;
+        lamp.shadowBias = 0.05f;
         lamp.enabled = startOn;
 
         clickClip = MakeClick();
@@ -85,11 +89,15 @@ public class Flashlight : MonoBehaviour
         for (int i = 0; i < n; i++)
         {
             float t = i / (float)rate;
-            float noise = (float)r.NextDouble() * 2f - 1f;
-            s[i] = (noise * 0.6f + Mathf.Sin(2f * Mathf.PI * 1800f * t) * 0.4f) * Mathf.Exp(-t * 90f);
+            s[i] = (noise(r) * 0.6f + Mathf.Sin(2f * Mathf.PI * 1800f * t) * 0.4f) * Mathf.Exp(-t * 90f);
         }
         var clip = AudioClip.Create("FlashlightClick", n, 1, rate, false);
         clip.SetData(s, 0);
         return clip;
+    }
+
+    static float noise(System.Random r)
+    {
+        return (float)r.NextDouble() * 2f - 1f;
     }
 }

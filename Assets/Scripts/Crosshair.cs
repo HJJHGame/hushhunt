@@ -22,7 +22,8 @@ public class Crosshair : MonoBehaviour
     void OnGUI()
     {
         if (Event.current.type != EventType.Repaint) return;
-        // Esc로 커서를 풀었을 때: 크로스헤어 대신 눈에 띄는 안내를 띄운다.
+        if (MainMenu.IsOpen) return;
+        // 메뉴 바깥에서 커서가 풀렸을 때: 크로스헤어 대신 눈에 띄는 안내를 띄운다.
         // 멀티플레이어라 게임은 멈추지 않는다(Time.timeScale 변경 없음).
         if (Cursor.lockState != CursorLockMode.Locked)
         {
