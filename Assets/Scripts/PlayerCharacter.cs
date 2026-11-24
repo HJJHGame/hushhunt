@@ -116,14 +116,22 @@ public class PlayerCharacter : MonoBehaviour
         }
 
         // 1인칭 시점 보정:
-        // - 몸 모델을 살짝 뒤로 빼서 카메라가 몸/후드 안쪽에 들어가지 않게 한다.
-        // - 눈 높이를 실제 모델 키에 맞춘다(발바닥 기준 약 92%). 기존 2m 프리미티브 몸
-        //   기준 값(0.72)은 1.8m 모델에서는 후드 안쪽에 해당해 내부 면이 보였다.
-        model.transform.localPosition += new Vector3(0f, 0f, -0.12f);
-        if (firstPerson && fpc != null && fpc.cameraPivot != null)
+        // - 몸 모델을 뒤로 빼서 카메라가 몸/헬멧 안쪽에 들어가지 않게 한다.
+        //   병사 모델은 플레이트 캐리어로 몸이 두꺼워 더 많이 뺀다.
+        // - near clip을 줄여 카메라 바로 앞의 몸 메시 앞면이 잘리지 않게 한다
+        //   (앞면이 잘리면 회색 내부가 보인다).
+        // - 눈 높이를 실제 모델 키에 맞춘다(발바닥 기준 약 92%).
+        float backShift = realistic ? 0.25f : 0.12f;
+        model.transform.localPosition += new Vector3(0f, 0f, -backShift);
+        if (fpc != null && fpc.cameraPivot != null)
         {
-            float eyeY = -controller.height * 0.5f + targetHeight * 0.92f;
-            fpc.cameraPivot.localPosition = new Vector3(0f, eyeY, 0.12f);
+            var cam = fpc.cameraPivot.GetComponent<Camera>();
+            if (cam != null) cam.nearClipPlane = 0.05f;
+            if (firstPerson)
+            {
+                float eyeY = -controller.height * 0.5f + targetHeight * 0.92f;
+                fpc.cameraPivot.localPosition = new Vector3(0f, eyeY, 0.12f);
+            }
         }
 
         if (realistic)
@@ -134,6 +142,14 @@ public class PlayerCharacter : MonoBehaviour
                 // 카메라 밖으로 나가도 그림자가 유지되게 (1인칭에서 자기 그림자용)
                 var smr = r as SkinnedMeshRenderer;
                 if (smr != null) smr.updateWhenOffscreen = true;
+                // 텍스처가 임포트되지 않아 밝은 회색으로 나오면 어두운 색으로 대체한다.
+                var m = r.sharedMaterial;
+                if (m != null && m.mainTexture == null && m.color.grayscale > 0.4f)
+                {
+                    var inst = r.material; // 인스턴스화해 원본 에셋은 건드리지 않는다
+                    inst.color = new Color(0.23f, 0.25f, 0.2f);
+                    runtimeMats.Add(inst);
+                }
             }
         }
         else
@@ -309,11 +325,14 @@ public class PlayerCharacter : MonoBehaviour
 
     // 씬을 다시 불러올 때(재시작/타이틀로) 런타임 머티리얼이 새지 않도록 OnDestroy에서 해제한다.
     Material runtimeMat;
+    readonly System.Collections.Generic.List<Material> runtimeMats = new System.Collections.Generic.List<Material>();
 
     void OnDestroy()
     {
         if (graph.IsValid()) graph.Destroy();
         if (modelRoot != null) Destroy(modelRoot.gameObject);
         if (runtimeMat != null) Destroy(runtimeMat);
+        foreach (var m in runtimeMats) if (m != null) Destroy(m);
+        runtimeMats.Clear();
     }
 }
