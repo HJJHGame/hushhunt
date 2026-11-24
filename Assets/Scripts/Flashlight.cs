@@ -54,7 +54,8 @@ public class Flashlight : MonoBehaviour
     {
         if (lamp == null) return;
 
-        if (Input.GetKeyDown(toggleKey))
+        // 메뉴(타이틀/일시정지)가 열려 있으면 토글 입력만 무시한다. 깜빡임 연출은 유지.
+        if (!MainMenu.IsOpen && Input.GetKeyDown(toggleKey))
         {
             lamp.enabled = !lamp.enabled;
             clickSource.PlayOneShot(clickClip, 0.6f);
