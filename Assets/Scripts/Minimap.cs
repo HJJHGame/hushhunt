@@ -13,6 +13,7 @@ public class Minimap : MonoBehaviour
 
     Texture2D arrowTex;
     HouseFootprint[] houses;
+    GUIStyle hintStyle;
     bool bigMap;
 
     void Awake()
@@ -90,13 +91,22 @@ public class Minimap : MonoBehaviour
 
         if (bigMap)
         {
-            var style = new GUIStyle(GUI.skin.label)
+            // 매 프레임 새로 만들면 GC가 쌓이므로 한 번만 만든다.
+            if (hintStyle == null)
             {
-                alignment = TextAnchor.MiddleCenter,
-                fontSize = 14
-            };
-            GUI.Label(new Rect(map.x, map.yMax + 6f, map.width, 22f), "M 키로 닫기", style);
+                hintStyle = new GUIStyle(GUI.skin.label)
+                {
+                    alignment = TextAnchor.MiddleCenter,
+                    fontSize = 14
+                };
+            }
+            GUI.Label(new Rect(map.x, map.yMax + 6f, map.width, 22f), "M 키로 닫기", hintStyle);
         }
+    }
+
+    void OnDestroy()
+    {
+        if (arrowTex != null) Destroy(arrowTex);
     }
 
     // 월드 좌표 -> 지도 픽셀. +Z(북쪽)가 위, +X가 오른쪽.
