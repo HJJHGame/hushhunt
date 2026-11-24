@@ -17,6 +17,7 @@ public class PlayerHud : MonoBehaviour
     void OnGUI()
     {
         if (Event.current.type != EventType.Repaint) return;
+        if (MainMenu.IsOpen) return;
         GUI.depth = 0;
         float scale = Mathf.Clamp(Screen.height / 1080f, 0.75f, 1.5f);
         Color prev = GUI.color;

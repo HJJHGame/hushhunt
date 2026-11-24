@@ -37,6 +37,7 @@ public class HorrorOverlay : MonoBehaviour
     void OnGUI()
     {
         if (Event.current.type != EventType.Repaint) return;
+        if (MainMenu.IsOpen) return; // 메뉴 위에 비네팅/그레인을 얹지 않는다
         GUI.depth = 100; // 다른 UI보다 뒤에 그린다
         var screen = new Rect(0f, 0f, Screen.width, Screen.height);
         Color prev = GUI.color;

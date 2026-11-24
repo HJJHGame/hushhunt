@@ -1,8 +1,7 @@
 using UnityEngine;
 
-// 미니맵: 카메라 렌더링이 아니라 실제 맵 데이터를 그대로 그린다.
-// 월드 좌표(-100~100m)를 지도 좌표로 변환해 맵 경계, 집(HouseFootprint),
-// 플레이어 위치/방향을 표시한다. 나무/돌/울타리는 표시하지 않는다.
+// 미니맵: 실제 맵 데이터로 만든 지도 이미지(MapImage)를 배경으로 쓰고,
+// 그 위에 플레이어 위치/방향과 북쪽 표시를 그린다.
 // 기본은 오른쪽 위 작은 지도, M 키로 화면 중앙의 큰 지도를 연다.
 public class Minimap : MonoBehaviour
 {
@@ -11,8 +10,8 @@ public class Minimap : MonoBehaviour
     public float bigSizeRatio = 0.75f; // 큰 지도: 화면 높이 대비 비율
     public float worldHalf = 100f;     // 맵 절반 크기 (m): 경계가 -100~100
 
+    Texture2D mapTex;
     Texture2D arrowTex;
-    HouseFootprint[] houses;
     GUIStyle hintStyle;
     GUIStyle northStyle;
     bool bigMap;
@@ -39,18 +38,21 @@ public class Minimap : MonoBehaviour
 
     void Start()
     {
-        // 씬에 실제 배치된 집들을 찾아 둔다 (집과 지도가 같은 데이터를 공유)
-        houses = FindObjectsByType<HouseFootprint>(FindObjectsSortMode.None);
+        // 씬에 실제 배치된 집들을 읽어 지도 이미지를 만든다 (집과 지도가 같은 데이터를 공유)
+        var houses = FindObjectsByType<HouseFootprint>(FindObjectsSortMode.None);
+        mapTex = MapImage.Build(1024, worldHalf, houses);
     }
 
     void Update()
     {
+        if (MainMenu.IsOpen) return;
         if (Input.GetKeyDown(KeyCode.M))
             bigMap = !bigMap;
     }
 
     void OnGUI()
     {
+        if (MainMenu.IsOpen) return;
         if (Event.current.type != EventType.Repaint) return;
 
         int size = bigMap ? Mathf.RoundToInt(Screen.height * bigSizeRatio) : smallSize;
@@ -58,39 +60,13 @@ public class Minimap : MonoBehaviour
         float y = bigMap ? (Screen.height - size) * 0.5f : 16f;
         var map = new Rect(x, y, size, size);
 
-        // 배경 + 테두리. 지도의 사각 가장자리가 곧 실제 맵 경계(±100m)다.
+        // 테두리 + 지도 이미지. 지도의 사각 가장자리가 곧 실제 맵 경계(±100m)다.
         GUI.color = new Color(0f, 0f, 0f, bigMap ? 0.85f : 0.6f);
         GUI.DrawTexture(new Rect(map.x - 4f, map.y - 4f, map.width + 8f, map.height + 8f), Texture2D.whiteTexture);
-        GUI.color = new Color(0.04f, 0.05f, 0.04f, bigMap ? 0.95f : 0.85f);
-        GUI.DrawTexture(map, Texture2D.whiteTexture);
-
-        // 격자: 50m 간격. 거리 감각을 잡는 데 도움이 된다.
-        GUI.color = new Color(1f, 1f, 1f, bigMap ? 0.10f : 0.06f);
-        for (int i = 1; i < 4; i++)
-        {
-            float f = i / 4f;
-            GUI.DrawTexture(new Rect(map.x + f * map.width, map.y, 1f, map.height), Texture2D.whiteTexture);
-            GUI.DrawTexture(new Rect(map.x, map.y + f * map.height, map.width, 1f), Texture2D.whiteTexture);
-        }
-
-        // 집들 (어두운 윤곽 + 안쪽 채움)
-        if (houses != null)
-        {
-            foreach (var h in houses)
-            {
-                if (h == null) continue;
-                Vector2 c = WorldToMap(h.transform.position, map);
-                float w = h.size.x / (worldHalf * 2f) * map.width;
-                float d = h.size.y / (worldHalf * 2f) * map.height;
-                GUI.color = new Color(0.12f, 0.09f, 0.06f, 1f);
-                GUI.DrawTexture(new Rect(c.x - w * 0.5f - 1.5f, c.y - d * 0.5f - 1.5f, w + 3f, d + 3f), Texture2D.whiteTexture);
-                GUI.color = new Color(0.5f, 0.4f, 0.28f, 1f);
-                GUI.DrawTexture(new Rect(c.x - w * 0.5f, c.y - d * 0.5f, w, d), Texture2D.whiteTexture);
-            }
-        }
+        GUI.color = Color.white;
+        if (mapTex != null) GUI.DrawTexture(map, mapTex);
 
         // 플레이어 위치 + 바라보는 방향
-        GUI.color = Color.white;
         if (target != null)
         {
             Vector2 p = WorldToMap(target.position, map);
@@ -133,9 +109,10 @@ public class Minimap : MonoBehaviour
     void OnDestroy()
     {
         if (arrowTex != null) Destroy(arrowTex);
+        if (mapTex != null) Destroy(mapTex);
     }
 
-    // 월드 좌표 -> 지도 픽셀. +Z(북쪽)가 위, +X가 오른쪽.
+    // 월드 좌표 -> 지도 픽셀. +Z(북쪽)가 위, +X가 오른쪽. MapImage와 같은 변환.
     Vector2 WorldToMap(Vector3 world, Rect map)
     {
         float u = Mathf.InverseLerp(-worldHalf, worldHalf, world.x);
