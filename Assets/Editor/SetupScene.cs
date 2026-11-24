@@ -46,6 +46,14 @@ public static class SetupScene
 
         if (!force && File.Exists(ScenePath)) return;
 
+        // 수동 수정 보호: 재생성으로 기존 씬을 덮어쓰기 전에 백업해 둔다.
+        if (force && File.Exists(ScenePath))
+        {
+            string backupPath = ScenePath.Replace(".unity", ".backup.unity");
+            File.Copy(ScenePath, backupPath, true);
+            Debug.LogWarning("[Hush Hunt] 씬을 다시 만들기 전에 기존 씬을 백업했습니다: " + backupPath);
+        }
+
         Directory.CreateDirectory("Assets/Scenes");
         Directory.CreateDirectory("Assets/Materials");
         Directory.CreateDirectory("Assets/Meshes");

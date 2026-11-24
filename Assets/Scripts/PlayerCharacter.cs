@@ -84,7 +84,8 @@ public class PlayerCharacter : MonoBehaviour
 
         // 팔레트 텍스처: 임포트 설정과 무관하게 코드에서 확실하게 연결한다.
         var tex = Resources.Load<Texture2D>("Character/rogue_texture");
-        var mat = new Material(Shader.Find("Standard"));
+        runtimeMat = new Material(Shader.Find("Standard"));
+        var mat = runtimeMat;
         mat.name = "Rogue";
         if (tex != null) mat.mainTexture = tex;
         mat.SetFloat("_Glossiness", 0.2f);
@@ -245,9 +246,13 @@ public class PlayerCharacter : MonoBehaviour
         return null;
     }
 
+    // 씬을 다시 불러올 때(재시작/타이틀로) 런타임 머티리얼이 새지 않도록 OnDestroy에서 해제한다.
+    Material runtimeMat;
+
     void OnDestroy()
     {
         if (graph.IsValid()) graph.Destroy();
         if (modelRoot != null) Destroy(modelRoot.gameObject);
+        if (runtimeMat != null) Destroy(runtimeMat);
     }
 }
