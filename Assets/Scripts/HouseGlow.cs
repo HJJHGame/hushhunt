@@ -6,7 +6,7 @@ using UnityEngine;
 public class HouseGlow : MonoBehaviour
 {
     public Color lightColor = new Color(1f, 0.72f, 0.42f); // 촛불/랜턴 느낌
-    public float intensity = 1.1f;
+    public float intensity = 0.55f; // 랜드마크 역할은 유지하되 주변을 밝히지 않을 정도로
     public float range = 7f;
 
     void Start()

@@ -7,13 +7,13 @@ using UnityEngine.Rendering;
 public class NightAtmosphere : MonoBehaviour
 {
     const float BaseFogDensity = 0.06f; // 몇 미터 밖은 짙은 어둠. 시야를 더 좁혀 손전등 의존도를 높인다
-    const float Darkness = 0.20f; // 환경광 기본 어둡기: 주변은 거의 검정, 손전등 원뿔만 살아난다
+    const float Darkness = 0.05f; // 환경광 기본 어둡기: 손전등 원뿔 밖은 사실상 검정
 
     // 원래 기준 색 (여기에 Darkness와 설정 밝기를 곱해 쓴다)
     static readonly Color SkyBase = new Color(0.13f, 0.17f, 0.27f);
     static readonly Color EquatorBase = new Color(0.07f, 0.10f, 0.12f);
     static readonly Color GroundBase = new Color(0.02f, 0.03f, 0.03f);
-    static readonly Color FogBase = new Color(0.07f, 0.10f, 0.14f);
+    static readonly Color FogBase = new Color(0.015f, 0.02f, 0.03f); // 안개도 거의 검정: 멀리 밝게 뜨지 않게
 
     void Start()
     {
@@ -22,7 +22,7 @@ public class NightAtmosphere : MonoBehaviour
         if (cam != null)
         {
             cam.clearFlags = CameraClearFlags.SolidColor;
-            cam.backgroundColor = new Color(0.02f, 0.03f, 0.05f);
+            cam.backgroundColor = new Color(0.004f, 0.006f, 0.010f);
             // 시야 거리를 좁힌다: 먼 곳은 안개에 묻히고 손전등이 유일한 시야 확보 수단이 된다.
             cam.farClipPlane = 50f;
         }
@@ -38,7 +38,7 @@ public class NightAtmosphere : MonoBehaviour
         {
             if (l.type != LightType.Directional) continue;
             l.color = new Color(0.55f, 0.68f, 0.95f);
-            l.intensity = 1.0f;
+            l.intensity = 0.25f; // 달빛도 최소화: 실루엣만 어렴풋이
             l.shadows = LightShadows.Soft;
             l.shadowStrength = 0.9f;
             l.shadowBias = 0.05f;
