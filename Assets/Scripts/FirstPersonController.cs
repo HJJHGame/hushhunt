@@ -1,6 +1,6 @@
 using UnityEngine;
 
-// 1인칭 이동 + 마우스 시점 + 스태미나. 총/규칙/네트워크는 이후 단계.
+// 1인칭 이동 + 마우스 시점 + 스태미나 + 웅크리기(C/왼쪽 Ctrl). 총/규칙/네트워크는 이후 단계.
 [RequireComponent(typeof(CharacterController))]
 public class FirstPersonController : MonoBehaviour
 {
@@ -9,6 +9,10 @@ public class FirstPersonController : MonoBehaviour
     public float sprintSpeed = 7f;
     public float jumpHeight = 1.2f;
     public float gravity = -19.62f;
+
+    [Header("Crouch")]
+    public float crouchSpeed = 2f;
+    public float crouchHeight = 1.2f;   // 웅크렸을 때 캡슐 높이 (서 있을 때는 시작 시 값 사용)
 
     [Header("Stamina")]
     public bool useStamina = true;
@@ -23,6 +27,7 @@ public class FirstPersonController : MonoBehaviour
     public Transform cameraPivot;
 
     public bool IsSprinting { get; private set; }
+    public bool IsCrouching { get; private set; }
     public bool IsExhausted { get; private set; }
     public float Stamina01 { get { return staminaMax > 0f ? stamina / staminaMax : 1f; } }
 
@@ -31,11 +36,17 @@ public class FirstPersonController : MonoBehaviour
     float pitch;
     float stamina;
     float regenTimer;
+    float standingHeight;
+    float standingCenterY;
+    const float StandingCamY = 0.72f;
+    const float CrouchCamY = 0.10f;
 
     void Awake()
     {
         controller = GetComponent<CharacterController>();
         stamina = staminaMax;
+        standingHeight = controller.height;
+        standingCenterY = controller.center.y;
 
         // 기존 씬도 재생성 없이 보조 기능들을 자동으로 붙인다.
         AddIfMissing<PlayerCharacter>(); // 리깅 캐릭터 + 애니메이션 (에셋 없으면 내부에서 프리미티브 몸으로 대체)
@@ -103,12 +114,19 @@ public class FirstPersonController : MonoBehaviour
         Vector3 dir = (transform.right * h + transform.forward * v).normalized;
 
         bool moving = dir.sqrMagnitude > 0.01f;
-        bool wantSprint = Input.GetKey(KeyCode.LeftShift) && moving;
+
+        // C 또는 왼쪽 Ctrl을 누르고 있는 동안 웅크린다. 일어설 땐 머리 위 공간을 확인한다.
+        bool wantCrouch = Input.GetKey(KeyCode.C) || Input.GetKey(KeyCode.LeftControl);
+        if (wantCrouch) IsCrouching = true;
+        else if (IsCrouching && CanStand()) IsCrouching = false;
+        ApplyCrouch();
+
+        bool wantSprint = Input.GetKey(KeyCode.LeftShift) && moving && !IsCrouching;
         bool canSprint = !useStamina || (!IsExhausted && stamina > 0f);
         IsSprinting = wantSprint && canSprint;
         UpdateStamina();
 
-        float speed = IsSprinting ? sprintSpeed : walkSpeed;
+        float speed = IsCrouching ? crouchSpeed : (IsSprinting ? sprintSpeed : walkSpeed);
 
         if (controller.isGrounded)
         {
@@ -127,6 +145,37 @@ public class FirstPersonController : MonoBehaviour
         // 점프 중 천장(집 지붕 안쪽 등)에 머리를 부딪히면 위로 계속 밀리지 않고 바로 떨어진다.
         if ((controller.collisionFlags & CollisionFlags.Above) != 0 && verticalVelocity > 0f)
             verticalVelocity = 0f;
+    }
+
+    void ApplyCrouch()
+    {
+        // 캡슐 아랫면(발바닥)은 그대로 두고 위만 줄였다 편다.
+        float targetH = IsCrouching ? crouchHeight : standingHeight;
+        if (!Mathf.Approximately(controller.height, targetH))
+        {
+            float feetY = standingCenterY - standingHeight * 0.5f;
+            controller.height = targetH;
+            controller.center = new Vector3(0f, feetY + targetH * 0.5f, 0f);
+        }
+        if (cameraPivot != null)
+        {
+            Vector3 p = cameraPivot.localPosition;
+            p.y = Mathf.MoveTowards(p.y, IsCrouching ? CrouchCamY : StandingCamY, Time.deltaTime * 3f);
+            cameraPivot.localPosition = p;
+        }
+    }
+
+    bool CanStand()
+    {
+        // 서 있을 때 캡슐이 차지할 공간에 다른 콜라이더가 있으면 일어나지 않는다.
+        float r = controller.radius * 0.95f;
+        float feetY = transform.position.y + standingCenterY - standingHeight * 0.5f;
+        Vector3 p1 = new Vector3(transform.position.x, feetY + r, transform.position.z);
+        Vector3 p2 = new Vector3(transform.position.x, feetY + standingHeight - r, transform.position.z);
+        foreach (var col in Physics.OverlapCapsule(p1, p2, r, ~0, QueryTriggerInteraction.Ignore))
+            if (col != controller && !col.transform.IsChildOf(transform))
+                return false;
+        return true;
     }
 
     void UpdateStamina()
@@ -166,3 +215,4 @@ public class FirstPersonController : MonoBehaviour
         Cursor.visible = !locked;
     }
 }
+

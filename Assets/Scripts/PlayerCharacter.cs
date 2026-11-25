@@ -3,8 +3,10 @@ using UnityEngine.Animations;
 using UnityEngine.Playables;
 
 // 리깅된 캐릭터 + 애니메이션 상태 머신.
-// 우선순위: 사실적 인간 모델(Grab3D Ninja, CC0, Assets/Resources/CharacterReal) →
+// 우선순위: 사실적 인간 모델(Grab3D 후드 로그, CC0, Assets/Resources/CharacterReal) →
 // KayKit Rogue Hooded(CC0, Assets/Resources/Character) → 프리미티브 몸(PlayerBody).
+// 애니메이션: Quaternius Universal Animation Library(CC0, Assets/Resources/Animations/UAL1_Standard)
+// 클립을 Humanoid 리타깃으로 재생한다.
 // 씬 수정 없이 시작할 때 적용된다.
 // 1인칭에서는 머리 뼈를 숨겨 카메라가 머리 안쪽을 보지 않게 하고,
 // 아래를 보면 실제 걷는 다리가 보인다. 멀티플레이어 원격 캐릭터에는 SetFirstPerson(false).
@@ -34,7 +36,7 @@ public class PlayerCharacter : MonoBehaviour
     int current;   // 페이드인 되는(주가 되는) 입력
     float fade = 1f;
 
-    AnimationClip clipIdle, clipWalk, clipWalkBack, clipStrafeL, clipStrafeR, clipRun, clipAir;
+    AnimationClip clipIdle, clipWalk, clipWalkBack, clipStrafeL, clipStrafeR, clipRun, clipAir, clipCrouchIdle, clipCrouchMove;
     string currentState = "";
     float idleSpeed = 1f; // 사실적 모델은 idle 클립이 없어 걷기를 느리게 재생한다
 
@@ -44,7 +46,7 @@ public class PlayerCharacter : MonoBehaviour
         fpc = GetComponent<FirstPersonController>();
         controller = GetComponent<CharacterController>();
 
-        // 사실적 인간 모델(Grab3D Ninja, CC0)을 우선 쓰고, 없으면 KayKit 도적,
+        // 사실적 인간 모델(Grab3D 후드 로그, CC0)을 우선 쓰고, 없으면 KayKit 도적,
         // 그것도 없으면 프리미티브 몸으로 되돌아간다.
         bool realistic = false;
         idleSpeed = 1f;
@@ -53,27 +55,47 @@ public class PlayerCharacter : MonoBehaviour
             Debug.LogWarning("[PlayerCharacter] 후드 로그 모델 로드 실패: Resources/CharacterReal/hooded-rogue-rigged 를 찾지 못함");
         if (prefab != null)
         {
-            // 리깅 FBX 안에 walk/run 클립이 함께 들어 있다 (idle 클립은 없음).
-            clipWalk = LoadClip("CharacterReal/hooded-rogue-rigged", "walk");
-            clipRun = LoadClip("CharacterReal/hooded-rogue-rigged", "run");
-            if (clipWalk != null && clipRun != null)
+            // 애니메이션은 Quaternius UAL(CC0)에서 가져온다. 로그와 UAL 둘 다 Humanoid
+            // 임포트라 Unity 머슬 리타깃으로 재생된다. back/strafe 클립은 UAL에 없어 walk 폴백.
+            clipIdle = LoadClip("Animations/UAL1_Standard", "Idle_Loop");
+            clipWalk = LoadClip("Animations/UAL1_Standard", "Walk_Loop");
+            clipRun = LoadClip("Animations/UAL1_Standard", "Sprint_Loop"); // sprint 7f 상태용
+            clipAir = LoadClip("Animations/UAL1_Standard", "Jump_Loop");
+            clipCrouchIdle = LoadClip("Animations/UAL1_Standard", "Crouch_Idle_Loop");
+            clipCrouchMove = LoadClip("Animations/UAL1_Standard", "Crouch_Fwd_Loop");
+            if (clipIdle != null && clipWalk != null && clipRun != null)
             {
                 realistic = true;
-                clipIdle = clipWalk; // idle 대용: 걷기를 아주 느리게 재생해 미세한 움직임만 남긴다
                 clipWalkBack = clipWalk;
                 clipStrafeL = clipWalk;
                 clipStrafeR = clipWalk;
-                clipAir = clipWalk;
-                idleSpeed = 0.06f;
+                if (clipAir == null) clipAir = clipIdle;
+                idleSpeed = 1f;
             }
             else
             {
                 // 어떤 클립이 들어 있는지 그대로 찍어 사용자가 보낼 수 있게 한다.
                 var names = new System.Text.StringBuilder();
-                foreach (var c in Resources.LoadAll<AnimationClip>("CharacterReal/hooded-rogue-rigged"))
+                foreach (var c in Resources.LoadAll<AnimationClip>("Animations/UAL1_Standard"))
                     names.Append(c.name).Append(' ');
-                Debug.LogWarning("[PlayerCharacter] 후드 로그 walk/run 클립 로드 실패. 실제 클립 목록: " + names);
-                prefab = null; // 클립이 안 읽히면 KayKit 경로로
+                Debug.LogWarning("[PlayerCharacter] UAL 클립 로드 실패. 실제 클립 목록: " + names);
+                // 폴백: 리깅 FBX 안의 walk/run 클립 (idle 없음, 걷기를 느리게 재생)
+                clipWalk = LoadClip("CharacterReal/hooded-rogue-rigged", "walk");
+                clipRun = LoadClip("CharacterReal/hooded-rogue-rigged", "run");
+                if (clipWalk != null && clipRun != null)
+                {
+                    realistic = true;
+                    clipIdle = clipWalk;
+                    clipWalkBack = clipWalk;
+                    clipStrafeL = clipWalk;
+                    clipStrafeR = clipWalk;
+                    clipAir = clipWalk;
+                    idleSpeed = 0.06f;
+                }
+                else
+                {
+                    prefab = null; // 클립이 안 읽히면 KayKit 경로로
+                }
             }
         }
         if (!realistic)
@@ -100,6 +122,8 @@ public class PlayerCharacter : MonoBehaviour
         if (clipStrafeL == null) clipStrafeL = clipWalk;
         if (clipStrafeR == null) clipStrafeR = clipWalk;
         if (clipAir == null) clipAir = clipIdle;
+        if (clipCrouchIdle == null) clipCrouchIdle = clipIdle;
+        if (clipCrouchMove == null) clipCrouchMove = clipWalk;
 
         var model = Instantiate(prefab, transform, false);
         model.name = "Character Model";
@@ -279,6 +303,11 @@ public class PlayerCharacter : MonoBehaviour
         {
             clip = clipAir; state = "air"; nominal = 1f;
         }
+        else if (fpc != null && fpc.IsCrouching)
+        {
+            if (speed < 0.3f) { clip = clipCrouchIdle; state = "crouchIdle"; nominal = 1f; }
+            else { clip = clipCrouchMove; state = "crouch"; nominal = 2f; }
+        }
         else if (speed < 0.3f)
         {
             clip = clipIdle; state = "idle"; nominal = 1f;
@@ -296,7 +325,7 @@ public class PlayerCharacter : MonoBehaviour
             else { clip = clipWalk; state = "walk"; nominal = 4f; }
         }
 
-        float playSpeed = nominal > 0.1f && state != "idle" && state != "air"
+        float playSpeed = nominal > 0.1f && state != "idle" && state != "air" && state != "crouchIdle"
             ? Mathf.Clamp(speed / nominal, 0.6f, 1.7f)
             : (state == "idle" ? idleSpeed : 1f);
         CrossTo(clip, state, playSpeed);
@@ -382,3 +411,4 @@ public class PlayerCharacter : MonoBehaviour
         runtimeMats.Clear();
     }
 }
+
