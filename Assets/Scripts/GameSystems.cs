@@ -45,6 +45,7 @@ public static class GameSystems
         AddOnce<NightAtmosphere>(root); // 밤 조명/안개
         AddOnce<HouseGlow>(root);       // 집 창문 빛
         AddOnce<GroundTexture>(root);   // 바닥 텍스처
+        AddOnce<PropTextures>(root);    // 집/소품 질감
         AddOnce<NightSky>(root);        // 별/달
         AddOnce<HorrorOverlay>(root);   // 비네팅/그레인
         AddOnce<FogMotes>(root);        // 떠다니는 먼지 입자
