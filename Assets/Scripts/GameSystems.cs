@@ -5,7 +5,7 @@ using UnityEngine.SceneManagement;
 // 예전에는 FirstPersonController.Awake가 플레이어 오브젝트에 전부 붙였다.
 // 이제 이 클래스가 씬이 로드될 때마다 한 번 실행돼 역할을 나눈다.
 // - 환경/UI: "GameSystems" 오브젝트에 씬당 하나씩만
-// - 플레이어 본인의 몸/장비(PlayerCharacter, Flashlight): 플레이어 오브젝트에
+// - 플레이어 본인의 몸/장비(PlayerBody, Flashlight): 플레이어 오브젝트에
 //   (멀티플레이어가 되면 이 둘은 플레이어 프리팹 책임으로 옮긴다)
 //
 // RuntimeInitializeOnLoadMethod는 앱 시작 후 첫 씬에서 딱 한 번만 호출된다.
@@ -52,7 +52,7 @@ public static class GameSystems
         AddOnce<PlayerHud>(root);       // 스태미나/손전등 표시
         AddOnce<MainMenu>(root);        // 타이틀/일시정지/설정 메뉴
 
-        if (fpc.GetComponent<PlayerCharacter>() == null) fpc.gameObject.AddComponent<PlayerCharacter>();
+        if (fpc.GetComponent<PlayerBody>() == null) fpc.gameObject.AddComponent<PlayerBody>();
         if (fpc.GetComponent<Flashlight>() == null) fpc.gameObject.AddComponent<Flashlight>();
     }
 
