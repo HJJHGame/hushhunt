@@ -8,6 +8,15 @@ public class Crosshair : MonoBehaviour
 
     Texture2D ring;
     GUIStyle noticeStyle;
+    MainMenu menu;
+
+    // 메뉴는 GameSystems가 씬에 하나만 붙인다. 찾으면 캐시한다 (issue #28).
+    bool MenuOpen()
+    {
+        if (menu == null) menu = FindFirstObjectByType<MainMenu>();
+        return menu != null && menu.IsOpen;
+    }
+
 
     void Awake()
     {
@@ -22,7 +31,7 @@ public class Crosshair : MonoBehaviour
     void OnGUI()
     {
         if (Event.current.type != EventType.Repaint) return;
-        if (MainMenu.IsOpen) return;
+        if (MenuOpen()) return;
         // 메뉴 바깥에서 커서가 풀렸을 때: 크로스헤어 대신 눈에 띄는 안내를 띄운다.
         // 멀티플레이어라 게임은 멈추지 않는다(Time.timeScale 변경 없음).
         if (Cursor.lockState != CursorLockMode.Locked)

@@ -13,6 +13,15 @@ public class Flashlight : MonoBehaviour
 
     Light lamp;
     AudioSource clickSource;
+    MainMenu menu;
+
+    // 메뉴는 GameSystems가 씬에 하나만 붙인다. 찾으면 캐시한다 (issue #28).
+    bool MenuOpen()
+    {
+        if (menu == null) menu = FindFirstObjectByType<MainMenu>();
+        return menu != null && menu.IsOpen;
+    }
+
     AudioClip clickClip;
     Material lensMat;
     readonly System.Collections.Generic.List<Material> propMats = new System.Collections.Generic.List<Material>();
@@ -66,7 +75,7 @@ public class Flashlight : MonoBehaviour
         if (lamp == null) return;
 
         // 메뉴(타이틀/일시정지)가 열려 있으면 토글 입력만 무시한다. 깜빡임 연출은 유지.
-        if (!MainMenu.IsOpen && Input.GetKeyDown(toggleKey))
+        if (!MenuOpen() && Input.GetKeyDown(toggleKey))
         {
             lamp.enabled = !lamp.enabled;
             clickSource.PlayOneShot(clickClip, 0.6f);

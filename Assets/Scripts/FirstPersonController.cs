@@ -32,6 +32,14 @@ public class FirstPersonController : MonoBehaviour
     public float Stamina01 { get { return staminaMax > 0f ? stamina / staminaMax : 1f; } }
 
     CharacterController controller;
+    MainMenu menu;
+
+    // 메뉴는 GameSystems가 씬에 하나만 붙인다. 찾으면 캐시한다 (issue #28).
+    bool MenuOpen()
+    {
+        if (menu == null) menu = FindFirstObjectByType<MainMenu>();
+        return menu != null && menu.IsOpen;
+    }
     float verticalVelocity;
     float pitch;
     float stamina;
@@ -47,26 +55,6 @@ public class FirstPersonController : MonoBehaviour
         stamina = staminaMax;
         standingHeight = controller.height;
         standingCenterY = controller.center.y;
-
-        // 기존 씬도 재생성 없이 보조 기능들을 자동으로 붙인다.
-        AddIfMissing<PlayerCharacter>(); // 리깅 캐릭터 + 애니메이션 (에셋 없으면 내부에서 프리미티브 몸으로 대체)
-        AddIfMissing<Crosshair>();      // 크로스헤어
-        AddIfMissing<TreeModels>();     // 소나무 3D 모델 (없으면 기존 나무 유지)
-        AddIfMissing<NightAtmosphere>();// 밤 조명/안개
-        AddIfMissing<HouseGlow>();      // 집 창문 빛
-        AddIfMissing<GroundTexture>();  // 바닥 텍스처
-        AddIfMissing<NightSky>();       // 별/달
-        AddIfMissing<HorrorOverlay>();  // 비네팅/그레인
-        AddIfMissing<FogMotes>();       // 떠다니는 먼지 입자
-        AddIfMissing<AmbientSound>();   // 바람/먼 소리
-        AddIfMissing<Flashlight>();     // 손전등 (F)
-        AddIfMissing<PlayerHud>();      // 스태미나/손전등 표시
-        AddIfMissing<MainMenu>();       // 타이틀/일시정지/설정 메뉴
-    }
-
-    void AddIfMissing<T>() where T : Component
-    {
-        if (GetComponent<T>() == null) gameObject.AddComponent<T>();
     }
 
     void Start()
@@ -76,14 +64,14 @@ public class FirstPersonController : MonoBehaviour
         if (cameraPivot != null)
             cameraPivot.localPosition = new Vector3(0f, 0.72f, 0.10f);
         // 타이틀 메뉴가 먼저 열려 있으면 메뉴가 커서를 관리한다.
-        if (!MainMenu.IsOpen)
+        if (!MenuOpen())
             LockCursor(true);
     }
 
     void Update()
     {
         // 메뉴가 열려 있으면 커서 잠금/시점/이동은 MainMenu가 관리한다.
-        if (MainMenu.IsOpen) return;
+        if (MenuOpen()) return;
 
         mouseSensitivity = GameSettings.Sensitivity;
         Look();
@@ -205,7 +193,7 @@ public class FirstPersonController : MonoBehaviour
     // 창 포커스를 얻을 때 다시 잠가서 커서를 숨긴다 (메뉴가 열려 있으면 메뉴 우선).
     void OnApplicationFocus(bool focused)
     {
-        if (focused && !MainMenu.IsOpen)
+        if (focused && !MenuOpen())
             LockCursor(true);
     }
 
