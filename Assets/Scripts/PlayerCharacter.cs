@@ -127,6 +127,7 @@ public class PlayerCharacter : MonoBehaviour
         var renderers = model.GetComponentsInChildren<Renderer>(true);
         if (realistic) ApplyRealisticMaterials(renderers);
         else ApplyKayKitMaterial(renderers);
+        LightenFirstPersonBody(renderers);
 
         var animator = model.GetComponent<Animator>();
         if (animator == null) animator = model.gameObject.AddComponent<Animator>();
@@ -301,6 +302,21 @@ public class PlayerCharacter : MonoBehaviour
             // 카메라 밖으로 나가도 그림자가 유지되게 (1인칭에서 자기 그림자용)
             var smr = r as SkinnedMeshRenderer;
             if (smr != null) smr.updateWhenOffscreen = true;
+        }
+    }
+
+    // 1인칭 자기 몸의 그림자를 끈다: 후드 로그 모델은 약 17.5만 정점(일반 캐릭터의 10배 이상)이라
+    // 달빛 2 캐스케이드 + 손전등 그림자에 매 프레임 3번씩 다시 스키닝/렌더링되는 비용이 크다.
+    // 프레임이 밀려 화면이 회색으로 떨어지는 증상의 원인 후보. 본인 그림자는 1인칭에서 거의 안 보인다.
+    void LightenFirstPersonBody(Renderer[] rends)
+    {
+        if (!firstPerson) return; // 원격 캐릭터는 그림자가 보여야 한다
+        foreach (var r in rends)
+        {
+            if (r == null) continue;
+            r.shadowCastingMode = UnityEngine.Rendering.ShadowCastingMode.Off;
+            var smr = r as SkinnedMeshRenderer;
+            if (smr != null) smr.updateWhenOffscreen = false;
         }
     }
 
