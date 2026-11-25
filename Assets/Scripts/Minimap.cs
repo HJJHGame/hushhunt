@@ -6,6 +6,15 @@ using UnityEngine;
 public class Minimap : MonoBehaviour
 {
     public Transform target;           // 플레이어
+    MainMenu menu;
+
+    // 메뉴는 GameSystems가 씬에 하나만 붙인다. 찾으면 캐시한다 (issue #28).
+    bool MenuOpen()
+    {
+        if (menu == null) menu = FindFirstObjectByType<MainMenu>();
+        return menu != null && menu.IsOpen;
+    }
+
     public int smallSize = 220;        // 작은 지도 한 변 (px)
     public float bigSizeRatio = 0.75f; // 큰 지도: 화면 높이 대비 비율
     public float worldHalf = 100f;     // 맵 절반 크기 (m): 경계가 -100~100
@@ -45,14 +54,14 @@ public class Minimap : MonoBehaviour
 
     void Update()
     {
-        if (MainMenu.IsOpen) return;
+        if (MenuOpen()) return;
         if (Input.GetKeyDown(KeyCode.M))
             bigMap = !bigMap;
     }
 
     void OnGUI()
     {
-        if (MainMenu.IsOpen) return;
+        if (MenuOpen()) return;
         if (Event.current.type != EventType.Repaint) return;
 
         int size = bigMap ? Mathf.RoundToInt(Screen.height * bigSizeRatio) : smallSize;
