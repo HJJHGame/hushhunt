@@ -52,8 +52,8 @@ public static class ProceduralTree
     }
 
     // 높이(m) -> 기둥 반지름(m): 뿌리에서 부풀고 위로 갈수록 가늘어진다.
-    static readonly float[] trunkY = { 0f, 0.35f, 1.0f, 1.8f, 2.8f, 4.0f, 5.2f, 6.5f };
-    static readonly float[] trunkR = { 0.30f, 0.23f, 0.195f, 0.175f, 0.155f, 0.125f, 0.10f, 0.075f };
+    static readonly float[] trunkY = { 0f, 0.35f, 1.0f, 1.8f, 2.8f, 4.0f, 5.2f, 6.5f, 7.8f, 9.2f };
+    static readonly float[] trunkR = { 0.30f, 0.23f, 0.195f, 0.175f, 0.155f, 0.125f, 0.10f, 0.075f, 0.055f, 0.03f };
 
     static float RadiusAt(float y)
     {
@@ -111,7 +111,7 @@ public static class ProceduralTree
         int branches = 6 + r.Next(3);
         for (int i = 0; i < branches; i++)
         {
-            float h = 2.1f + (float)r.NextDouble() * 4.2f;
+            float h = 3.8f + (float)r.NextDouble() * 3.6f; // 아래 줄기는 비워 둔다 (전나무처럼)
             float az = (float)(i * 137.5 + r.NextDouble() * 40.0) * Mathf.Deg2Rad;
             float tilt = (float)(55.0 + r.NextDouble() * 15.0) * Mathf.Deg2Rad;
             var dir = new Vector3(Mathf.Cos(az) * Mathf.Sin(tilt), Mathf.Cos(tilt), Mathf.Sin(az) * Mathf.Sin(tilt));
@@ -289,9 +289,9 @@ public static class ProceduralTree
         var tris = new List<int>();
 
         // 1) 속 원뿔 (바늘 카드 사이로 하늘/기둥이 비치지 않게 어둡게 채운다)
-        float[] ys = { 2.8f, 4.1f, 5.3f, 6.4f, 7.4f };
+        float[] ys = { 3.9f, 5.0f, 6.1f, 7.1f, 8.0f };
         float[] rads = { 1.05f, 0.88f, 0.70f, 0.52f, 0.32f };
-        float[] hts = { 2.4f, 2.3f, 2.2f, 2.1f, 2.3f };
+        float[] hts = { 2.2f, 2.0f, 1.9f, 1.8f, 1.6f };
         const int seg = 8;
         for (int c = 0; c < ys.Length; c++)
         {
@@ -316,9 +316,9 @@ public static class ProceduralTree
         for (int w = 0; w < whorls; w++)
         {
             float t = w / (float)(whorls - 1);
-            float y0 = Mathf.Lerp(2.2f, 8.8f, t) + ((float)r.NextDouble() - 0.5f) * 0.25f;
+            float y0 = Mathf.Lerp(3.6f, 8.9f, t) + ((float)r.NextDouble() - 0.5f) * 0.25f;
             int n = Mathf.RoundToInt(Mathf.Lerp(7.4f, 3f, t));
-            float lmax = Mathf.Lerp(2.55f, 0.55f, Mathf.Pow(t, 0.9f));
+            float lmax = Mathf.Lerp(2.3f, 0.5f, Mathf.Pow(t, 0.9f));
             for (int i = 0; i < n; i++)
             {
                 float az = az0 + w * 2.399f + i * Mathf.PI * 2f / n + ((float)r.NextDouble() - 0.5f) * 0.5f;
@@ -340,7 +340,7 @@ public static class ProceduralTree
         {
             float az = i * Mathf.PI / 3f;
             var side = new Vector3(Mathf.Cos(az), 0f, Mathf.Sin(az));
-            AddCard(verts, uvs, norms, tris, new Vector3(0f, 7.6f, 0f), new Vector3(0f, 9.6f, 0f), 0.5f, side, false);
+            AddCard(verts, uvs, norms, tris, new Vector3(0f, 8.0f, 0f), new Vector3(0f, 9.6f, 0f), 0.5f, side, false);
         }
 
         var mesh = new Mesh { name = "Pine Foliage (needle cards)" };
