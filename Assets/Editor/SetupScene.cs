@@ -3,6 +3,7 @@ using System.IO;
 using UnityEditor;
 using UnityEditor.SceneManagement;
 using UnityEngine;
+using Names = WorldConfig.Names;
 
 // 처음 프로젝트를 열 때 Main 씬이 없으면 자동으로 만들어 준다.
 // 씬 구성이 바뀌어 SceneVersion 이 올라가면 다음에 열 때 자동으로 다시 만든다.
@@ -46,6 +47,9 @@ public static class SetupScene
 
         if (!force && File.Exists(ScenePath)) return;
 
+        // NewScene(Single)은 현재 열린 씬을 그대로 버린다. 저장하지 않은 수정이 있으면 먼저 묻는다.
+        if (!EditorSceneManager.SaveCurrentModifiedScenesIfUserWantsTo()) return;
+
         // 수동 수정 보호: 재생성으로 기존 씬을 덮어쓰기 전에 백업해 둔다.
         if (force && File.Exists(ScenePath))
         {
@@ -82,7 +86,7 @@ public static class SetupScene
         // 땅: 내장 Plane(10x10m)을 20배 -> 200x200m, 어두운 흙색
         var groundMat = MakeMaterial("Ground", new Color(0.05f, 0.06f, 0.05f));
         var ground = GameObject.CreatePrimitive(PrimitiveType.Plane);
-        ground.name = "Ground";
+        ground.name = Names.Ground;
         ground.transform.localScale = new Vector3(20f, 1f, 20f);
         ground.GetComponent<Renderer>().sharedMaterial = groundMat;
 
@@ -120,7 +124,7 @@ public static class SetupScene
 
             float s = 0.5f + (float)rand.NextDouble() * 1.5f;
             var rock = GameObject.CreatePrimitive(PrimitiveType.Sphere);
-            rock.name = "Rock";
+            rock.name = Names.Rock;
             rock.transform.position = new Vector3(x, s * 0.25f, z); // 살짝 묻힌 모양
             rock.transform.localScale = new Vector3(s * 1.4f, s * 0.8f, s);
             rock.transform.rotation = Quaternion.Euler(0f, (float)rand.NextDouble() * 360f, 0f);
@@ -135,7 +139,7 @@ public static class SetupScene
             float fz = (float)(rand.NextDouble() * 140.0 - 70.0);
             if (new Vector2(fx, fz).magnitude < 6f) { f--; continue; }
 
-            var fence = new GameObject("Old Fence");
+            var fence = new GameObject(Names.OldFence);
             fence.transform.position = new Vector3(fx, 0f, fz);
             fence.transform.rotation = Quaternion.Euler(0f, (float)rand.NextDouble() * 360f, 0f);
 
@@ -174,7 +178,7 @@ public static class SetupScene
             float rad = 0.25f + (float)rand.NextDouble() * 0.2f;
             float yaw = (float)rand.NextDouble() * 360f;
             var log = GameObject.CreatePrimitive(PrimitiveType.Cylinder);
-            log.name = "Fallen Log";
+            log.name = Names.FallenLog;
             log.transform.position = new Vector3(x, rad * 0.9f, z);
             log.transform.rotation = Quaternion.Euler(0f, yaw, 0f) * Quaternion.Euler(0f, 0f, 90f);
             log.transform.localScale = new Vector3(rad * 2f, len * 0.5f, rad * 2f);
@@ -190,7 +194,7 @@ public static class SetupScene
             float hh = 0.25f + (float)rand.NextDouble() * 0.2f;   // 절반 높이
             float rr = 0.3f + (float)rand.NextDouble() * 0.25f;    // 반지름
             var stump = GameObject.CreatePrimitive(PrimitiveType.Cylinder);
-            stump.name = "Stump";
+            stump.name = Names.Stump;
             stump.transform.position = new Vector3(x, hh * 0.9f, z);
             stump.transform.localScale = new Vector3(rr * 2f, hh, rr * 2f);
             stump.GetComponent<Renderer>().sharedMaterial = logMat;
@@ -257,10 +261,12 @@ public static class SetupScene
         // 맵 가장자리 벽: 200x200m 경계(±100m)를 어두운 벽 네 면으로 둘러싼다.
         // 땅과 같은 재질이라 안개 속에서 지형처럼 보이고, 미니맵에는 맵 경계로 보인다.
         // 벽 안쪽 면이 ±99m라 플레이어는 절대 맵 밖으로 못 나간다.
-        MakeEdgeWall(new Vector3(0f, 2f, 99.5f), new Vector3(201f, 4f, 1f), groundMat);
-        MakeEdgeWall(new Vector3(0f, 2f, -99.5f), new Vector3(201f, 4f, 1f), groundMat);
-        MakeEdgeWall(new Vector3(99.5f, 2f, 0f), new Vector3(1f, 4f, 201f), groundMat);
-        MakeEdgeWall(new Vector3(-99.5f, 2f, 0f), new Vector3(1f, 4f, 201f), groundMat);
+        float wallOffset = WorldConfig.Half - 0.5f;   // 벽 두께 1m의 중심: 안쪽 면이 ±(Half-1)
+        float wallLength = WorldConfig.Half * 2f + 1f; // 모서리가 서로 겹쳐 틈이 없게
+        MakeEdgeWall(new Vector3(0f, 2f, wallOffset), new Vector3(wallLength, 4f, 1f), groundMat);
+        MakeEdgeWall(new Vector3(0f, 2f, -wallOffset), new Vector3(wallLength, 4f, 1f), groundMat);
+        MakeEdgeWall(new Vector3(wallOffset, 2f, 0f), new Vector3(1f, 4f, wallLength), groundMat);
+        MakeEdgeWall(new Vector3(-wallOffset, 2f, 0f), new Vector3(1f, 4f, wallLength), groundMat);
 
         // 플레이어: CharacterController + 카메라 자식 + 발소리
         var player = new GameObject("Player");
@@ -298,10 +304,19 @@ public static class SetupScene
         EditorSceneManager.SaveScene(scene, ScenePath);
         EditorPrefs.SetInt(VersionKey, SceneVersion);
 
-        // 빌드 설정에 씬 추가
-        EditorBuildSettings.scenes = new[] { new EditorBuildSettingsScene(ScenePath, true) };
+        RegisterInBuildSettings();
 
         Debug.Log("[Hush Hunt] Main scene created at " + ScenePath + " (v" + SceneVersion + ")");
+    }
+
+    // 빌드 설정에 Main 씬이 없으면 맨 앞에 추가한다. 이미 등록된 다른 씬은 건드리지 않는다.
+    static void RegisterInBuildSettings()
+    {
+        var scenes = new List<EditorBuildSettingsScene>(EditorBuildSettings.scenes);
+        foreach (var s in scenes)
+            if (s.path == ScenePath) return;
+        scenes.Insert(0, new EditorBuildSettingsScene(ScenePath, true));
+        EditorBuildSettings.scenes = scenes.ToArray();
     }
 
     // 움직이지 않는 오브젝트(땅/집/바위/울타리/경계벽)는 정적 배칭 대상으로 표시해 렌더링 비용을 줄인다.
@@ -312,7 +327,8 @@ public static class SetupScene
         foreach (var t in Object.FindObjectsByType<Transform>(FindObjectsSortMode.None))
         {
             string n = t.name;
-            if (n == "Ground" || n == "Rock" || n == "Edge Wall" || n == "Old Fence" || n == "House" || n == "Fallen Log" || n == "Stump")
+            if (n == Names.Ground || n == Names.Rock || n == Names.EdgeWall || n == Names.OldFence
+                || n == Names.House || n == Names.FallenLog || n == Names.Stump)
             {
                 foreach (var child in t.GetComponentsInChildren<Transform>(true))
                     GameObjectUtility.SetStaticEditorFlags(child.gameObject, flags);
@@ -326,7 +342,7 @@ public static class SetupScene
         Material wallMat, Material roofMat, Material trimMat, Material floorMat,
         Material furnMat, Material clothMat, Mesh gableMesh, System.Random rand)
     {
-        var house = new GameObject("House");
+        var house = new GameObject(Names.House);
         house.transform.position = pos;
         var hp = house.transform;
 
@@ -508,7 +524,7 @@ public static class SetupScene
     static void MakeEdgeWall(Vector3 center, Vector3 size, Material mat)
     {
         var wall = GameObject.CreatePrimitive(PrimitiveType.Cube);
-        wall.name = "Edge Wall";
+        wall.name = Names.EdgeWall;
         wall.transform.position = center;
         wall.transform.localScale = size;
         wall.GetComponent<Renderer>().sharedMaterial = mat;
@@ -518,13 +534,13 @@ public static class SetupScene
     // 키 크고 가는 실루엣이 나오도록 기둥은 가늘고 수형은 높게.
     static void MakePineTree(Vector3 pos, float scale, Material trunkMat, Material pineMat, Mesh coneMesh)
     {
-        var tree = new GameObject("Pine Tree");
+        var tree = new GameObject(Names.PineTree);
         tree.transform.position = pos;
 
         float trunkH = 3.2f * scale;
-        float trunkW = 0.32f * scale;
+        float trunkW = WorldConfig.PineTrunkBaseWidth * scale;
         var trunk = GameObject.CreatePrimitive(PrimitiveType.Cylinder);
-        trunk.name = "Trunk";
+        trunk.name = Names.PineTrunk;
         trunk.transform.SetParent(tree.transform);
         trunk.transform.localPosition = new Vector3(0f, trunkH * 0.5f, 0f);
         trunk.transform.localScale = new Vector3(trunkW, trunkH * 0.5f, trunkW);
@@ -536,7 +552,7 @@ public static class SetupScene
         for (int i = 0; i < 3; i++)
         {
             float radius = baseRadius * (1f - 0.25f * i);
-            var layer = new GameObject("Foliage" + (i + 1));
+            var layer = new GameObject(Names.PineFoliagePrefix + (i + 1));
             layer.transform.SetParent(tree.transform);
             layer.transform.localPosition = new Vector3(0f, y, 0f);
             layer.transform.localScale = new Vector3(radius, layerH, radius);
