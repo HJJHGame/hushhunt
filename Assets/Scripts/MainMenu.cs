@@ -28,6 +28,7 @@ public class MainMenu : MonoBehaviour
     FirstPersonController fpc;
     RectTransform titlePanel, pausePanel, settingsPanel;
     Text sensValue, volValue;
+    Text fpsLabel;
 
     static readonly Color BgTitle = new Color(0.015f, 0.02f, 0.035f, 1f);
     static readonly Color BgPause = new Color(0f, 0f, 0f, 0.55f);
@@ -215,6 +216,13 @@ public class MainMenu : MonoBehaviour
         volValue = MakeSlider(box, "볼륨", 70f, 0f, 1f, GameSettings.Volume,
             v => GameSettings.SetVolume(v), v => Mathf.RoundToInt(v * 100f) + "%");
 
+        var fpsButton = MakeButton(box, "", -60f, true, () =>
+        {
+            GameSettings.SetMaxFps(GameSettings.MaxFps == 0 ? 60 : 0);
+            RefreshSettings();
+        });
+        fpsLabel = fpsButton.GetComponentInChildren<Text>();
+
         MakeButton(box, "뒤로", -260f, true, CloseSettings);
     }
 
@@ -222,6 +230,7 @@ public class MainMenu : MonoBehaviour
     {
         if (sensValue != null) sensValue.text = GameSettings.Sensitivity.ToString("0.0");
         if (volValue != null) volValue.text = Mathf.RoundToInt(GameSettings.Volume * 100f) + "%";
+        if (fpsLabel != null) fpsLabel.text = "최대 FPS: " + (GameSettings.MaxFps == 0 ? "무제한" : "60");
     }
 
     // ---- 조각 helpers ----
