@@ -12,18 +12,16 @@ public class GroundTexture : MonoBehaviour
 
     void Start()
     {
-        var ground = GameObject.Find("Ground");
+        var ground = GameObject.Find(WorldConfig.Names.Ground);
         if (ground == null) return;
         var rend = ground.GetComponent<Renderer>();
         if (rend == null) return;
 
         tex = BuildTexture();
-        mat = new Material(Shader.Find("Standard"));
+        mat = RuntimeMaterials.CreateLit("Ground (runtime)", Color.white, 0.05f); // 젖은 흙이지만 반짝이지 않게
         mat.mainTexture = tex;
         mat.mainTextureScale = new Vector2(TilesAcrossGround, TilesAcrossGround);
-        mat.color = Color.white;
-        mat.SetFloat("_Glossiness", 0.05f); // 젖은 흙이지만 반짝이지 않게
-        mat.SetFloat("_Metallic", 0f);
+        if (mat.HasProperty("_Metallic")) mat.SetFloat("_Metallic", 0f);
         rend.material = mat;
     }
 
