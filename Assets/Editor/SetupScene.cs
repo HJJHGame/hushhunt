@@ -13,7 +13,7 @@ using Names = WorldConfig.Names;
 public static class SetupScene
 {
     const string ScenePath = "Assets/Scenes/Main.unity";
-    const int SceneVersion = 11; // 씬 구성을 바꾸면 1 올린다 (v11: 집 static 해제 - 런타임 랜덤배치가 집을 움직일 수 있게)
+    const int SceneVersion = 12; // 씬 구성을 바꾸면 1 올린다 (v12: 경계 벽 안쪽 면을 정확히 ±200m로)
     const string VersionKey = "HushHunt.SceneVersion";
 
     static SetupScene()
@@ -282,9 +282,9 @@ public static class SetupScene
 
         // 맵 가장자리 벽: 400x400m 경계(±Half)를 어두운 벽 네 면으로 둘러싼다.
         // 땅과 같은 재질이라 안개 속에서 지형처럼 보이고, 미니맵에는 맵 경계로 보인다.
-        // 벽 안쪽 면이 ±99m라 플레이어는 절대 맵 밖으로 못 나간다.
-        float wallOffset = WorldConfig.Half - 0.5f;   // 벽 두께 1m의 중심: 안쪽 면이 ±(Half-1)
-        float wallLength = WorldConfig.Half * 2f + 1f; // 모서리가 서로 겹쳐 틈이 없게
+        // 벽 안쪽 면이 정확히 ±200m(Half)라 플레이어는 절대 맵 밖으로 못 나간다.
+        float wallOffset = WorldConfig.Half + 0.5f;   // 벽 두께 1m의 중심: 안쪽 면이 ±Half
+        float wallLength = WorldConfig.Half * 2f + 3f; // 모서리가 서로 겹쳐 틈이 없게
         MakeEdgeWall(new Vector3(0f, 2f, wallOffset), new Vector3(wallLength, 4f, 1f), groundMat);
         MakeEdgeWall(new Vector3(0f, 2f, -wallOffset), new Vector3(wallLength, 4f, 1f), groundMat);
         MakeEdgeWall(new Vector3(wallOffset, 2f, 0f), new Vector3(1f, 4f, wallLength), groundMat);
