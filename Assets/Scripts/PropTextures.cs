@@ -8,22 +8,25 @@ public class PropTextures : MonoBehaviour
 {
     readonly List<Texture2D> texes = new List<Texture2D>();
     readonly List<Material> mats = new List<Material>();
+    readonly HashSet<Texture2D> photos = new HashSet<Texture2D>(); // Resources 에서 불러온 사진 (지우지 않는다)
 
     void Start()
     {
-        // SetupScene이 만든 머티리얼 이름 -> 만들 텍스처. 회색조로 만들어 머티리얼 색이 입힌다.
+        // SetupScene이 만든 머티리얼 이름 -> 텍스처. Assets/Resources/Textures 에 실사 사진
+        // (ambientCG CC0)이 있으면 그걸 쓰고, 없으면 절차적 텍스처로 버틴다.
+        // 절차적 텍스처는 회색조라 머티리얼 색이 입히고, 사진은 풀컬러라 흰색 그대로 둔다.
         var texByName = new Dictionary<string, Texture2D>
         {
-            { "House A", Siding(11, true) },
-            { "House B", Siding(23, true) },
-            { "House C", Siding(37, true) },
-            { "Roof", Shingles(5) },
-            { "Trim", WoodGrain(7, true) },
-            { "Floor", Siding(13, false) },   // 가로 판자 바닥
-            { "Furniture", WoodGrain(17, false) },
-            { "Rock", Rock(29) },
-            { "Fence", WoodGrain(31, true) },
-            { "Log", WoodGrain(41, false) },
+            { "House A", PhotoOr("Siding", () => Siding(11, true)) },
+            { "House B", PhotoOr("Siding", () => Siding(23, true)) },
+            { "House C", PhotoOr("Siding", () => Siding(37, true)) },
+            { "Roof", PhotoOr("Roof", () => Shingles(5)) },
+            { "Trim", PhotoOr("Planks", () => WoodGrain(7, true)) },
+            { "Floor", PhotoOr("Planks", () => Siding(13, false)) },   // 가로 판자 바닥
+            { "Furniture", PhotoOr("Planks", () => WoodGrain(17, false)) },
+            { "Rock", PhotoOr("Rock", () => Rock(29)) },
+            { "Fence", PhotoOr("Planks", () => WoodGrain(31, true)) },
+            { "Log", PhotoOr("Bark", () => WoodGrain(41, false)) },
         };
 
         var replByName = new Dictionary<string, Material>();
@@ -33,7 +36,8 @@ public class PropTextures : MonoBehaviour
             if (m == null || !texByName.ContainsKey(m.name)) continue;
             if (!replByName.TryGetValue(m.name, out var repl))
             {
-                repl = RuntimeMaterials.CreateLit(m.name + " (textured)", m.color, 0.05f);
+                var tint = photos.Contains(texByName[m.name]) ? Color.white : m.color;
+                repl = RuntimeMaterials.CreateLit(m.name + " (textured)", tint, 0.05f);
                 repl.mainTexture = texByName[m.name];
                 replByName[m.name] = repl;
                 mats.Add(repl);
@@ -48,6 +52,15 @@ public class PropTextures : MonoBehaviour
         foreach (var t in texes) if (t != null) Destroy(t);
         mats.Clear();
         texes.Clear();
+    }
+
+    // Resources/Textures/<resName> 사진이 있으면 그걸 쓰고 (공유 에셋이라 OnDestroy 에서 지우지 않는다),
+    // 없으면 fallback()으로 절차적 텍스처를 만든다.
+    Texture2D PhotoOr(string resName, System.Func<Texture2D> fallback)
+    {
+        var t = Resources.Load<Texture2D>("Textures/" + resName);
+        if (t != null) { photos.Add(t); return t; }
+        return fallback();
     }
 
     Texture2D NewTex(int w, int h)
