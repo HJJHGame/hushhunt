@@ -110,9 +110,9 @@ public class GameManager : MonoBehaviour
     void EnsureStyles()
     {
         if (timerStyle != null) return;
-        timerStyle = new GUIStyle(GUI.skin.label) { alignment = TextAnchor.MiddleCenter, fontSize = 28, fontStyle = FontStyle.Bold };
-        titleStyle = new GUIStyle(GUI.skin.label) { alignment = TextAnchor.MiddleCenter, fontSize = 34, fontStyle = FontStyle.Bold };
-        subStyle = new GUIStyle(GUI.skin.label) { alignment = TextAnchor.MiddleCenter, fontSize = 18 };
+        timerStyle = new GUIStyle(GUI.skin.label) { alignment = TextAnchor.MiddleCenter, fontSize = 34, fontStyle = FontStyle.Bold };
+        titleStyle = new GUIStyle(GUI.skin.label) { alignment = TextAnchor.MiddleCenter, fontSize = 40, fontStyle = FontStyle.Bold };
+        subStyle = new GUIStyle(GUI.skin.label) { alignment = TextAnchor.MiddleCenter, fontSize = 23, fontStyle = FontStyle.Bold };
     }
 
     static string FormatTime(float seconds)
@@ -157,14 +157,9 @@ public class GameManager : MonoBehaviour
         GUI.color = prev;
     }
 
-    // 검은 그림자를 한 번 깔고 글씨를 올려 어두운 배경에서도 읽히게 한다.
+    // 진한 외곽선 + 불투명 글씨 (HudText)로 어두운 배경에서도 읽히게 한다.
     static void DrawShadowed(Rect rect, string text, GUIStyle style, Color color)
     {
-        var prev = GUI.color;
-        GUI.color = new Color(0f, 0f, 0f, 0.8f * color.a);
-        GUI.Label(new Rect(rect.x + 2f, rect.y + 2f, rect.width, rect.height), text, style);
-        GUI.color = color;
-        GUI.Label(rect, text, style);
-        GUI.color = prev;
+        HudText.Label(rect, text, style, color);
     }
 }
