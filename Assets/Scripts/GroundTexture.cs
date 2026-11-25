@@ -9,6 +9,7 @@ public class GroundTexture : MonoBehaviour
 
     Texture2D tex;
     Material mat;
+    bool texOwned = true; // Resources 에서 불러온 공유 에셋이면 Destroy 하면 안 된다
 
     void Start()
     {
@@ -17,7 +18,10 @@ public class GroundTexture : MonoBehaviour
         var rend = ground.GetComponent<Renderer>();
         if (rend == null) return;
 
-        tex = BuildTexture();
+        // 실사 숲 바닥 사진(ambientCG CC0)이 있으면 그걸 쓰고, 없으면 코드로 만든 텍스처로 버틴다.
+        tex = Resources.Load<Texture2D>("Textures/Ground");
+        texOwned = tex == null;
+        if (tex == null) tex = BuildTexture();
         mat = RuntimeMaterials.CreateLit("Ground (runtime)", Color.white, 0.05f); // 젖은 흙이지만 반짝이지 않게
         mat.mainTexture = tex;
         mat.mainTextureScale = new Vector2(TilesAcrossGround, TilesAcrossGround);
@@ -28,7 +32,7 @@ public class GroundTexture : MonoBehaviour
     void OnDestroy()
     {
         if (mat != null) Destroy(mat);
-        if (tex != null) Destroy(tex);
+        if (tex != null && texOwned) Destroy(tex);
     }
 
     // 가장자리가 이어지는(타일링) 노이즈: 네 방향 오프셋 샘플을 섞는다.
