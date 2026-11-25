@@ -6,12 +6,20 @@ public class PlayerHud : MonoBehaviour
     FirstPersonController fpc;
     Flashlight flash;
     GUIStyle hintStyle;
+    GUIStyle coordStyle;
     float visibility;
+    bool showCoords;
 
     void Start()
     {
         fpc = FindFirstObjectByType<FirstPersonController>();
         flash = FindFirstObjectByType<Flashlight>();
+    }
+
+    void Update()
+    {
+        if (!MainMenu.IsMenuOpen && Input.GetKeyDown(KeyCode.F1))
+            showCoords = !showCoords;
     }
 
     void OnGUI()
@@ -54,6 +62,20 @@ public class PlayerHud : MonoBehaviour
             GUI.color = new Color(1f, 1f, 1f, 0.55f);
             string text = "[F] 손전등 " + (flash.IsOn ? "켜짐" : "꺼짐");
             GUI.Label(new Rect(Screen.width - 260f * scale - 16f, Screen.height - 40f * scale, 260f * scale, 28f * scale), text, hintStyle);
+        }
+
+        // F1: 현재 좌표와 가장자리까지 거리. 맵이 진짜 400x400m인지 직접 확인할 수 있다.
+        if (showCoords && fpc != null)
+        {
+            if (coordStyle == null)
+                coordStyle = new GUIStyle(GUI.skin.label) { alignment = TextAnchor.UpperLeft };
+            coordStyle.fontSize = Mathf.RoundToInt(15f * scale);
+            var p = fpc.transform.position;
+            float edge = WorldConfig.Half - Mathf.Max(Mathf.Abs(p.x), Mathf.Abs(p.z));
+            string text = "위치 (" + p.x.ToString("0.0") + ", " + p.z.ToString("0.0")
+                + ")  |  가장자리까지 " + edge.ToString("0") + "m  |  맵 400x400m  [F1] 끄기";
+            GUI.color = new Color(1f, 1f, 1f, 0.55f);
+            GUI.Label(new Rect(16f, 12f, 640f * scale, 28f * scale), text, coordStyle);
         }
 
         GUI.color = prev;
