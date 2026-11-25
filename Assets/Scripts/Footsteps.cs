@@ -36,6 +36,14 @@ public class Footsteps : MonoBehaviour
         lastPosition = transform.position;
     }
 
+    void OnDestroy()
+    {
+        // 런타임에 만든 클립은 직접 해제한다 (씬 재시작 시 메모리 누수 방지)
+        if (steps == null) return;
+        foreach (var clip in steps)
+            if (clip != null) Destroy(clip);
+    }
+
     // 이동(Update)이 끝난 뒤 한 곳에서 발소리와 다리의 박자를 계산한다.
     void LateUpdate()
     {
