@@ -1,5 +1,4 @@
 using UnityEngine;
-using UnityEngine.SceneManagement;
 
 // 한 판의 흐름: 타이틀 대기 -> 숨는 시간(1분) -> 수색 시간(폭탄 타이머, 5분) -> 종료.
 // 규칙상 타이머가 끝나면 잡는 팀 승리. 캐릭터/무기/네트워크는 아직 없으므로
@@ -24,15 +23,6 @@ public class GameManager : MonoBehaviour
     public bool paused;
 
     float bannerUntil = -1f;
-    MainMenu menu;
-
-    // 메뉴는 GameSystems가 씬에 하나만 붙인다. 찾으면 캐시한다 (issue #28).
-    bool MenuOpen()
-    {
-        if (menu == null) menu = FindFirstObjectByType<MainMenu>();
-        return menu != null && menu.IsOpen;
-    }
-
 
     // OnGUI마다 GUIStyle을 새로 만들면 GC가 계속 쌓이므로 처음 한 번만 만든다.
     static GUIStyle timerStyle, titleStyle, subStyle;
@@ -81,17 +71,13 @@ public class GameManager : MonoBehaviour
 
     void Restart()
     {
-        var scene = SceneManager.GetActiveScene();
-        if (scene.buildIndex >= 0)
-            SceneManager.LoadScene(scene.buildIndex);
-        else
-            SceneManager.LoadScene(scene.name);
+        SceneReloader.ReloadActive();
     }
 
     void OnGUI()
     {
         if (Event.current.type != EventType.Repaint) return;
-        if (MenuOpen() || CurrentPhase == Phase.Waiting) return;
+        if (MainMenu.IsMenuOpen || CurrentPhase == Phase.Waiting) return;
         EnsureStyles();
 
         bool urgent = CurrentPhase != Phase.Ended && TimeLeft <= urgentSeconds;
