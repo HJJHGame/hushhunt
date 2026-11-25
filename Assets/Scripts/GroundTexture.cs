@@ -72,6 +72,26 @@ public class GroundTexture : MonoBehaviour
             }
         }
 
+        // 잔디 포기: 짧은 세로 초록 획을 심는다.
+        var grass = new Color(0.14f, 0.22f, 0.10f);
+        for (int i = 0; i < 700; i++)
+        {
+            int cx = rand.Next(Size), cy = rand.Next(Size);
+            int len = 2 + rand.Next(3);
+            float shade = 0.5f + (float)rand.NextDouble() * 0.7f;
+            var gc = grass * shade;
+            for (int dy = 0; dy < len; dy++)
+                px[((cy + dy) % Size) * Size + cx] = Color.Lerp(gc, px[((cy + dy) % Size) * Size + cx], 0.25f);
+        }
+
+        // 잔돌: 밝은 회색 점을 흩뿌린다.
+        var gravel = new Color(0.35f, 0.35f, 0.36f);
+        for (int i = 0; i < 500; i++)
+        {
+            float shade = 0.5f + (float)rand.NextDouble() * 0.8f;
+            px[rand.Next(Size) * Size + rand.Next(Size)] = gravel * shade;
+        }
+
         // 낙엽/솔잎 조각: 작은 갈색 점들을 타일 경계에서 감싸 이어지게 찍는다.
         for (int i = 0; i < 900; i++)
         {
