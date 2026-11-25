@@ -51,11 +51,11 @@ public class Crosshair : MonoBehaviour
             noticeStyle.fontStyle = FontStyle.Bold;
             noticeStyle.normal.textColor = Color.white;
         }
-        noticeStyle.fontSize = Mathf.Max(18, Screen.height / 22);
-        GUI.Label(new Rect(0, Screen.height * 0.5f - 60f, Screen.width, 60f),
+        noticeStyle.fontSize = Mathf.Max(24, Screen.height / 18);
+        HudText.Label(new Rect(0, Screen.height * 0.5f - 70f, Screen.width, 64f),
             "ESC - 커서 해제됨", noticeStyle);
-        noticeStyle.fontSize = Mathf.Max(14, Screen.height / 36);
-        GUI.Label(new Rect(0, Screen.height * 0.5f, Screen.width, 40f),
+        noticeStyle.fontSize = Mathf.Max(18, Screen.height / 28);
+        HudText.Label(new Rect(0, Screen.height * 0.5f, Screen.width, 44f),
             "화면을 클릭하면 다시 조작 (게임은 계속 진행 중)", noticeStyle);
     }
 

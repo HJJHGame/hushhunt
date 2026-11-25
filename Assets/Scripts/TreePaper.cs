@@ -115,7 +115,8 @@ public class TreePaper : MonoBehaviour
         if (style == null)
         {
             style = new GUIStyle(GUI.skin.label) { alignment = TextAnchor.MiddleCenter };
-            style.fontSize = Mathf.RoundToInt(20f * Mathf.Clamp(Screen.height / 1080f, 0.75f, 1.5f));
+            style.fontStyle = FontStyle.Bold;
+            style.fontSize = Mathf.RoundToInt(26f * Mathf.Clamp(Screen.height / 1080f, 0.75f, 1.5f));
         }
         if (taken)
         {
@@ -130,11 +131,7 @@ public class TreePaper : MonoBehaviour
 
     void ShadowText(string msg)
     {
-        var r = new Rect(0f, Screen.height * 0.62f, Screen.width, 40f);
-        GUI.color = new Color(0f, 0f, 0f, 0.9f);
-        GUI.Label(new Rect(r.x + 1f, r.y + 1f, r.width, r.height), msg, style);
-        GUI.color = Color.white;
-        GUI.Label(r, msg, style);
+        HudText.Label(new Rect(0f, Screen.height * 0.62f, Screen.width, 44f), msg, style);
     }
 
     void OnDestroy()
