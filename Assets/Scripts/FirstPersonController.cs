@@ -157,9 +157,11 @@ public class FirstPersonController : MonoBehaviour
     {
         // 서 있을 때 캡슐이 차지할 공간에 다른 콜라이더가 있으면 일어나지 않는다.
         float r = controller.radius * 0.95f;
-        float feetY = transform.position.y + standingCenterY - standingHeight * 0.5f;
-        Vector3 p1 = new Vector3(transform.position.x, feetY + r, transform.position.z);
-        Vector3 p2 = new Vector3(transform.position.x, feetY + standingHeight - r, transform.position.z);
+        // 캡슐 중심의 X/Z는 현재 컨트롤러 설정을 따른다 (center를 바꿔도 검사 위치가 어긋나지 않게)
+        Vector3 center = transform.TransformPoint(new Vector3(controller.center.x, standingCenterY, controller.center.z));
+        float feetY = center.y - standingHeight * 0.5f;
+        Vector3 p1 = new Vector3(center.x, feetY + r, center.z);
+        Vector3 p2 = new Vector3(center.x, feetY + standingHeight - r, center.z);
         foreach (var col in Physics.OverlapCapsule(p1, p2, r, ~0, QueryTriggerInteraction.Ignore))
             if (col != controller && !col.transform.IsChildOf(transform))
                 return false;
