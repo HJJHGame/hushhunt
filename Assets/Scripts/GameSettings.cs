@@ -14,9 +14,12 @@ public static class GameSettings
 
     const string KeySensitivity = "hh.sensitivity";
     const string KeyVolume = "hh.volume";
+    const string KeyMaxFps = "hh.maxfps";
 
     public static float Sensitivity { get; private set; }
     public static float Volume { get; private set; }
+    public const int MaxFpsDefault = 60;
+    public static int MaxFps { get; private set; } // 60 또는 0(제한 없음)
 
     public static event System.Action Changed;
 
@@ -27,13 +30,30 @@ public static class GameSettings
         // 저장된 값이 손상됐어도(수동 편집 등) 허용 범위를 벗어나지 않게 한다.
         Sensitivity = Mathf.Clamp(PlayerPrefs.GetFloat(KeySensitivity, SensitivityDefault), SensitivityMin, SensitivityMax);
         Volume = Mathf.Clamp01(PlayerPrefs.GetFloat(KeyVolume, VolumeDefault));
+        MaxFps = PlayerPrefs.GetInt(KeyMaxFps, MaxFpsDefault) == 0 ? 0 : 60;
+    }
+
+    // 어느 씬에서 Play를 눌러도(메뉴를 거치지 않아도) 시작할 때 저장된 최대 FPS를 적용한다.
+    [RuntimeInitializeOnLoadMethod(RuntimeInitializeLoadType.BeforeSceneLoad)]
+    static void ApplyFrameRate()
+    {
+        QualitySettings.vSyncCount = 0;
+        Application.targetFrameRate = MaxFps == 0 ? -1 : MaxFps;
+    }
+
+    public static void SetMaxFps(int value)
+    {
+        MaxFps = value == 0 ? 0 : 60;
+        PlayerPrefs.SetInt(KeyMaxFps, MaxFps);
+        ApplyFrameRate();
+        dirty = true;
+        Changed?.Invoke();
     }
 
     // 게임 시작 시 한 번 호출: 저장된 값을 실제 시스템(볼륨 등)에 반영한다.
     public static void Apply()
     {
-        QualitySettings.vSyncCount = 0;
-        Application.targetFrameRate = 60;
+        ApplyFrameRate();
         AudioListener.volume = Volume;
         Changed?.Invoke();
     }
