@@ -13,7 +13,7 @@ using Names = WorldConfig.Names;
 public static class SetupScene
 {
     const string ScenePath = "Assets/Scenes/Main.unity";
-    const int SceneVersion = 10; // 씬 구성을 바꾸면 1 올린다 (v10: 400x400m 맵 + 모서리/중앙 스폰)
+    const int SceneVersion = 11; // 씬 구성을 바꾸면 1 올린다 (v11: 집 static 해제 - 런타임 랜덤배치가 집을 움직일 수 있게)
     const string VersionKey = "HushHunt.SceneVersion";
 
     static SetupScene()
@@ -349,8 +349,9 @@ public static class SetupScene
         foreach (var t in Object.FindObjectsByType<Transform>(FindObjectsSortMode.None))
         {
             string n = t.name;
+            // 집(Names.House)은 빼야 한다: 정적 배치로 굳으면 RandomizeLayout 이 위치를 바꿔도 화면의 집이 안 움직인다.
             if (n == Names.Ground || n == Names.Rock || n == Names.EdgeWall || n == Names.OldFence
-                || n == Names.House || n == Names.FallenLog || n == Names.Stump)
+                || n == Names.FallenLog || n == Names.Stump)
             {
                 foreach (var child in t.GetComponentsInChildren<Transform>(true))
                     GameObjectUtility.SetStaticEditorFlags(child.gameObject, flags);
