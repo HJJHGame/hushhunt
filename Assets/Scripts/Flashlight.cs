@@ -8,9 +8,9 @@ public class Flashlight : MonoBehaviour
 {
     public KeyCode toggleKey = KeyCode.F;
     public bool startOn = true;
-    public float intensity = 3.6f; // 어두워진 맵에서 존재감을 높인다
-    public float range = 38f;
-    public float spotAngle = 55f;
+    public float intensity = 5.0f; // 거의 검정인 맵에서 좁은 원뿔이 확실히 보이게
+    public float range = 26f;
+    public float spotAngle = 42f;
 
     Light lamp;
     Material lensMat;
