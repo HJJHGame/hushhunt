@@ -8,7 +8,26 @@ public class TreeModels : MonoBehaviour
 {
     Texture2D barkTex;
     Material barkMaterial;
+    Material leafInst; // 잎 재질의 GPU 인스턴싱용 복사본
     bool barkTexOwned = true; // Resources 에서 불러온 공유 에셋이면 Destroy 하면 안 된다
+    bool farCullingReady;
+    const int FarLayer = 30; // 31은 용지 표면 레이캐스트가 임시로 쓴다
+
+    // 안개 시야(약 50m) 밖의 무거운 모델은 카메라 레이어 컬링으로 아예 그리지 않는다.
+    void SetupFarCulling(GameObject go)
+    {
+        foreach (var r in go.GetComponentsInChildren<Renderer>())
+            r.gameObject.layer = FarLayer;
+        if (farCullingReady) return;
+        var cam = Camera.main != null ? Camera.main : FindFirstObjectByType<Camera>();
+        if (cam == null) return;
+        var d = cam.layerCullDistances;
+        if (d == null || d.Length != 32) d = new float[32];
+        d[FarLayer] = 50f;
+        cam.layerCullDistances = d;
+        cam.layerCullSpherical = true;
+        farCullingReady = true;
+    }
 
     void Start()
     {
@@ -16,11 +35,17 @@ public class TreeModels : MonoBehaviour
         bool hasModels = prefabs != null && prefabs.Length > 0;
 
         var rand = new System.Random(11);
-        // 전나무(Fir Tree 01) 모델이 있으면 최소 3그루에는 반드시 단다: 용지는 전나무에만 붙는다.
+        // 전나무(Fir Tree 01) 모델이 있으면 딱 3그루에만 단다: 용지는 전나무에만 붙고,
+        // 이 모델은 고폴리라 복사본을 늘리면 프레임이 크게 떨어진다 (실측: 320그루 전부 전나무일 때 30fps).
+        // 전나무는 무작위 후보에서도 빼서 나머지 나무는 절차적 소나무(또는 다른 모델)로 유지한다.
         GameObject firPrefab = null;
+        var others = new System.Collections.Generic.List<GameObject>();
         if (hasModels)
             foreach (var pf in prefabs)
-                if (pf.name.ToLowerInvariant().Contains("fir_tree_01")) { firPrefab = pf; break; }
+            {
+                if (pf.name.ToLowerInvariant().Contains("fir_tree_01")) firPrefab = pf;
+                else others.Add(pf);
+            }
         int firNeed = firPrefab != null ? 3 : 0;
 
         // 거친 나무껍질 느낌: 코드로 만든 세로 결 노이즈 텍스처. 이미지 파일 없이 적용된다.
@@ -33,6 +58,7 @@ public class TreeModels : MonoBehaviour
         barkMaterial = RuntimeMaterials.CreateLit("Tree Bark (runtime)",
             barkTexOwned ? new Color(0.28f, 0.22f, 0.18f) : Color.white, 0.05f);
         barkMaterial.mainTexture = barkTex;
+        barkMaterial.enableInstancing = true; // 절차적 나무 줄기를 GPU 인스턴싱으로 그린다
         var all = FindObjectsByType<Transform>(FindObjectsSortMode.None);
         var pines = new System.Collections.Generic.List<Transform>();
         foreach (var cand in all) if (cand.name == WorldConfig.Names.PineTree) pines.Add(cand);
@@ -63,18 +89,27 @@ public class TreeModels : MonoBehaviour
                 f.gameObject.SetActive(false);
             }
 
-            if (!hasModels)
+            GameObject prefab = null;
+            bool isFir = false;
+            if (firNeed > 0) { prefab = firPrefab; firNeed--; isFir = true; }
+            else if (others.Count > 0) prefab = others[rand.Next(others.Count)];
+            if (prefab == null)
             {
                 // 절차적 소나무: 기존 나무 높이/굵기 배율에 맞춰 코드로 만든다.
+                if (leafMat != null)
+                {
+                    if (leafInst == null)
+                        leafInst = new Material(leafMat) { name = leafMat.name + " (instanced)", enableInstancing = true };
+                    leafMat = leafInst; // GPU 인스턴싱: 같은 재질/메시를 한 번에 그린다
+                }
                 ProceduralTree.Build(t, WorldConfig.PineHeight * oldScale,
                     0.9f + (float)rand.NextDouble() * 0.25f, barkMaterial, leafMat, rand);
                 continue;
             }
 
-            var prefab = firNeed > 0 ? firPrefab : prefabs[rand.Next(prefabs.Length)];
             var go = Instantiate(prefab, t);
-            go.name = prefab == firPrefab ? "TreeModel Fir" : "TreeModel";
-            if (prefab == firPrefab) firNeed--;
+            go.name = isFir ? "TreeModel Fir" : "TreeModel";
+            if (isFir) SetupFarCulling(go); // 안개 시야(약 50m) 밖의 무거운 전나무는 그리지 않는다
             go.transform.localPosition = Vector3.zero;
             // 방향은 제각각, 살짝 기울어진 나무로 획일적인 줄맞춤 느낌을 없앤다.
             float tiltX = (float)(rand.NextDouble() * 6.0 - 3.0);
@@ -102,7 +137,9 @@ public class TreeModels : MonoBehaviour
                 go.transform.position += Vector3.up * (t.position.y - nb.min.y);
             }
 
-            // 재질: 이름에 wood/bark 가 있으면 줄기색, 나머지는 잎색.
+            // 재질: 전나무는 원래 실사 텍스처를 그대로 쓴다 (덮어쓰면 폴리헤이븐 재질이 날아감).
+            // 다른 모델은 이름에 wood/bark 가 있으면 줄기색, 나머지는 잎색으로 맞춘다.
+            if (isFir) continue;
             foreach (var r in rends)
             {
                 var mats = r.sharedMaterials;
@@ -121,6 +158,7 @@ public class TreeModels : MonoBehaviour
     void OnDestroy()
     {
         if (barkMaterial != null) Destroy(barkMaterial);
+        if (leafInst != null) Destroy(leafInst);
         if (barkTex != null && barkTexOwned) Destroy(barkTex);
     }
 
