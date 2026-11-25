@@ -5,12 +5,21 @@ using UnityEngine;
 // 모델 파일이 없으면 아무것도 바꾸지 않아 기존 나무가 그대로 남는다.
 public class TreeModels : MonoBehaviour
 {
+    Texture2D barkTex;
+    Material barkMaterial;
+
     void Start()
     {
         var prefabs = Resources.LoadAll<GameObject>("Trees");
         if (prefabs == null || prefabs.Length == 0) return;
 
         var rand = new System.Random(11);
+
+        // 거친 나무껍질 느낌: 코드로 만든 세로 결 노이즈 텍스처. 이미지 파일 없이 적용된다.
+        // 어두운 갈색을 입혀 두고, 손전등이 비출 때 결 명암이 드러난다.
+        barkTex = BuildBarkTexture();
+        barkMaterial = RuntimeMaterials.CreateLit("Tree Bark (runtime)", new Color(0.28f, 0.22f, 0.18f), 0.05f);
+        barkMaterial.mainTexture = barkTex;
         var all = FindObjectsByType<Transform>(FindObjectsSortMode.None);
         var pines = new System.Collections.Generic.List<Transform>();
         foreach (var cand in all) if (cand.name == WorldConfig.Names.PineTree) pines.Add(cand);
@@ -79,11 +88,53 @@ public class TreeModels : MonoBehaviour
                 {
                     string n = mats[i] != null ? mats[i].name.ToLowerInvariant() : "";
                     bool wood = n.Contains("wood") || n.Contains("bark") || n.Contains("trunk");
-                    var pick = wood ? barkMat : leafMat;
+                    var pick = wood ? (barkMaterial != null ? barkMaterial : barkMat) : leafMat;
                     if (pick != null) mats[i] = pick;
                 }
                 r.sharedMaterials = mats;
             }
         }
+    }
+
+    void OnDestroy()
+    {
+        if (barkMaterial != null) Destroy(barkMaterial);
+        if (barkTex != null) Destroy(barkTex);
+    }
+
+    // 가장자리가 이어지는(타일링) 노이즈. GroundTexture와 같은 기법.
+    static float TileN(float u, float v, float fx, float fy, float seed)
+    {
+        float a = Mathf.PerlinNoise(seed + u * fx, seed + v * fy);
+        float b = Mathf.PerlinNoise(seed + (u - 1f) * fx, seed + v * fy);
+        float c = Mathf.PerlinNoise(seed + u * fx, seed + (v - 1f) * fy);
+        float d = Mathf.PerlinNoise(seed + (u - 1f) * fx, seed + (v - 1f) * fy);
+        return Mathf.Lerp(Mathf.Lerp(a, b, u), Mathf.Lerp(c, d, u), v);
+    }
+
+    // 세로로 길게 늘어진 결 + 잔결로 거친 껍질 질감을 만든다. 회색조로 만들고 색은 머티리얼이 입힌다.
+    static Texture2D BuildBarkTexture()
+    {
+        const int W = 128, H = 256;
+        var tex = new Texture2D(W, H, TextureFormat.RGB24, true);
+        tex.wrapMode = TextureWrapMode.Repeat;
+        tex.filterMode = FilterMode.Trilinear;
+        var px = new Color[W * H];
+        for (int y = 0; y < H; y++)
+        {
+            for (int x = 0; x < W; x++)
+            {
+                float u = x / (float)W, v = y / (float)H;
+                float ridge = TileN(u, v, 16f, 2f, 3f);      // 가로로 촘촘, 세로로 완만한 결
+                float groove = Mathf.Abs(ridge - 0.5f) * 2f; // 골이 패인 느낌
+                float fine = TileN(u, v, 48f, 24f, 31f);     // 잔결
+                float t = Mathf.Clamp01(1f - groove) * (0.65f + fine * 0.6f);
+                float g = Mathf.Lerp(0.30f, 0.85f, t);
+                px[y * W + x] = new Color(g, g, g);
+            }
+        }
+        tex.SetPixels(px);
+        tex.Apply(true);
+        return tex;
     }
 }
