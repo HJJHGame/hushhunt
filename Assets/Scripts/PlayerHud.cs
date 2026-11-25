@@ -73,7 +73,7 @@ public class PlayerHud : MonoBehaviour
             var p = fpc.transform.position;
             float edge = WorldConfig.Half - Mathf.Max(Mathf.Abs(p.x), Mathf.Abs(p.z));
             string text = "위치 (" + p.x.ToString("0.0") + ", " + p.z.ToString("0.0")
-                + ")  |  가장자리까지 " + edge.ToString("0") + "m  |  맵 400x400m  [F1] 끄기";
+                + ")  |  가장자리(±200m)까지 " + edge.ToString("0") + "m  |  맵 400x400m  [F1] 끄기";
             GUI.color = new Color(1f, 1f, 1f, 0.55f);
             GUI.Label(new Rect(16f, 12f, 640f * scale, 28f * scale), text, coordStyle);
         }
