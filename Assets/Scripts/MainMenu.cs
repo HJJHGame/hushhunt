@@ -37,7 +37,7 @@ public class MainMenu : MonoBehaviour
     static readonly Color ButtonPressed = new Color(0.32f, 0.45f, 0.52f, 1f);
     static readonly Color ButtonDisabled = new Color(0.10f, 0.11f, 0.13f, 0.7f);
     static readonly Color TextMain = new Color(0.92f, 0.95f, 1f);
-    static readonly Color TextSub = new Color(0.65f, 0.72f, 0.8f);
+    static readonly Color TextSub = new Color(0.85f, 0.88f, 0.92f); // 어두운 화면+압축에서도 읽히게 밝게
 
     void Awake()
     {
@@ -184,7 +184,7 @@ public class MainMenu : MonoBehaviour
         MakeButton(titlePanel, "온라인 (준비 중)", -80f, false, null);
         MakeButton(titlePanel, "설정", -180f, true, () => OpenSettings(Mode.Title));
 
-        var ver = MakeText(titlePanel, "Unity 6 · 싱글 프로토타입", 18, TextAnchor.MiddleCenter, TextSub);
+        var ver = MakeText(titlePanel, "Unity 6 · 싱글 프로토타입", 22, TextAnchor.MiddleCenter, TextSub);
         Place(ver.rectTransform, 0f, -480f, 600f, 30f);
     }
 
@@ -198,7 +198,7 @@ public class MainMenu : MonoBehaviour
         MakeButton(box, "계속하기", 80f, true, Resume);
         MakeButton(box, "설정", 0f, true, () => OpenSettings(Mode.Pause));
         MakeButton(box, "타이틀로", -80f, true, BackToTitle);
-        var hint = MakeText(box, "Esc로 닫기", 18, TextAnchor.MiddleCenter, TextSub);
+        var hint = MakeText(box, "Esc로 닫기", 22, TextAnchor.MiddleCenter, TextSub);
         Place(hint.rectTransform, 0f, -220f, 480f, 30f);
     }
 
