@@ -13,14 +13,6 @@ public class HorrorOverlay : MonoBehaviour
     FirstPersonController fpc;
     float grainTimer;
     int grainIndex;
-    MainMenu menu;
-
-    // 메뉴는 GameSystems가 씬에 하나만 붙인다. 찾으면 캐시한다 (issue #28).
-    bool MenuOpen()
-    {
-        if (menu == null) menu = FindFirstObjectByType<MainMenu>();
-        return menu != null && menu.IsOpen;
-    }
 
     Rect grainUv = new Rect(0f, 0f, 1f, 1f);
 
@@ -46,7 +38,7 @@ public class HorrorOverlay : MonoBehaviour
     void OnGUI()
     {
         if (Event.current.type != EventType.Repaint) return;
-        if (MenuOpen()) return; // 메뉴 위에 비네팅/그레인을 얹지 않는다
+        if (MainMenu.IsMenuOpen) return; // 메뉴 위에 비네팅/그레인을 얹지 않는다
         GUI.depth = 100; // 다른 UI보다 뒤에 그린다
         var screen = new Rect(0f, 0f, Screen.width, Screen.height);
         Color prev = GUI.color;
