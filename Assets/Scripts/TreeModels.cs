@@ -48,7 +48,7 @@ public class TreeModels : MonoBehaviour
             }
         // 전나무는 숲 전체에 흩어 놓는다 (pines 는 x 순 정렬이라 앞에서부터 쓰면 한쪽 끝에 몰린다).
         // 개수: 안개(약 25~30m 밖은 거의 안 보임) 속에서도 시야에 전나무가 여러 그루 보이는 정도. 모델이 고폴리라 너무 늘리면 fps가 떨어진다.
-        const int FirCount = 150;
+        const int FirCount = 180;
 
         // 거친 나무껍질 느낌: 코드로 만든 세로 결 노이즈 텍스처. 이미지 파일 없이 적용된다.
         // 어두운 갈색을 입혀 두고, 손전등이 비출 때 결 명암이 드러난다.
@@ -68,7 +68,7 @@ public class TreeModels : MonoBehaviour
         var firSet = new System.Collections.Generic.HashSet<int>();
         if (firPrefab != null)
         {
-            // 같은 숲이면 같은 전나무가 되도록 고정 시드로 고른다.
+            // 매 판 숲 전체에서 무작위로 고른다 (나무 위치는 RandomizeLayout이 집/스폰을 피해 이미 정했다).
             var idx = new System.Collections.Generic.List<int>();
             pines.Sort((p1, p2) =>
             {
@@ -76,7 +76,7 @@ public class TreeModels : MonoBehaviour
                 return cmp != 0 ? cmp : p1.position.z.CompareTo(p2.position.z);
             });
             for (int i = 0; i < pines.Count; i++) idx.Add(i);
-            var pick = new System.Random(23);
+            var pick = new System.Random(); // 판마다 다른 나무가 전나무가 된다
             for (int i = idx.Count - 1; i > 0; i--)
             {
                 int j = pick.Next(i + 1);
