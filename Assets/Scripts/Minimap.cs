@@ -87,10 +87,8 @@ public class Minimap : MonoBehaviour
                 fontStyle = FontStyle.Bold
             };
         }
-        northStyle.fontSize = bigMap ? 18 : 13;
-        GUI.color = new Color(1f, 1f, 1f, 0.7f);
-        GUI.Label(new Rect(map.x, map.y + 1f, map.width, 24f), "N", northStyle);
-        GUI.color = Color.white;
+        northStyle.fontSize = bigMap ? 22 : 16;
+        HudText.Label(new Rect(map.x, map.y + 1f, map.width, 26f), "N", northStyle);
 
         if (bigMap)
         {
@@ -100,10 +98,11 @@ public class Minimap : MonoBehaviour
                 hintStyle = new GUIStyle(GUI.skin.label)
                 {
                     alignment = TextAnchor.MiddleCenter,
-                    fontSize = 14
+                    fontSize = 18,
+                    fontStyle = FontStyle.Bold
                 };
             }
-            GUI.Label(new Rect(map.x, map.yMax + 6f, map.width, 22f), "M 키로 닫기", hintStyle);
+            HudText.Label(new Rect(map.x, map.yMax + 6f, map.width, 26f), "M 키로 닫기", hintStyle);
         }
     }
 
