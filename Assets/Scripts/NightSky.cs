@@ -87,7 +87,7 @@ public class NightSky : MonoBehaviour
             float a = Mathf.Clamp01(1f - Mathf.Abs(lat) / 0.5f);
             a = a * a * 0.9f;
             for (int x = 0; x < W; x++)
-                px[y * W + x] = new Color(0.07f, 0.10f, 0.14f, a);
+                px[y * W + x] = new Color(0.015f, 0.02f, 0.03f, a); // NightAtmosphere의 안개색과 동일하게 유지
         }
 
         // 2) 별: 위쪽 반구에 고르게. 극 근처는 가로로 늘어나므로 그만큼 넓게 찍는다.
@@ -128,7 +128,7 @@ public class NightSky : MonoBehaviour
                 if (ang > glowR) continue;
 
                 float g = 1f - (Mathf.Max(ang, moonSize) - moonSize) / (glowR - moonSize);
-                g = g * g * g * 0.55f;
+                g = g * g * g * 0.35f; // 달무리도 어둡게
                 Over(px, y * W + x, new Color(0.55f, 0.68f, 0.95f, g));
 
                 if (ang < moonSize)
