@@ -1,6 +1,7 @@
+using System.Collections.Generic;
 using UnityEngine;
 
-// 손전등 (F 키). 카메라에 붙은 스포트라이트. 가끔 깜빡인다.
+// 손전등 (F 키). 카메라에 붙은 스포트라이트. 아주 미세한 밝기 떨림만 넣는다 (뚝 떨어지는 깜빡임은 화면이 깜빡이는 것처럼 느껴져 제거했다).
 // 그림자를 켜서 빛이 벽과 나무를 통과하지 않게 한다: 어둠 속에서 보이게 해주지만
 // 빛이 켜져 있으면 멀리서도 눈에 띈다는 점이 PvP 숨바꼭질의 긴장 요소.
 public class Flashlight : MonoBehaviour
@@ -13,18 +14,11 @@ public class Flashlight : MonoBehaviour
 
     Light lamp;
     AudioSource clickSource;
-    MainMenu menu;
-
-    // 메뉴는 GameSystems가 씬에 하나만 붙인다. 찾으면 캐시한다 (issue #28).
-    bool MenuOpen()
-    {
-        if (menu == null) menu = FindFirstObjectByType<MainMenu>();
-        return menu != null && menu.IsOpen;
-    }
 
     AudioClip clickClip;
     Material lensMat;
-    readonly System.Collections.Generic.List<Material> propMats = new System.Collections.Generic.List<Material>();
+    bool lensLit;
+    readonly List<Material> propMats = new List<Material>();
 
     public bool IsOn { get { return lamp != null && lamp.enabled; } }
 
@@ -73,8 +67,8 @@ public class Flashlight : MonoBehaviour
     {
         if (lamp == null) return;
 
-        // 메뉴(타이틀/일시정지)가 열려 있으면 토글 입력만 무시한다. 깜빡임 연출은 유지.
-        if (!MenuOpen() && Input.GetKeyDown(toggleKey))
+        // 메뉴(타이틀/일시정지)가 열려 있으면 토글 입력만 무시한다. 밝기 떨림 연출은 유지.
+        if (!MainMenu.IsMenuOpen && Input.GetKeyDown(toggleKey))
         {
             lamp.enabled = !lamp.enabled;
             clickSource.PlayOneShot(clickClip, 0.6f);
@@ -83,24 +77,22 @@ public class Flashlight : MonoBehaviour
         if (!lamp.enabled) { SetLens(false); return; }
         SetLens(true);
 
-        // ~10초 간격의 큰 강도 하락(75%)은 화면이 회색으로 깜빡이는 것처럼 보인다는
-        // 보고가 있어 제거. 미세한 밝기 떨림만 남긴다.
+        // 미세한 밝기 떨림만 남긴다. 가끔 순간적으로 어두워지는 깜빡임은 화면 깜빡임처럼 느껴진다는 보고가 있어 제거.
         lamp.intensity = intensity * (1f + 0.03f * Mathf.Sin(Time.time * 23f));
     }
 
-    // 켜지면 렌즈가 발광하고 꺼지면 꺼진다.
+    // 켜지면 렌즈가 발광하고 꺼지면 꺼진다. 상태가 바뀔 때만 머티리얼을 건드린다.
     void SetLens(bool on)
     {
-        if (lensMat != null)
-            lensMat.SetColor("_EmissionColor", on ? new Color(1f, 0.93f, 0.7f) * 1.6f : Color.black);
+        if (lensMat == null || on == lensLit) return;
+        lensLit = on;
+        RuntimeMaterials.SetEmission(lensMat, on ? new Color(1f, 0.93f, 0.7f) * 1.6f : Color.black);
     }
 
     void BuildProp(Transform root)
     {
         // 몸통: 길이 16cm, 지름 3cm의 어두운 금속 통
-        var bodyMat = new Material(Shader.Find("Standard"));
-        bodyMat.color = new Color(0.13f, 0.13f, 0.14f);
-        bodyMat.SetFloat("_Glossiness", 0.55f);
+        var bodyMat = RuntimeMaterials.CreateLit("Flashlight Body", new Color(0.13f, 0.13f, 0.14f), 0.55f);
         propMats.Add(bodyMat);
         AddPart(root, "Body", new Vector3(0f, 0f, 0f), new Vector3(0.03f, 0.08f, 0.03f), bodyMat);
 
@@ -108,8 +100,8 @@ public class Flashlight : MonoBehaviour
         AddPart(root, "Head", new Vector3(0f, 0f, 0.09f), new Vector3(0.05f, 0.03f, 0.05f), bodyMat);
 
         // 렌즈: 손전등 상태에 따라 발광한다
-        lensMat = new Material(Shader.Find("Standard"));
-        lensMat.EnableKeyword("_EMISSION");
+        lensMat = RuntimeMaterials.CreateLit("Flashlight Lens", Color.white);
+        RuntimeMaterials.SetEmission(lensMat, Color.black);
         propMats.Add(lensMat);
         AddPart(root, "Lens", new Vector3(0f, 0f, 0.122f), new Vector3(0.042f, 0.006f, 0.042f), lensMat);
 
@@ -146,14 +138,14 @@ public class Flashlight : MonoBehaviour
         for (int i = 0; i < n; i++)
         {
             float t = i / (float)rate;
-            s[i] = (noise(r) * 0.6f + Mathf.Sin(2f * Mathf.PI * 1800f * t) * 0.4f) * Mathf.Exp(-t * 90f);
+            s[i] = (Noise(r) * 0.6f + Mathf.Sin(2f * Mathf.PI * 1800f * t) * 0.4f) * Mathf.Exp(-t * 90f);
         }
         var clip = AudioClip.Create("FlashlightClick", n, 1, rate, false);
         clip.SetData(s, 0);
         return clip;
     }
 
-    static float noise(System.Random r)
+    static float Noise(System.Random r)
     {
         return (float)r.NextDouble() * 2f - 1f;
     }
