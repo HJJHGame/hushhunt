@@ -35,8 +35,8 @@ public class TreeModels : MonoBehaviour
         bool hasModels = prefabs != null && prefabs.Length > 0;
 
         var rand = new System.Random(11);
-        // 전나무(Fir Tree 01) 모델이 있으면 딱 3그루에만 단다: 용지는 전나무에만 붙고,
-        // 이 모델은 고폴리라 복사본을 늘리면 프레임이 크게 떨어진다 (실측: 320그루 전부 전나무일 때 30fps).
+        // 전나무(Fir Tree 01) 모델이 있으면 일부 나무(FirCount그루)에만 단다: 용지는 전나무에만 붙고,
+        // 이 모델은 고폴리라 전부 전나무로 만들면 프레임이 크게 떨어진다 (실측: 320그루 전부 전나무일 때 30fps).
         // 전나무는 무작위 후보에서도 빼서 나머지 나무는 절차적 소나무(또는 다른 모델)로 유지한다.
         GameObject firPrefab = null;
         var others = new System.Collections.Generic.List<GameObject>();
@@ -46,7 +46,9 @@ public class TreeModels : MonoBehaviour
                 if (pf.name.ToLowerInvariant().Contains("fir_tree_01")) firPrefab = pf;
                 else others.Add(pf);
             }
-        int firNeed = firPrefab != null ? 3 : 0;
+        // 전나무는 숲 전체에 흩어 놓는다 (pines 는 x 순 정렬이라 앞에서부터 쓰면 한쪽 끝에 몰린다).
+        // 개수: 안개 시야 50m 안에 보이는 전나무가 십수 그루가 되는 정도. 모델이 고폴리라 너무 늘리면 fps가 떨어진다.
+        const int FirCount = 60;
 
         // 거친 나무껍질 느낌: 코드로 만든 세로 결 노이즈 텍스처. 이미지 파일 없이 적용된다.
         // 어두운 갈색을 입혀 두고, 손전등이 비출 때 결 명암이 드러난다.
@@ -63,13 +65,33 @@ public class TreeModels : MonoBehaviour
         var pines = new System.Collections.Generic.List<Transform>();
         foreach (var cand in all) if (cand.name == WorldConfig.Names.PineTree) pines.Add(cand);
         // 검색 순서가 실행마다 달라도 같은 숲이 나오도록 위치로 정렬한다.
+        var firSet = new System.Collections.Generic.HashSet<int>();
+        if (firPrefab != null)
+        {
+            // 같은 숲이면 같은 전나무가 되도록 고정 시드로 고른다.
+            var idx = new System.Collections.Generic.List<int>();
+            pines.Sort((p1, p2) =>
+            {
+                int cmp = p1.position.x.CompareTo(p2.position.x);
+                return cmp != 0 ? cmp : p1.position.z.CompareTo(p2.position.z);
+            });
+            for (int i = 0; i < pines.Count; i++) idx.Add(i);
+            var pick = new System.Random(23);
+            for (int i = idx.Count - 1; i > 0; i--)
+            {
+                int j = pick.Next(i + 1);
+                int tmp = idx[i]; idx[i] = idx[j]; idx[j] = tmp;
+            }
+            for (int i = 0; i < idx.Count && i < FirCount; i++) firSet.Add(idx[i]);
+        }
         pines.Sort((p1, p2) =>
         {
             int cmp = p1.position.x.CompareTo(p2.position.x);
             return cmp != 0 ? cmp : p1.position.z.CompareTo(p2.position.z);
         });
-        foreach (var t in pines)
+        for (int pi = 0; pi < pines.Count; pi++)
         {
+            var t = pines[pi];
             // 기존 원뿔 나무의 재질(씬의 어두운 색)을 그대로 써서 안개/밤 분위기와 맞춘다.
             Material leafMat = null, barkMat = null;
             float oldScale = 1f;
@@ -91,7 +113,7 @@ public class TreeModels : MonoBehaviour
 
             GameObject prefab = null;
             bool isFir = false;
-            if (firNeed > 0) { prefab = firPrefab; firNeed--; isFir = true; }
+            if (firSet.Contains(pi)) { prefab = firPrefab; isFir = true; }
             else if (others.Count > 0) prefab = others[rand.Next(others.Count)];
             if (prefab == null)
             {
