@@ -98,6 +98,11 @@ public class PlayerCharacter : MonoBehaviour
     // 씬을 다시 불러올 때(재시작/타이틀로) 런타임 머티리얼이 새지 않도록 OnDestroy에서 해제한다.
     readonly List<Material> runtimeMats = new List<Material>();
 
+    // [임시 되돌리기] true이면 외부 모델(후드 로그, 약 30만 삼각형)을 건너뛰고
+    // 코드로 만든 기본 몸(PlayerBody)을 쓴다. 화면 깜빡임 원인이 모델인지 가르는 실험용.
+    // 모델/애니메이션 파일은 저장소에 그대로 두므로 false로 바꾸면 바로 복구된다.
+    public bool forcePrimitiveBody = true;
+
     // ------------------------------------------------------------------
     // 초기화
     // ------------------------------------------------------------------
@@ -107,6 +112,14 @@ public class PlayerCharacter : MonoBehaviour
         fpc = GetComponent<FirstPersonController>();
         controller = GetComponent<CharacterController>();
         lastPosition = transform.position;
+
+        if (forcePrimitiveBody)
+        {
+            clipCache.Clear();
+            gameObject.AddComponent<PlayerBody>();
+            enabled = false;
+            return;
+        }
 
         GameObject prefab;
         ClipSet loaded;
