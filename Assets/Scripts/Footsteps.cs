@@ -10,6 +10,7 @@ public class Footsteps : MonoBehaviour
     public float volume = 0.55f;
 
     CharacterController controller;
+    FirstPersonController fpc;
     AudioSource source;
     AudioClip[] steps;
     public float GaitPhase { get; private set; } = Mathf.PI * 0.5f;
@@ -24,6 +25,7 @@ public class Footsteps : MonoBehaviour
     void Awake()
     {
         controller = GetComponent<CharacterController>();
+        fpc = GetComponent<FirstPersonController>();
         source = gameObject.AddComponent<AudioSource>();
         source.spatialBlend = 0f; // 2D: 자기 발소리라 공간감 없이
         source.playOnAwake = false;
@@ -65,7 +67,10 @@ public class Footsteps : MonoBehaviour
                 distanceSinceStep -= contacts * length;
                 contactParity = (contactParity + contacts) % 2;
                 source.pitch = 0.85f + (float)rng.NextDouble() * 0.3f;
-                float v = volume * (0.8f + (float)rng.NextDouble() * 0.4f);
+                // 웅크리면 살금살금(35%), 달리면 쿵쿵(160%), 걷기는 기본.
+                float state = fpc != null && fpc.IsCrouching ? 0.35f
+                    : fpc != null && fpc.IsSprinting ? 1.6f : 1f;
+                float v = volume * state * (0.8f + (float)rng.NextDouble() * 0.4f);
                 source.PlayOneShot(steps[rng.Next(steps.Length)], v);
             }
         }
