@@ -129,10 +129,27 @@ public class TreeModels : MonoBehaviour
                 float groove = Mathf.Abs(ridge - 0.5f) * 2f; // 골이 패인 느낌
                 float fine = TileN(u, v, 48f, 24f, 31f);     // 잔결
                 float t = Mathf.Clamp01(1f - groove) * (0.65f + fine * 0.6f);
-                float g = Mathf.Lerp(0.30f, 0.85f, t);
+                float g = Mathf.Lerp(0.22f, 0.90f, t);
                 px[y * W + x] = new Color(g, g, g);
             }
         }
+        // 옹이: 어두운 타원을 몇 개 박는다.
+        var rand = new System.Random(9);
+        for (int i = 0; i < 8; i++)
+        {
+            int kx = rand.Next(W), ky = rand.Next(H);
+            int rw = 2 + rand.Next(4), rh = 4 + rand.Next(7);
+            for (int dy = -rh; dy <= rh; dy++)
+            for (int dx = -rw; dx <= rw; dx++)
+            {
+                float dd = dx * dx / (float)(rw * rw) + dy * dy / (float)(rh * rh);
+                if (dd > 1f) continue;
+                int ii = ((ky + dy + H) % H) * W + ((kx + dx + W) % W);
+                float k = 1f - 0.7f * (1f - dd);
+                px[ii] = new Color(px[ii].r * k, px[ii].g * k, px[ii].b * k);
+            }
+        }
+
         tex.SetPixels(px);
         tex.Apply(true);
         return tex;
