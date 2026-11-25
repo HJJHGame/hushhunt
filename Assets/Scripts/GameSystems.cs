@@ -46,6 +46,8 @@ public static class GameSystems
         AddOnce<HouseGlow>(root);       // 집 창문 빛
         AddOnce<GroundTexture>(root);   // 바닥 텍스처
         AddOnce<PropTextures>(root);    // 집/소품 질감
+        AddOnce<RandomizeLayout>(root); // 매 판 집/나무/스폰 재배치
+        AddOnce<TreePaper>(root);       // 나무에 붙은 A4 용지
         AddOnce<NightSky>(root);        // 별/달
         AddOnce<HorrorOverlay>(root);   // 비네팅/그레인
         AddOnce<FogMotes>(root);        // 떠다니는 먼지 입자
