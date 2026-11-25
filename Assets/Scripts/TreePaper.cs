@@ -2,6 +2,8 @@ using UnityEngine;
 
 // 나무 한 그루에 깨끗한 흰색 A4 용지 한 장을 붙인다 (슬렌더 페이지). 매 판 무작위 나무/무작위 방향.
 // 가까이 가면 용지가 어둠 속에서 환하게 빛나 눈에 띄고, E를 누르면 줍는다. 이 게임의 목표.
+// TreeModels(기본 순서)가 실제 모델로 교체한 뒤에 실행되어야 보이는 줄기 크기를 잴 수 있다.
+[DefaultExecutionOrder(50)]
 public class TreePaper : MonoBehaviour
 {
     // 종이 소리는 잠시 꺼둠. 다시 켜려면 false를 true로 바꾼다.
@@ -28,23 +30,24 @@ public class TreePaper : MonoBehaviour
         var rand = new System.Random();
         var tree = trees[rand.Next(trees.Count)];
 
-        // 줄기 굵기에 맞춰 껍질에서 살짝 띄운다.
-        float radius = 0.25f;
-        var trunk = tree.Find(WorldConfig.Names.PineTrunk);
-        if (trunk != null) radius = trunk.localScale.x * 0.5f + 0.03f;
-
         float yaw = (float)rand.NextDouble() * 360f;
         var dir = Quaternion.Euler(0f, yaw, 0f) * Vector3.forward;
+
+        // 용지 높이(1.5m)에서 보이는 줄기의 실제 바깥 표면까지의 거리를 메시 경계로 잰다.
+        // (TreeModels가 심은 실제 모델은 굵기가 제각각이라 옛 원뿔 Trunk 크기를 쓰면 용지가 기둥 속에 파묻힌다.)
+        float surface = TrunkSurfaceDistance(tree, dir, tree.position.y + 1.5f);
 
         // 얇은 상자: 어느 쪽에서 봐도 보인다 (Quad는 한쪽 면만 보임).
         paper = GameObject.CreatePrimitive(PrimitiveType.Cube);
         paper.name = "A4 Page";
         Destroy(paper.GetComponent<Collider>()); // 걸리적거리지 않게
-        paper.transform.SetParent(tree, false);
-        paper.transform.localPosition = new Vector3(dir.x * radius, 1.5f, dir.z * radius);
-        paper.transform.localRotation = Quaternion.Euler(
+        // 표면에서 1cm + 두께의 절반만큼 바깥에 띄워 껍질 위에 얹힌 것처럼 보이게 한다.
+        paper.transform.position = tree.position + Vector3.up * 1.5f
+            + dir * (surface + 0.01f + 0.0015f);
+        paper.transform.rotation = Quaternion.Euler(
             (float)(rand.NextDouble() * 8.0 - 4.0), yaw, (float)(rand.NextDouble() * 6.0 - 3.0));
         paper.transform.localScale = new Vector3(0.21f, 0.297f, 0.003f); // A4 (m)
+        paper.transform.SetParent(tree, true); // 월드 위치/회전 유지
 
         // 무늬 없는 깨끗한 흰색. glowMat는 빛이 없어도 항상 밝은 흰색 (가까이 왔을 때 표시용).
         litMat = RuntimeMaterials.CreateLit("A4 Page", new Color(0.98f, 0.98f, 0.96f), 0.02f);
@@ -138,6 +141,37 @@ public class TreePaper : MonoBehaviour
     {
         if (rustle != null) Destroy(rustle);
         if (glowMat != null) Destroy(glowMat);
+    }
+
+    // 나무 축에서 dir 방향으로, 지정 높이 부근(±0.3m)의 줄기 바깥 표면까지의 수평 거리.
+    // 실제 모델(TreeModel)의 나무 재질 렌더러 경계상자로 재고, 모델이 없으면 옛 원뿔 기둥 크기로 추정한다.
+    static float TrunkSurfaceDistance(Transform tree, Vector3 dir, float worldY)
+    {
+        var model = tree.Find("TreeModel");
+        float best = -1f;
+        if (model != null)
+        {
+            foreach (var r in model.GetComponentsInChildren<Renderer>())
+            {
+                var b = r.bounds;
+                if (b.max.y < worldY - 0.3f || b.min.y > worldY + 0.3f) continue;
+                // 줄기(나무 재질)만 잰다. 잎이 끼면 표면이 과대계산되어 용지가 붕 뜬다.
+                var m = r.sharedMaterial;
+                string n = m != null ? m.name.ToLowerInvariant() : "";
+                bool wood = n.Contains("bark") || n.Contains("wood") || n.Contains("trunk");
+                if (!wood) continue;
+                // 경계상자의 dir 방향 표면: 중심의 방향 성분 + 방향별 반경의 합
+                float along = dir.x * (b.center.x - tree.position.x) + dir.z * (b.center.z - tree.position.z);
+                float extent = Mathf.Abs(dir.x) * b.extents.x + Mathf.Abs(dir.z) * b.extents.z;
+                best = Mathf.Max(best, along + extent);
+            }
+        }
+        if (best < 0f)
+        {
+            var trunk = tree.Find(WorldConfig.Names.PineTrunk);
+            best = trunk != null ? trunk.localScale.x * 0.5f : 0.25f;
+        }
+        return best;
     }
 
     // 6초짜리 종이 바스락 소리. 바람에 펄럭이는 종이: 중역 노이즈 + 빠른 떨림 + 가끔 큰 펄럭임.
