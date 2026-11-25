@@ -99,7 +99,10 @@ public class TreeModels : MonoBehaviour
                 if (leafMat != null)
                 {
                     if (leafInst == null)
+                    {
                         leafInst = new Material(leafMat) { name = leafMat.name + " (instanced)", enableInstancing = true };
+                        ProceduralTree.ConfigureLeafMaterial(leafInst); // 바늘잎 알파 컷아웃
+                    }
                     leafMat = leafInst; // GPU 인스턴싱: 같은 재질/메시를 한 번에 그린다
                 }
                 ProceduralTree.Build(t, WorldConfig.PineHeight * oldScale,
@@ -163,6 +166,7 @@ public class TreeModels : MonoBehaviour
     {
         if (barkMaterial != null) Destroy(barkMaterial);
         if (leafInst != null) Destroy(leafInst);
+        ProceduralTree.ReleaseTexture();
         if (barkTex != null && barkTexOwned) Destroy(barkTex);
     }
 
