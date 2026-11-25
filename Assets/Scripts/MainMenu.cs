@@ -1,7 +1,6 @@
 using UnityEngine;
 using UnityEngine.Events;
 using UnityEngine.EventSystems;
-using UnityEngine.SceneManagement;
 using UnityEngine.UI;
 
 // 게임 메인 화면: 타이틀(모드 선택, 설정)과 일시정지 메뉴.
@@ -13,6 +12,10 @@ public class MainMenu : MonoBehaviour
     // 씬에 하나만 있는 메뉴. static 상태 대신 인스턴스를 참조한다 (issue #28).
     public static MainMenu Instance { get; private set; }
     public bool IsOpen { get; private set; }
+
+    // 다른 시스템이 "메뉴가 입력/화면을 점유 중인가"를 묻는 단일 창구.
+    // 예전에는 각 클래스가 FindFirstObjectByType으로 따로 찾아 캐시했다.
+    public static bool IsMenuOpen { get { return Instance != null && Instance.IsOpen; } }
 
     enum Mode { Hidden, Title, Pause, Settings }
 
@@ -46,6 +49,12 @@ public class MainMenu : MonoBehaviour
     void OnDestroy()
     {
         if (Instance == this) Instance = null;
+        GameSettings.Save();
+    }
+
+    void OnApplicationQuit()
+    {
+        GameSettings.Save();
     }
 
     void Start()
@@ -101,6 +110,8 @@ public class MainMenu : MonoBehaviour
 
     void CloseSettings()
     {
+        // 슬라이더를 조작하는 동안은 메모리 값만 바뀐다. 화면을 나갈 때 한 번에 저장한다.
+        GameSettings.Save();
         if (settingsReturn == Mode.Pause) OpenPause();
         else OpenTitle();
     }
@@ -121,9 +132,7 @@ public class MainMenu : MonoBehaviour
     void BackToTitle()
     {
         // 씬을 다시 불러오면 타이틀이 기본 상태로 열린다.
-        var scene = SceneManager.GetActiveScene();
-        if (scene.buildIndex >= 0) SceneManager.LoadScene(scene.buildIndex);
-        else SceneManager.LoadScene(scene.name);
+        SceneReloader.ReloadActive();
     }
 
     void ShowOnly(RectTransform panel)
@@ -203,7 +212,7 @@ public class MainMenu : MonoBehaviour
         var title = MakeText(box, "설정", 44, TextAnchor.MiddleCenter, TextMain, FontStyle.Bold);
         Place(title.rectTransform, 0f, 300f, 480f, 70f);
 
-        sensValue = MakeSlider(box, "마우스 감도", 190f, 0.5f, 6f, GameSettings.Sensitivity,
+        sensValue = MakeSlider(box, "마우스 감도", 190f, GameSettings.SensitivityMin, GameSettings.SensitivityMax, GameSettings.Sensitivity,
             v => GameSettings.SetSensitivity(v), v => v.ToString("0.0"));
         volValue = MakeSlider(box, "볼륨", 70f, 0f, 1f, GameSettings.Volume,
             v => GameSettings.SetVolume(v), v => Mathf.RoundToInt(v * 100f) + "%");
