@@ -60,9 +60,8 @@ public class PlayerHud : MonoBehaviour
                 hintStyle = new GUIStyle(GUI.skin.label) { alignment = TextAnchor.LowerRight };
             }
             hintStyle.fontSize = Mathf.RoundToInt(15f * scale);
-            GUI.color = new Color(1f, 1f, 1f, 0.55f);
             string text = "[F] 손전등 " + (flash.IsOn ? "켜짐" : "꺼짐");
-            GUI.Label(new Rect(Screen.width - 260f * scale - 16f, Screen.height - 40f * scale, 260f * scale, 28f * scale), text, hintStyle);
+            ShadowLabel(new Rect(Screen.width - 260f * scale - 16f, Screen.height - 40f * scale, 260f * scale, 28f * scale), text, hintStyle);
         }
 
         // F1: 현재 좌표와 가장자리까지 거리. 맵이 진짜 400x400m인지 직접 확인할 수 있다.
@@ -75,10 +74,18 @@ public class PlayerHud : MonoBehaviour
             float edge = WorldConfig.Half - Mathf.Max(Mathf.Abs(p.x), Mathf.Abs(p.z));
             string text = "위치 (" + p.x.ToString("0.0") + ", " + p.z.ToString("0.0")
                 + ")  |  가장자리(±200m)까지 " + edge.ToString("0") + "m  |  맵 400x400m  [K] 끄기";
-            GUI.color = new Color(1f, 1f, 1f, 0.55f);
-            GUI.Label(new Rect(16f, 12f, 640f * scale, 28f * scale), text, coordStyle);
+            ShadowLabel(new Rect(16f, 12f, 640f * scale, 28f * scale), text, coordStyle);
         }
 
         GUI.color = prev;
+    }
+
+    // 거의 검정인 화면 위에서도 읽히게: 검은 그림자를 한 픽셀 아래·오른쪽에 깔고 불투명 흰 글씨.
+    static void ShadowLabel(Rect r, string text, GUIStyle style)
+    {
+        GUI.color = new Color(0f, 0f, 0f, 0.9f);
+        GUI.Label(new Rect(r.x + 1f, r.y + 1f, r.width, r.height), text, style);
+        GUI.color = Color.white;
+        GUI.Label(r, text, style);
     }
 }
