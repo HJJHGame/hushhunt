@@ -13,7 +13,7 @@ using Names = WorldConfig.Names;
 public static class SetupScene
 {
     const string ScenePath = "Assets/Scenes/Main.unity";
-    const int SceneVersion = 9; // 씬 구성을 바꾸면 1 올린다 (v9: .meta GUID 정리로 깨진 스크립트 참조 복구용 재생성)
+    const int SceneVersion = 10; // 씬 구성을 바꾸면 1 올린다 (v10: 400x400m 맵 + 모서리/중앙 스폰)
     const string VersionKey = "HushHunt.SceneVersion";
 
     static SetupScene()
@@ -92,11 +92,11 @@ public static class SetupScene
         light.intensity = 0.6f;
         lightGo.transform.rotation = Quaternion.Euler(32f, -30f, 0f); // 낮게 걸린 달: 그림자가 길고 하늘에서 달이 보인다
 
-        // 땅: 내장 Plane(10x10m)을 20배 -> 200x200m, 어두운 흙색
+        // 땅: 내장 Plane(10x10m)을 40배 -> 400x400m, 어두운 흙색
         var groundMat = MakeMaterial("Ground", new Color(0.05f, 0.06f, 0.05f));
         var ground = GameObject.CreatePrimitive(PrimitiveType.Plane);
         ground.name = Names.Ground;
-        ground.transform.localScale = new Vector3(20f, 1f, 20f);
+        ground.transform.localScale = new Vector3(40f, 1f, 40f);
         ground.GetComponent<Renderer>().sharedMaterial = groundMat;
 
         // 큰 소나무들: 갈색 원기둥 기둥 + 짙은 초록 원뿔 3단. 키 크고 가는 실루엣.
@@ -107,14 +107,27 @@ public static class SetupScene
 
         var rand = new System.Random(42);
         var props = new List<Vector3>(); // x, z, 대략 반경: 집 배치 때 겹침 방지용
+
+        // 스폰: 네 모서리(벽에서 15m 안쪽) 중 하나 또는 정중앙. 모든 배치가 이 주변을 비운다.
+        float corner = WorldConfig.Half - 15f;
+        var spawnChoices = new[]
+        {
+            new Vector2(0f, 0f),
+            new Vector2(corner, corner), new Vector2(corner, -corner),
+            new Vector2(-corner, corner), new Vector2(-corner, -corner),
+        };
+        var spawn = spawnChoices[rand.Next(spawnChoices.Length)];
+        bool NearSpawn(float x, float z, float r) => new Vector2(x - spawn.x, z - spawn.y).magnitude < r;
+        float spread = WorldConfig.Half - 5f; // 배치 가능 범위 (벽 안쪽)
+
         int placed = 0;
         int attempts = 0;
-        while (placed < 160 && attempts < 600)
+        while (placed < 320 && attempts < 1400)
         {
             attempts++;
-            float x = (float)(rand.NextDouble() * 190.0 - 95.0);
-            float z = (float)(rand.NextDouble() * 190.0 - 95.0);
-            if (new Vector2(x, z).magnitude < 5f) continue; // 스폰 지점 비우기
+            float x = (float)(rand.NextDouble() * 2.0) * spread - spread;
+            float z = (float)(rand.NextDouble() * 2.0) * spread - spread;
+            if (NearSpawn(x, z, 6f)) continue; // 스폰 지점 비우기
 
             float scale = 0.9f + (float)rand.NextDouble() * 0.7f; // 0.9~1.6배 크기
             MakePineTree(new Vector3(x, 0f, z), scale, trunkMat, pineMat, coneMesh);
@@ -125,11 +138,11 @@ public static class SetupScene
         // 바위와 낡은 나무 울타리 (슬렌더 분위기 소품)
         var rockMat = MakeMaterial("Rock", new Color(0.08f, 0.09f, 0.09f));
         var fenceMat = MakeMaterial("Fence", new Color(0.09f, 0.07f, 0.05f));
-        for (int i = 0; i < 25; i++)
+        for (int i = 0; i < 50; i++)
         {
-            float x = (float)(rand.NextDouble() * 190.0 - 95.0);
-            float z = (float)(rand.NextDouble() * 190.0 - 95.0);
-            if (new Vector2(x, z).magnitude < 5f) continue;
+            float x = (float)(rand.NextDouble() * 2.0) * spread - spread;
+            float z = (float)(rand.NextDouble() * 2.0) * spread - spread;
+            if (NearSpawn(x, z, 6f)) continue;
 
             float s = 0.5f + (float)rand.NextDouble() * 1.5f;
             var rock = GameObject.CreatePrimitive(PrimitiveType.Sphere);
@@ -142,11 +155,11 @@ public static class SetupScene
         }
 
         // 낡은 울타리 두 토막: 삐뚤빼뚤한 기둥들 + 가로대 두 줄
-        for (int f = 0; f < 2; f++)
+        for (int f = 0; f < 4; f++)
         {
-            float fx = (float)(rand.NextDouble() * 140.0 - 70.0);
-            float fz = (float)(rand.NextDouble() * 140.0 - 70.0);
-            if (new Vector2(fx, fz).magnitude < 6f) { f--; continue; }
+            float fx = (float)(rand.NextDouble() * 2.0) * spread * 0.7f - spread * 0.7f;
+            float fz = (float)(rand.NextDouble() * 2.0) * spread * 0.7f - spread * 0.7f;
+            if (NearSpawn(fx, fz, 8f)) { f--; continue; }
 
             var fence = new GameObject(Names.OldFence);
             fence.transform.position = new Vector3(fx, 0f, fz);
@@ -177,11 +190,11 @@ public static class SetupScene
 
         // 쓰러진 통나무와 그루터기: 숲 바닥에 변화를 주고, 낮은 엄폐물/점프 장애물이 된다.
         var logMat = MakeMaterial("Log", new Color(0.08f, 0.06f, 0.045f));
-        for (int i = 0; i < 22; i++)
+        for (int i = 0; i < 44; i++)
         {
-            float x = (float)(rand.NextDouble() * 186.0 - 93.0);
-            float z = (float)(rand.NextDouble() * 186.0 - 93.0);
-            if (new Vector2(x, z).magnitude < 7f) continue;
+            float x = (float)(rand.NextDouble() * 2.0) * spread - spread;
+            float z = (float)(rand.NextDouble() * 2.0) * spread - spread;
+            if (NearSpawn(x, z, 8f)) continue;
 
             float len = 2.5f + (float)rand.NextDouble() * 3f;
             float rad = 0.25f + (float)rand.NextDouble() * 0.2f;
@@ -194,11 +207,11 @@ public static class SetupScene
             log.GetComponent<Renderer>().sharedMaterial = logMat;
             props.Add(new Vector3(x, z, len * 0.5f + 0.5f));
         }
-        for (int i = 0; i < 30; i++)
+        for (int i = 0; i < 60; i++)
         {
-            float x = (float)(rand.NextDouble() * 186.0 - 93.0);
-            float z = (float)(rand.NextDouble() * 186.0 - 93.0);
-            if (new Vector2(x, z).magnitude < 7f) continue;
+            float x = (float)(rand.NextDouble() * 2.0) * spread - spread;
+            float z = (float)(rand.NextDouble() * 2.0) * spread - spread;
+            if (NearSpawn(x, z, 8f)) continue;
 
             float hh = 0.25f + (float)rand.NextDouble() * 0.2f;   // 절반 높이
             float rr = 0.3f + (float)rand.NextDouble() * 0.25f;    // 반지름
@@ -227,16 +240,16 @@ public static class SetupScene
         var houseRects = new List<Vector4>(); // x, z, 반폭, 반깊이
         int housesPlaced = 0;
         int houseAttempts = 0;
-        while (housesPlaced < 6 && houseAttempts < 300)
+        while (housesPlaced < 10 && houseAttempts < 600)
         {
             houseAttempts++;
             float hw = 3f + (float)rand.NextDouble() * 3f; // 반폭 3~6m -> 폭 6~12m
             float hd = 3f + (float)rand.NextDouble() * 3f;
-            float range = 86f - Mathf.Max(hw, hd);         // 경계 벽과 여유 확보
+            float range = WorldConfig.Half - 14f - Mathf.Max(hw, hd); // 경계 벽과 여유 확보
             float hx = (float)(rand.NextDouble() * 2.0) * range - range;
             float hz = (float)(rand.NextDouble() * 2.0) * range - range;
 
-            if (new Vector2(hx, hz).magnitude < 8f + Mathf.Max(hw, hd)) continue; // 스폰 비우기
+            if (NearSpawn(hx, hz, 9f + Mathf.Max(hw, hd))) continue; // 스폰 비우기
 
             bool overlaps = false;
             foreach (var r in houseRects)
@@ -267,7 +280,7 @@ public static class SetupScene
             housesPlaced++;
         }
 
-        // 맵 가장자리 벽: 200x200m 경계(±100m)를 어두운 벽 네 면으로 둘러싼다.
+        // 맵 가장자리 벽: 400x400m 경계(±Half)를 어두운 벽 네 면으로 둘러싼다.
         // 땅과 같은 재질이라 안개 속에서 지형처럼 보이고, 미니맵에는 맵 경계로 보인다.
         // 벽 안쪽 면이 ±99m라 플레이어는 절대 맵 밖으로 못 나간다.
         float wallOffset = WorldConfig.Half - 0.5f;   // 벽 두께 1m의 중심: 안쪽 면이 ±(Half-1)
@@ -279,7 +292,7 @@ public static class SetupScene
 
         // 플레이어: CharacterController + 카메라 자식 + 발소리
         var player = new GameObject("Player");
-        player.transform.position = new Vector3(0f, 1.1f, 0f);
+        player.transform.position = new Vector3(spawn.x, 1.1f, spawn.y); // 네 모서리 중 하나 또는 정중앙
         var cc = player.AddComponent<CharacterController>();
         cc.height = 2f;
         cc.radius = 0.4f;
