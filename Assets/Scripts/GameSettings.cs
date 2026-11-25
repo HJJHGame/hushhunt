@@ -32,6 +32,8 @@ public static class GameSettings
     // 게임 시작 시 한 번 호출: 저장된 값을 실제 시스템(볼륨 등)에 반영한다.
     public static void Apply()
     {
+        QualitySettings.vSyncCount = 0;
+        Application.targetFrameRate = 60;
         AudioListener.volume = Volume;
         Changed?.Invoke();
     }
