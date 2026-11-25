@@ -7,6 +7,7 @@ public class TreeModels : MonoBehaviour
 {
     Texture2D barkTex;
     Material barkMaterial;
+    bool barkTexOwned = true; // Resources 에서 불러온 공유 에셋이면 Destroy 하면 안 된다
 
     void Start()
     {
@@ -17,8 +18,13 @@ public class TreeModels : MonoBehaviour
 
         // 거친 나무껍질 느낌: 코드로 만든 세로 결 노이즈 텍스처. 이미지 파일 없이 적용된다.
         // 어두운 갈색을 입혀 두고, 손전등이 비출 때 결 명암이 드러난다.
-        barkTex = BuildBarkTexture();
-        barkMaterial = RuntimeMaterials.CreateLit("Tree Bark (runtime)", new Color(0.28f, 0.22f, 0.18f), 0.05f);
+        // 실사 껍질 사진(ambientCG CC0)이 있으면 그걸 쓰고, 없으면 코드로 만든 텍스처로 버틴다.
+        barkTex = Resources.Load<Texture2D>("Textures/Bark");
+        barkTexOwned = barkTex == null;
+        if (barkTex == null) barkTex = BuildBarkTexture();
+        // 사진은 색이 이미 들어 있으니 흰색, 절차적 텍스처는 회색조라 갈색을 입힌다.
+        barkMaterial = RuntimeMaterials.CreateLit("Tree Bark (runtime)",
+            barkTexOwned ? new Color(0.28f, 0.22f, 0.18f) : Color.white, 0.05f);
         barkMaterial.mainTexture = barkTex;
         var all = FindObjectsByType<Transform>(FindObjectsSortMode.None);
         var pines = new System.Collections.Generic.List<Transform>();
@@ -99,7 +105,7 @@ public class TreeModels : MonoBehaviour
     void OnDestroy()
     {
         if (barkMaterial != null) Destroy(barkMaterial);
-        if (barkTex != null) Destroy(barkTex);
+        if (barkTex != null && barkTexOwned) Destroy(barkTex);
     }
 
     // 가장자리가 이어지는(타일링) 노이즈. GroundTexture와 같은 기법.
