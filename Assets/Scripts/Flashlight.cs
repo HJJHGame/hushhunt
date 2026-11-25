@@ -25,7 +25,6 @@ public class Flashlight : MonoBehaviour
     AudioClip clickClip;
     Material lensMat;
     readonly System.Collections.Generic.List<Material> propMats = new System.Collections.Generic.List<Material>();
-    float dipUntil;
 
     public bool IsOn { get { return lamp != null && lamp.enabled; } }
 
@@ -84,17 +83,9 @@ public class Flashlight : MonoBehaviour
         if (!lamp.enabled) { SetLens(false); return; }
         SetLens(true);
 
-        if (Time.time < dipUntil)
-        {
-            lamp.intensity = intensity * 0.25f;
-        }
-        else
-        {
-            lamp.intensity = intensity * (1f + 0.03f * Mathf.Sin(Time.time * 23f));
-            // 가끔 순간적으로 꺼질 듯 깜빡인다 (대략 10초에 한 번)
-            if (Random.value < 0.1f * Time.deltaTime)
-                dipUntil = Time.time + Random.Range(0.05f, 0.15f);
-        }
+        // ~10초 간격의 큰 강도 하락(75%)은 화면이 회색으로 깜빡이는 것처럼 보인다는
+        // 보고가 있어 제거. 미세한 밝기 떨림만 남긴다.
+        lamp.intensity = intensity * (1f + 0.03f * Mathf.Sin(Time.time * 23f));
     }
 
     // 켜지면 렌즈가 발광하고 꺼지면 꺼진다.
