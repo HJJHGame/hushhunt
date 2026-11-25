@@ -24,6 +24,15 @@ public class GameManager : MonoBehaviour
     public bool paused;
 
     float bannerUntil = -1f;
+    MainMenu menu;
+
+    // 메뉴는 GameSystems가 씬에 하나만 붙인다. 찾으면 캐시한다 (issue #28).
+    bool MenuOpen()
+    {
+        if (menu == null) menu = FindFirstObjectByType<MainMenu>();
+        return menu != null && menu.IsOpen;
+    }
+
 
     // OnGUI마다 GUIStyle을 새로 만들면 GC가 계속 쌓이므로 처음 한 번만 만든다.
     static GUIStyle timerStyle, titleStyle, subStyle;
@@ -82,7 +91,7 @@ public class GameManager : MonoBehaviour
     void OnGUI()
     {
         if (Event.current.type != EventType.Repaint) return;
-        if (MainMenu.IsOpen || CurrentPhase == Phase.Waiting) return;
+        if (MenuOpen() || CurrentPhase == Phase.Waiting) return;
         EnsureStyles();
 
         bool urgent = CurrentPhase != Phase.Ended && TimeLeft <= urgentSeconds;
