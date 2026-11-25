@@ -3,7 +3,7 @@
 public static class WorldConfig
 {
     // 맵 절반 크기(m). 경계 벽 안쪽 면은 ±(Half - 1), 미니맵은 ±Half로 그린다.
-    public const float Half = 100f;
+    public const float Half = 200f; // 400x400m 맵
 
     // 소나무 규격. SetupScene이 만들고 TreeModels가 3D 모델 크기를 맞출 때 같은 값을 쓴다.
     public const float PineTrunkBaseWidth = 0.32f; // 크기 배율 1일 때 기둥 굵기(m)
