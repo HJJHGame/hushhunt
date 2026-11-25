@@ -10,7 +10,9 @@ using UnityEngine.UI;
 // 온라인 모드는 멀티플레이어 작업 전까지 비활성으로 표시한다.
 public class MainMenu : MonoBehaviour
 {
-    public static bool IsOpen { get; private set; }
+    // 씬에 하나만 있는 메뉴. static 상태 대신 인스턴스를 참조한다 (issue #28).
+    public static MainMenu Instance { get; private set; }
+    public bool IsOpen { get; private set; }
 
     enum Mode { Hidden, Title, Pause, Settings }
 
@@ -36,10 +38,20 @@ public class MainMenu : MonoBehaviour
     static readonly Color TextMain = new Color(0.92f, 0.95f, 1f);
     static readonly Color TextSub = new Color(0.65f, 0.72f, 0.8f);
 
+    void Awake()
+    {
+        Instance = this;
+    }
+
+    void OnDestroy()
+    {
+        if (Instance == this) Instance = null;
+    }
+
     void Start()
     {
         gm = FindFirstObjectByType<GameManager>();
-        fpc = GetComponent<FirstPersonController>();
+        fpc = FindFirstObjectByType<FirstPersonController>();
         font = Resources.GetBuiltinResource<Font>("LegacyRuntime.ttf");
         if (font == null) font = Resources.GetBuiltinResource<Font>("Arial.ttf");
         Build();
