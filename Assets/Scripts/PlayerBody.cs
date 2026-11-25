@@ -110,9 +110,7 @@ public class PlayerBody : MonoBehaviour
         part.transform.localPosition = position;
         part.transform.localScale = scale;
         // 시각 전용. 충돌 판정은 기존 CharacterController만 사용한다.
-        var collider = part.GetComponent<Collider>();
-        collider.enabled = false;
-        Object.Destroy(collider);
+        Object.Destroy(part.GetComponent<Collider>());
         var renderer = part.GetComponent<Renderer>();
         renderer.sharedMaterial = material;
         return renderer;
@@ -120,12 +118,9 @@ public class PlayerBody : MonoBehaviour
 
     static Material MakeMaterial(string name, Color color)
     {
-        var material = new Material(Shader.Find("Standard"));
-        material.name = name;
-        material.color = color;
+        var material = RuntimeMaterials.CreateLit(name, color);
         // 어두운 숲에서도 발 윤곽이 보일 정도의 약한 자체 발광.
-        material.EnableKeyword("_EMISSION");
-        material.SetColor("_EmissionColor", color * 0.12f);
+        RuntimeMaterials.SetEmission(material, color * 0.12f);
         return material;
     }
 
