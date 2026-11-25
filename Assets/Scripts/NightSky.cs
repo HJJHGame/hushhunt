@@ -87,7 +87,7 @@ public class NightSky : MonoBehaviour
             float a = Mathf.Clamp01(1f - Mathf.Abs(lat) / 0.5f);
             a = a * a * 0.9f;
             for (int x = 0; x < W; x++)
-                px[y * W + x] = new Color(0.015f, 0.02f, 0.03f, a); // NightAtmosphere의 안개색과 동일하게 유지
+                px[y * W + x] = new Color(0.008f, 0.011f, 0.017f, a); // NightAtmosphere의 안개색과 동일하게 유지
         }
 
         // 2) 별: 위쪽 반구에 고르게. 극 근처는 가로로 늘어나므로 그만큼 넓게 찍는다.
