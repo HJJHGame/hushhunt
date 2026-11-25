@@ -104,6 +104,10 @@ public class TreeModels : MonoBehaviour
                 }
                 ProceduralTree.Build(t, WorldConfig.PineHeight * oldScale,
                     0.9f + (float)rand.NextDouble() * 0.25f, barkMaterial, leafMat, rand);
+                // 절차적 나무도 안개 시야(약 50m) 밖에서는 그리지 않는다.
+                // 320그루를 매 프레임 그리면 드로 콜이 쌓여 느려진다 (실제로 보이는 건 반경 50m 안쪽 몇십 그루뿐).
+                var tm = t.Find("TreeModel");
+                if (tm != null) SetupFarCulling(tm.gameObject);
                 continue;
             }
 
