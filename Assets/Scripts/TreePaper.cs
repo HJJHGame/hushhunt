@@ -1,4 +1,5 @@
 using UnityEngine;
+using System.Collections.Generic;
 
 // 나무 한 그루에 깨끗한 흰색 A4 용지 한 장을 붙인다 (슬렌더 페이지). 매 판 무작위 나무/무작위 방향.
 // 가까이 가면 용지가 어둠 속에서 환하게 빛나 눈에 띄고, E를 누르면 줍는다. 이 게임의 목표.
@@ -23,31 +24,47 @@ public class TreePaper : MonoBehaviour
     void Start()
     {
         var trees = new System.Collections.Generic.List<Transform>();
+        var firs = new System.Collections.Generic.List<Transform>();
         foreach (var t in FindObjectsByType<Transform>(FindObjectsSortMode.None))
-            if (t.parent == null && t.name == WorldConfig.Names.PineTree) trees.Add(t);
+        {
+            if (t.parent != null || t.name != WorldConfig.Names.PineTree) continue;
+            trees.Add(t);
+            if (t.Find("TreeModel Fir") != null) firs.Add(t); // 전나무(Fir Tree 01) 모델이 달린 나무
+        }
         if (trees.Count == 0) return;
 
         var rand = new System.Random();
-        var tree = trees[rand.Next(trees.Count)];
+        // 용지는 전나무(Fir Tree 01)에만 붙는다. 모델이 아직 없으면 아무 소나무나 사용.
+        var pool = firs.Count > 0 ? firs : trees;
+        var tree = pool[rand.Next(pool.Count)];
 
         float yaw = (float)rand.NextDouble() * 360f;
         var dir = Quaternion.Euler(0f, yaw, 0f) * Vector3.forward;
 
-        // 용지 높이(1.5m)에서 보이는 줄기의 실제 바깥 표면까지의 거리를 메시 경계로 잰다.
-        // (TreeModels가 심은 실제 모델은 굵기가 제각각이라 옛 원뿔 Trunk 크기를 쓰면 용지가 기둥 속에 파묻힌다.)
-        float surface = TrunkSurfaceDistance(tree, dir, tree.position.y + 1.5f);
+        // 보이는 줄기 메시에 레이캐스트해 실제 표면 위치와 바깥 법선을 구한다.
+        // (모델마다 굵기/기울기/면 방향이 달라 추정치를 쓰면 용지가 기둥 속에 묻히거나 옆을 보게 된다.)
+        Vector3 surfacePos, outward;
+        if (!TryTrunkSurface(tree, dir, tree.position.y + 1.5f, out surfacePos, out outward))
+        {
+            float surface = TrunkSurfaceDistance(tree, dir, tree.position.y + 1.5f);
+            surfacePos = tree.position + Vector3.up * 1.5f + dir * surface;
+            outward = dir;
+        }
 
         // 얇은 상자: 어느 쪽에서 봐도 보인다 (Quad는 한쪽 면만 보임).
         paper = GameObject.CreatePrimitive(PrimitiveType.Cube);
         paper.name = "A4 Page";
         Destroy(paper.GetComponent<Collider>()); // 걸리적거리지 않게
-        // 표면에서 1cm + 두께의 절반만큼 바깥에 띄워 껍질 위에 얹힌 것처럼 보이게 한다.
-        paper.transform.position = tree.position + Vector3.up * 1.5f
-            + dir * (surface + 0.01f + 0.0015f);
-        paper.transform.rotation = Quaternion.Euler(
-            (float)(rand.NextDouble() * 8.0 - 4.0), yaw, (float)(rand.NextDouble() * 6.0 - 3.0));
+        // 표면에서 6mm + 두께의 절반만큼 바깥에 띄우고, 면이 바깥(법선)을 보게 세워 껍질에 붙인다.
+        paper.transform.position = surfacePos + outward * (0.006f + 0.0015f);
+        paper.transform.rotation = Quaternion.LookRotation(outward, Vector3.up);
         paper.transform.localScale = new Vector3(0.21f, 0.297f, 0.003f); // A4 (m)
         paper.transform.SetParent(tree, true); // 월드 위치/회전 유지
+
+        Debug.Log("[HushHunt] A4 용지 배치: 나무 " + tree.name
+            + " 위치 " + paper.transform.position.ToString("0.00")
+            + " 바깥 방향 " + outward.ToString("0.00")
+            + " 회전 " + paper.transform.eulerAngles.ToString("0.0"));
 
         // 무늬 없는 깨끗한 흰색. glowMat는 빛이 없어도 항상 밝은 흰색 (가까이 왔을 때 표시용).
         litMat = RuntimeMaterials.CreateLit("A4 Page", new Color(0.98f, 0.98f, 0.96f), 0.02f);
@@ -141,6 +158,66 @@ public class TreePaper : MonoBehaviour
     {
         if (rustle != null) Destroy(rustle);
         if (glowMat != null) Destroy(glowMat);
+    }
+
+    // 보이는 줄기 메시에 레이캐스트해 dir 방향의 실제 표면 위치와 바깥 법선을 구한다.
+    // 임시 MeshCollider를 전용 레이어(31)에 걸어 기존 충돌체는 무시하고, 끝나면 지운다.
+    static bool TryTrunkSurface(Transform tree, Vector3 dir, float worldY, out Vector3 point, out Vector3 normal)
+    {
+        point = default;
+        normal = default;
+        Transform model = null; // "TreeModel" 또는 "TreeModel Fir"
+        foreach (Transform c in tree)
+            if (c.name.StartsWith("TreeModel")) { model = c; break; }
+        if (model == null) return false;
+
+        // 1.5m 부근 띠에 닿는 줄기(나무 재질) 렌더러를 모은다. 재질명으로 못 찾으면 띠의 전체 메시를 쓴다.
+        var meshes = new List<MeshRenderer>();
+        foreach (var r in model.GetComponentsInChildren<MeshRenderer>())
+        {
+            var b = r.bounds;
+            if (b.max.y < worldY - 0.3f || b.min.y > worldY + 0.3f) continue;
+            var m = r.sharedMaterial;
+            string n = m != null ? m.name.ToLowerInvariant() : "";
+            if (n.Contains("bark") || n.Contains("wood") || n.Contains("trunk")) meshes.Add(r);
+        }
+        if (meshes.Count == 0)
+        {
+            foreach (var r in model.GetComponentsInChildren<MeshRenderer>())
+            {
+                var b = r.bounds;
+                if (b.max.y < worldY - 0.3f || b.min.y > worldY + 0.3f) continue;
+                meshes.Add(r);
+            }
+        }
+        if (meshes.Count == 0) return false;
+
+        var oldLayers = new List<int>();
+        var cols = new List<MeshCollider>();
+        foreach (var r in meshes)
+        {
+            var mf = r.GetComponent<MeshFilter>();
+            if (mf == null || mf.sharedMesh == null) continue;
+            oldLayers.Add(r.gameObject.layer);
+            r.gameObject.layer = 31; // 임시: 이 레이어만 레이캐스트한다
+            var mc = r.gameObject.AddComponent<MeshCollider>();
+            mc.sharedMesh = mf.sharedMesh;
+            cols.Add(mc);
+        }
+
+        bool ok = false;
+        var origin = new Vector3(tree.position.x, worldY, tree.position.z) + dir * 3f;
+        if (Physics.Raycast(origin, -dir, out var hit, 6f, 1 << 31))
+        {
+            point = hit.point;
+            normal = hit.normal;
+            if (Vector3.Dot(normal, dir) < 0f) normal = -normal; // 항상 바깥을 보게
+            ok = true;
+        }
+
+        foreach (var mc in cols) Destroy(mc);
+        for (int i = 0; i < oldLayers.Count; i++) meshes[i].gameObject.layer = oldLayers[i];
+        return ok;
     }
 
     // 나무 축에서 dir 방향으로, 지정 높이 부근(±0.3m)의 줄기 바깥 표면까지의 수평 거리.

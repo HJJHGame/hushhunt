@@ -13,7 +13,7 @@ using Names = WorldConfig.Names;
 public static class SetupScene
 {
     const string ScenePath = "Assets/Scenes/Main.unity";
-    const int SceneVersion = 12; // 씬 구성을 바꾸면 1 올린다 (v12: 경계 벽 안쪽 면을 정확히 ±200m로)
+    const int SceneVersion = 13; // 씬 구성을 바꾸면 1 올린다 (v13: 집 10채 확실히 배치)
     const string VersionKey = "HushHunt.SceneVersion";
 
     static SetupScene()
@@ -223,7 +223,7 @@ public static class SetupScene
             props.Add(new Vector3(x, z, rr + 0.5f));
         }
 
-        // 집들: 크기가 다른 속 빈 집 6채를 맵 곳곳에 배치한다.
+        // 집들: 크기가 다른 속 빈 집 10채(최소 9채)를 맵 곳곳에 배치한다.
         // 문(폭 1.4m, 높이 2.4m)으로 출입 가능. 스폰 지점/다른 집/나무/바위/울타리와 안 겹치게.
         var wallMats = new[]
         {
@@ -240,7 +240,7 @@ public static class SetupScene
         var houseRects = new List<Vector4>(); // x, z, 반폭, 반깊이
         int housesPlaced = 0;
         int houseAttempts = 0;
-        while (housesPlaced < 10 && houseAttempts < 600)
+        while (housesPlaced < 10 && houseAttempts < 1200)
         {
             houseAttempts++;
             float hw = 3f + (float)rand.NextDouble() * 3f; // 반폭 3~6m -> 폭 6~12m

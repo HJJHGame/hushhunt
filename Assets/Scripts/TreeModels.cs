@@ -1,8 +1,9 @@
 using UnityEngine;
 
-// 소나무를 실제 3D 모델(Kenney Nature Kit, CC0)로 교체한다.
-// 모델은 Assets/Resources/Trees 에서 불러온다. 씬을 다시 만들지 않아도 시작할 때 적용되고,
-// 모델 파일이 없으면 아무것도 바꾸지 않아 기존 나무가 그대로 남는다.
+// 소나무를 더 실감 나는 모습으로 교체한다.
+// Assets/Resources/Trees 에 모델(.fbx 등)이 있으면 그걸 쓰고, 없으면 코드로 만드는
+// 절차적 소나무(ProceduralTree)를 쓴다. 씬을 다시 만들지 않아도 시작할 때 적용된다.
+[DefaultExecutionOrder(-50)] // TreePaper 보다 먼저 모델을 단다 (용지는 전나무 모델을 찾는다)
 public class TreeModels : MonoBehaviour
 {
     Texture2D barkTex;
@@ -12,9 +13,15 @@ public class TreeModels : MonoBehaviour
     void Start()
     {
         var prefabs = Resources.LoadAll<GameObject>("Trees");
-        if (prefabs == null || prefabs.Length == 0) return;
+        bool hasModels = prefabs != null && prefabs.Length > 0;
 
         var rand = new System.Random(11);
+        // 전나무(Fir Tree 01) 모델이 있으면 최소 3그루에는 반드시 단다: 용지는 전나무에만 붙는다.
+        GameObject firPrefab = null;
+        if (hasModels)
+            foreach (var pf in prefabs)
+                if (pf.name.ToLowerInvariant().Contains("fir_tree_01")) { firPrefab = pf; break; }
+        int firNeed = firPrefab != null ? 3 : 0;
 
         // 거친 나무껍질 느낌: 코드로 만든 세로 결 노이즈 텍스처. 이미지 파일 없이 적용된다.
         // 어두운 갈색을 입혀 두고, 손전등이 비출 때 결 명암이 드러난다.
@@ -56,9 +63,18 @@ public class TreeModels : MonoBehaviour
                 f.gameObject.SetActive(false);
             }
 
-            var prefab = prefabs[rand.Next(prefabs.Length)];
+            if (!hasModels)
+            {
+                // 절차적 소나무: 기존 나무 높이/굵기 배율에 맞춰 코드로 만든다.
+                ProceduralTree.Build(t, WorldConfig.PineHeight * oldScale,
+                    0.9f + (float)rand.NextDouble() * 0.25f, barkMaterial, leafMat, rand);
+                continue;
+            }
+
+            var prefab = firNeed > 0 ? firPrefab : prefabs[rand.Next(prefabs.Length)];
             var go = Instantiate(prefab, t);
-            go.name = "TreeModel";
+            go.name = prefab == firPrefab ? "TreeModel Fir" : "TreeModel";
+            if (prefab == firPrefab) firNeed--;
             go.transform.localPosition = Vector3.zero;
             // 방향은 제각각, 살짝 기울어진 나무로 획일적인 줄맞춤 느낌을 없앤다.
             float tiltX = (float)(rand.NextDouble() * 6.0 - 3.0);
