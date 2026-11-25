@@ -18,7 +18,8 @@ public class PlayerHud : MonoBehaviour
 
     void Update()
     {
-        if (!MainMenu.IsMenuOpen && Input.GetKeyDown(KeyCode.F1))
+        // F 키처럼 일반 문자 키를 쓴다: F1은 원격 데스크톱/브라우저/유니티 도움말이 가로챌 수 있다.
+        if (!MainMenu.IsMenuOpen && Input.GetKeyDown(KeyCode.K))
             showCoords = !showCoords;
     }
 
@@ -73,7 +74,7 @@ public class PlayerHud : MonoBehaviour
             var p = fpc.transform.position;
             float edge = WorldConfig.Half - Mathf.Max(Mathf.Abs(p.x), Mathf.Abs(p.z));
             string text = "위치 (" + p.x.ToString("0.0") + ", " + p.z.ToString("0.0")
-                + ")  |  가장자리(±200m)까지 " + edge.ToString("0") + "m  |  맵 400x400m  [F1] 끄기";
+                + ")  |  가장자리(±200m)까지 " + edge.ToString("0") + "m  |  맵 400x400m  [K] 끄기";
             GUI.color = new Color(1f, 1f, 1f, 0.55f);
             GUI.Label(new Rect(16f, 12f, 640f * scale, 28f * scale), text, coordStyle);
         }
