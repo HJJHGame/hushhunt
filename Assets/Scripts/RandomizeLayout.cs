@@ -6,7 +6,9 @@ using UnityEngine;
 [DefaultExecutionOrder(-100)] // TreeModels/HouseGlow/Minimap보다 먼저 위치를 잡는다
 public class RandomizeLayout : MonoBehaviour
 {
-    void Start()
+    // Awake 에서 바로 섞는다: GameSystems 가 씬 로드 직후 이 컴포넌트를 추가하면 Awake 는 즉시 실행돼
+    // Minimap(지도 이미지 생성)/TreePaper(용지 부착) 같은 Start 들보다 항상 먼저 끝난다.
+    void Awake()
     {
         var rand = new System.Random(); // 시드 고정 없음: 매번 다른 배치
 
@@ -76,6 +78,7 @@ public class RandomizeLayout : MonoBehaviour
         }
 
         // 나무: 스폰/집/소품을 피해 다시 심는다 (크기/기울기는 유지, 위치만 바꾼다).
+        int movedTrees = 0;
         foreach (var t in FindObjectsByType<Transform>(FindObjectsSortMode.None))
         {
             if (t.parent != null || t.name != WorldConfig.Names.PineTree) continue;
@@ -90,8 +93,11 @@ public class RandomizeLayout : MonoBehaviour
                     if (Mathf.Abs(x - r.x) < r.z + 1.5f && Mathf.Abs(z - r.y) < r.w + 1.5f) { inHouse = true; break; }
                 if (inHouse) continue;
                 t.position = new Vector3(x, t.position.y, z);
+                movedTrees++;
                 break;
             }
         }
+        Debug.Log("[HushHunt] 랜덤 배치 완료: 스폰 (" + spawn.x.ToString("0") + ", " + spawn.y.ToString("0")
+            + "), 집 " + placed.Count + "/" + houses.Length + "채 재배치, 나무 " + movedTrees + "그루 이동");
     }
 }
