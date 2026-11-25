@@ -13,7 +13,7 @@ using Names = WorldConfig.Names;
 public static class SetupScene
 {
     const string ScenePath = "Assets/Scenes/Main.unity";
-    const int SceneVersion = 13; // 씬 구성을 바꾸면 1 올린다 (v13: 집 10채 확실히 배치)
+    const int SceneVersion = 14; // 씬 구성을 바꾸면 1 올린다 (v14: 숲 밀도 대폭 증가: 나무 700, 바위 120, 통나무 90, 그루터기 110)
     const string VersionKey = "HushHunt.SceneVersion";
 
     static SetupScene()
@@ -122,7 +122,7 @@ public static class SetupScene
 
         int placed = 0;
         int attempts = 0;
-        while (placed < 320 && attempts < 1400)
+        while (placed < 700 && attempts < 3000)
         {
             attempts++;
             float x = (float)(rand.NextDouble() * 2.0) * spread - spread;
@@ -135,10 +135,10 @@ public static class SetupScene
             placed++;
         }
 
-        // 바위와 낡은 나무 울타리 (슬렌더 분위기 소품)
+        // 바위와 낡은 나무 울타리 (슬렌더 분위기 소품). 빈 공간을 채우도록 많이 둔다.
         var rockMat = MakeMaterial("Rock", new Color(0.08f, 0.09f, 0.09f));
         var fenceMat = MakeMaterial("Fence", new Color(0.09f, 0.07f, 0.05f));
-        for (int i = 0; i < 50; i++)
+        for (int i = 0; i < 120; i++)
         {
             float x = (float)(rand.NextDouble() * 2.0) * spread - spread;
             float z = (float)(rand.NextDouble() * 2.0) * spread - spread;
@@ -190,7 +190,7 @@ public static class SetupScene
 
         // 쓰러진 통나무와 그루터기: 숲 바닥에 변화를 주고, 낮은 엄폐물/점프 장애물이 된다.
         var logMat = MakeMaterial("Log", new Color(0.08f, 0.06f, 0.045f));
-        for (int i = 0; i < 44; i++)
+        for (int i = 0; i < 90; i++)
         {
             float x = (float)(rand.NextDouble() * 2.0) * spread - spread;
             float z = (float)(rand.NextDouble() * 2.0) * spread - spread;
@@ -207,7 +207,7 @@ public static class SetupScene
             log.GetComponent<Renderer>().sharedMaterial = logMat;
             props.Add(new Vector3(x, z, len * 0.5f + 0.5f));
         }
-        for (int i = 0; i < 60; i++)
+        for (int i = 0; i < 110; i++)
         {
             float x = (float)(rand.NextDouble() * 2.0) * spread - spread;
             float z = (float)(rand.NextDouble() * 2.0) * spread - spread;

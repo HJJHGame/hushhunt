@@ -2,7 +2,7 @@ using UnityEngine;
 
 // 숲 바닥 덮개: Assets/Resources/GroundCover 에 모델(고사리/풀/새싹 소나무 등 .fbx)이
 // 있으면 맵 전체에 흩뿌린다. 없으면 아무것도 하지 않는다 (기존 숲 그대로).
-// 충돌체는 만들지 않아 지나다닐 수 있고, 집/나무/바위/스폰 자리는 피한다.
+// 충돌체는 만들지 않아 지나다닐 수 있고, 집/나무/바위/스폰 자리는 피한다. 빈 공간을 채우도록 많이 뿌린다.
 public class GroundCover : MonoBehaviour
 {
     void Start()
@@ -13,8 +13,8 @@ public class GroundCover : MonoBehaviour
         var rand = new System.Random(97);
         float half = WorldConfig.Half - 6f;
         int placed = 0;
-        // 너무 많이 심으면 그리기 호출이 늘어 느려진다: 150개 상한.
-        for (int i = 0; i < 700 && placed < 150; i++)
+        // 너무 많이 심으면 그리기 호출이 늘어 느려진다: 350개 상한.
+        for (int i = 0; i < 1500 && placed < 350; i++)
         {
             float x = ((float)rand.NextDouble() * 2f - 1f) * half;
             float z = ((float)rand.NextDouble() * 2f - 1f) * half;
