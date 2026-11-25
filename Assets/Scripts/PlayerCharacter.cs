@@ -234,6 +234,14 @@ public class PlayerCharacter : MonoBehaviour
         var animator = model.GetComponent<Animator>();
         if (animator == null) animator = model.AddComponent<Animator>();
         animator.applyRootMotion = false;
+        // Humanoid 임포트 이후 클립은 머슬 곡선이라 아바타 없이 재생하면 스키닝이 깨진다
+        // (화면이 회색으로 깜빡이는 원인). 모델 FBX의 아바타를 명시적으로 연결한다.
+        if (realistic && animator.avatar == null)
+        {
+            var avatars = Resources.LoadAll<Avatar>("CharacterReal/hooded-rogue-rigged");
+            if (avatars.Length > 0) animator.avatar = avatars[0];
+            else Debug.LogWarning("[PlayerCharacter] 로그 아바타를 찾지 못함: Humanoid 클립이 깨질 수 있음");
+        }
 
         graph = PlayableGraph.Create("PlayerCharacter");
         graph.SetTimeUpdateMode(DirectorUpdateMode.GameTime);
@@ -394,7 +402,8 @@ public class PlayerCharacter : MonoBehaviour
     {
         var clips = Resources.LoadAll<AnimationClip>(resourcePath);
         foreach (var c in clips)
-            if (c.name == clipName) return c;
+            // 임포트된 클립 이름은 "Armature|Idle_Loop"처럼 앞에 노드명이 붙을 수 있어 꼬리로 맞춘다
+            if (c.name == clipName || c.name.EndsWith("|" + clipName)) return c;
         return null;
     }
 
@@ -411,4 +420,5 @@ public class PlayerCharacter : MonoBehaviour
         runtimeMats.Clear();
     }
 }
+
 
