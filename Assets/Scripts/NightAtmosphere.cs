@@ -6,24 +6,14 @@ using UnityEngine.Rendering;
 // 기본 밝기는 이전보다 어둡게(0.5배) 맞추고, 설정의 밝기 단계를 곱한다.
 public class NightAtmosphere : MonoBehaviour
 {
-    const float BaseFogDensity = 0.030f;
-    const float Darkness = 0.5f; // 환경광 기본 어둡기 (조명 효과 극대화용)
+    const float BaseFogDensity = 0.045f; // 시야를 더 좁혀 손전등 의존도를 높인다
+    const float Darkness = 0.32f; // 환경광 기본 어둡기 (조명 효과 극대화용)
 
     // 원래 기준 색 (여기에 Darkness와 설정 밝기를 곱해 쓴다)
     static readonly Color SkyBase = new Color(0.13f, 0.17f, 0.27f);
     static readonly Color EquatorBase = new Color(0.07f, 0.10f, 0.12f);
     static readonly Color GroundBase = new Color(0.02f, 0.03f, 0.03f);
     static readonly Color FogBase = new Color(0.07f, 0.10f, 0.14f);
-
-    void OnEnable()
-    {
-        GameSettings.Changed += ApplyAtmosphere;
-    }
-
-    void OnDisable()
-    {
-        GameSettings.Changed -= ApplyAtmosphere;
-    }
 
     void Start()
     {
@@ -33,6 +23,8 @@ public class NightAtmosphere : MonoBehaviour
         {
             cam.clearFlags = CameraClearFlags.SolidColor;
             cam.backgroundColor = new Color(0.02f, 0.03f, 0.05f);
+            // 시야 거리를 좁힌다: 먼 곳은 안개에 묻히고 손전등이 유일한 시야 확보 수단이 된다.
+            cam.farClipPlane = 80f;
         }
 
         // 안개: 푸른 먹빛. 멀리 나무 실루엣이 겹쳐 보이게.
@@ -63,10 +55,9 @@ public class NightAtmosphere : MonoBehaviour
     }
 
     // 환경광: 위(하늘)는 푸른 기, 옆은 어두운 청록, 아래(땅)는 거의 검정.
-    // 설정의 밝기 단계가 바뀌면 즉시 다시 적용한다.
     void ApplyAtmosphere()
     {
-        float m = Darkness * GameSettings.BrightnessMultiplier;
+        float m = Darkness;
         RenderSettings.ambientMode = AmbientMode.Trilight;
         RenderSettings.ambientSkyColor = Scale(SkyBase, m);
         RenderSettings.ambientEquatorColor = Scale(EquatorBase, m);
