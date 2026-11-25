@@ -28,7 +28,6 @@ public class MainMenu : MonoBehaviour
     FirstPersonController fpc;
     RectTransform titlePanel, pausePanel, settingsPanel;
     Text sensValue, volValue;
-    Button[] brightnessButtons;
 
     static readonly Color BgTitle = new Color(0.015f, 0.02f, 0.035f, 1f);
     static readonly Color BgPause = new Color(0f, 0f, 0f, 0.55f);
@@ -37,7 +36,6 @@ public class MainMenu : MonoBehaviour
     static readonly Color ButtonHover = new Color(0.26f, 0.36f, 0.44f, 1f);
     static readonly Color ButtonPressed = new Color(0.32f, 0.45f, 0.52f, 1f);
     static readonly Color ButtonDisabled = new Color(0.10f, 0.11f, 0.13f, 0.7f);
-    static readonly Color ButtonSelected = new Color(0.30f, 0.46f, 0.50f, 1f);
     static readonly Color TextMain = new Color(0.92f, 0.95f, 1f);
     static readonly Color TextSub = new Color(0.65f, 0.72f, 0.8f);
 
@@ -217,42 +215,11 @@ public class MainMenu : MonoBehaviour
         volValue = MakeSlider(box, "볼륨", 70f, 0f, 1f, GameSettings.Volume,
             v => GameSettings.SetVolume(v), v => Mathf.RoundToInt(v * 100f) + "%");
 
-        var brightLabel = MakeText(box, "밝기 (분위기)", 20, TextAnchor.MiddleLeft, TextSub);
-        Place(brightLabel.rectTransform, -80f, -60f, 300f, 30f);
-        brightnessButtons = new Button[3];
-        string[] names = { "어둡게", "보통", "밝게" };
-        for (int i = 0; i < 3; i++)
-        {
-            int choice = i;
-            var b = MakeButton(box, names[i], -120f, true, () =>
-            {
-                GameSettings.SetBrightness(choice);
-                RefreshSettings();
-            });
-            var rt = (RectTransform)b.transform;
-            rt.sizeDelta = new Vector2(150f, 56f);
-            rt.anchoredPosition = new Vector2((i - 1) * 170f, -120f);
-            brightnessButtons[i] = b.GetComponent<Button>();
-        }
-
         MakeButton(box, "뒤로", -260f, true, CloseSettings);
     }
 
     void RefreshSettings()
     {
-        if (brightnessButtons != null)
-            for (int i = 0; i < brightnessButtons.Length; i++)
-                if (brightnessButtons[i] != null)
-                {
-                    // Button의 ColorTint가 targetGraphic 색을 덮어쓰므로 normalColor 자체를 바꾼다.
-                    Color c = i == GameSettings.Brightness ? ButtonSelected : ButtonNormal;
-                    var cols = brightnessButtons[i].colors;
-                    cols.normalColor = c;
-                    cols.selectedColor = c;
-                    brightnessButtons[i].colors = cols;
-                    if (brightnessButtons[i].targetGraphic != null)
-                        brightnessButtons[i].targetGraphic.color = c;
-                }
         if (sensValue != null) sensValue.text = GameSettings.Sensitivity.ToString("0.0");
         if (volValue != null) volValue.text = Mathf.RoundToInt(GameSettings.Volume * 100f) + "%";
     }
