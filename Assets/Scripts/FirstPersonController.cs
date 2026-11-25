@@ -26,28 +26,28 @@ public class FirstPersonController : MonoBehaviour
     public float mouseSensitivity = 2f;
     public Transform cameraPivot;
 
+    // 카메라 피벗(눈) 위치는 이 컴포넌트가 단독으로 관리한다 (캡슐 중심 기준 로컬 좌표).
+    // 예전에는 PlayerCharacter도 같은 값을 써서, 이쪽 ApplyCrouch가 매 프레임 덮어쓰는 바람에
+    // 그쪽 계산이 실제로는 적용되지 않았다.
+    [Header("Eye")]
+    public float standingEyeY = 0.72f;  // 서 있을 때 눈 높이 (발바닥 기준 1.72m)
+    public float crouchEyeY = 0.10f;    // 웅크렸을 때 눈 높이
+    public float eyeForward = 0.12f;    // 카메라를 몸보다 앞에 둬서 몸/후드 안쪽이 안 보이게
+    public float eyeMoveSpeed = 3f;     // 서기/웅크리기 전환 시 눈 높이 이동 속도 (m/s)
+
     public bool IsSprinting { get; private set; }
     public bool IsCrouching { get; private set; }
     public bool IsExhausted { get; private set; }
     public float Stamina01 { get { return staminaMax > 0f ? stamina / staminaMax : 1f; } }
 
     CharacterController controller;
-    MainMenu menu;
-
-    // 메뉴는 GameSystems가 씬에 하나만 붙인다. 찾으면 캐시한다 (issue #28).
-    bool MenuOpen()
-    {
-        if (menu == null) menu = FindFirstObjectByType<MainMenu>();
-        return menu != null && menu.IsOpen;
-    }
     float verticalVelocity;
     float pitch;
     float stamina;
     float regenTimer;
     float standingHeight;
     float standingCenterY;
-    const float StandingCamY = 0.72f;
-    const float CrouchCamY = 0.10f;
+    static readonly Collider[] standOverlaps = new Collider[16]; // CanStand용 재사용 버퍼 (GC 방지)
 
     void Awake()
     {
@@ -59,19 +59,18 @@ public class FirstPersonController : MonoBehaviour
 
     void Start()
     {
-        // 모델 머리 중심 y=0.66, 얼굴 앞쪽 z=0.10. 발바닥(-1) 기준 눈높이 1.72m.
-        // 기존 씬에도 적용되도록 시작할 때 맞춘다.
+        // 기존 씬에도 적용되도록 시작할 때 눈 위치를 맞춘다.
         if (cameraPivot != null)
-            cameraPivot.localPosition = new Vector3(0f, 0.72f, 0.10f);
+            cameraPivot.localPosition = new Vector3(0f, standingEyeY, eyeForward);
         // 타이틀 메뉴가 먼저 열려 있으면 메뉴가 커서를 관리한다.
-        if (!MenuOpen())
+        if (!MainMenu.IsMenuOpen)
             LockCursor(true);
     }
 
     void Update()
     {
         // 메뉴가 열려 있으면 커서 잠금/시점/이동은 MainMenu가 관리한다.
-        if (MenuOpen()) return;
+        if (MainMenu.IsMenuOpen) return;
 
         mouseSensitivity = GameSettings.Sensitivity;
         Look();
@@ -142,13 +141,14 @@ public class FirstPersonController : MonoBehaviour
         if (!Mathf.Approximately(controller.height, targetH))
         {
             float feetY = standingCenterY - standingHeight * 0.5f;
+            Vector3 c = controller.center;
             controller.height = targetH;
-            controller.center = new Vector3(0f, feetY + targetH * 0.5f, 0f);
+            controller.center = new Vector3(c.x, feetY + targetH * 0.5f, c.z);
         }
         if (cameraPivot != null)
         {
             Vector3 p = cameraPivot.localPosition;
-            p.y = Mathf.MoveTowards(p.y, IsCrouching ? CrouchCamY : StandingCamY, Time.deltaTime * 3f);
+            p.y = Mathf.MoveTowards(p.y, IsCrouching ? crouchEyeY : standingEyeY, Time.deltaTime * eyeMoveSpeed);
             cameraPivot.localPosition = p;
         }
     }
@@ -162,9 +162,13 @@ public class FirstPersonController : MonoBehaviour
         float feetY = center.y - standingHeight * 0.5f;
         Vector3 p1 = new Vector3(center.x, feetY + r, center.z);
         Vector3 p2 = new Vector3(center.x, feetY + standingHeight - r, center.z);
-        foreach (var col in Physics.OverlapCapsule(p1, p2, r, ~0, QueryTriggerInteraction.Ignore))
+        int count = Physics.OverlapCapsuleNonAlloc(p1, p2, r, standOverlaps, ~0, QueryTriggerInteraction.Ignore);
+        for (int i = 0; i < count; i++)
+        {
+            var col = standOverlaps[i];
             if (col != controller && !col.transform.IsChildOf(transform))
                 return false;
+        }
         return true;
     }
 
@@ -195,7 +199,7 @@ public class FirstPersonController : MonoBehaviour
     // 창 포커스를 얻을 때 다시 잠가서 커서를 숨긴다 (메뉴가 열려 있으면 메뉴 우선).
     void OnApplicationFocus(bool focused)
     {
-        if (focused && !MenuOpen())
+        if (focused && !MainMenu.IsMenuOpen)
             LockCursor(true);
     }
 
@@ -205,4 +209,3 @@ public class FirstPersonController : MonoBehaviour
         Cursor.visible = !locked;
     }
 }
-

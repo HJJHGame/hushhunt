@@ -3,7 +3,10 @@ using UnityEngine;
 // 안개 속을 떠다니는 희미한 먼지/포자 입자. 플레이어를 따라다니지만 입자는 월드에 남아 천천히 흐른다.
 public class FogMotes : MonoBehaviour
 {
+    const float HolderHeight = 3f; // 입자 상자 중심 높이 (상자 높이 8m -> 지면 아래 -1m ~ 위 7m)
+
     GameObject holder;
+    Transform follow;
     Texture2D dot;
     Material mat;
 
@@ -18,7 +21,7 @@ public class FogMotes : MonoBehaviour
 
         holder = new GameObject("Fog Motes");
         holder.transform.SetParent(transform, false);
-        holder.transform.localPosition = new Vector3(0f, 3f, 0f);
+        holder.transform.position = new Vector3(0f, HolderHeight, 0f);
 
         var ps = holder.AddComponent<ParticleSystem>();
         ps.Stop(true, ParticleSystemStopBehavior.StopEmittingAndClear);
@@ -65,6 +68,21 @@ public class FogMotes : MonoBehaviour
         r.receiveShadows = false;
 
         ps.Play();
+    }
+
+    // 입자 자체는 월드 공간에 남아 천천히 흐르고, 새로 생기는 위치만 플레이어를 따라간다.
+    // (이 컴포넌트는 원점의 GameSystems에 붙어 있어서 따라가지 않으면 스폰 지점 주변에만 입자가 생긴다.)
+    void LateUpdate()
+    {
+        if (holder == null) return;
+        if (follow == null)
+        {
+            var cam = Camera.main;
+            if (cam == null) return;
+            follow = cam.transform;
+        }
+        Vector3 p = follow.position;
+        holder.transform.position = new Vector3(p.x, HolderHeight, p.z);
     }
 
     void OnDestroy()

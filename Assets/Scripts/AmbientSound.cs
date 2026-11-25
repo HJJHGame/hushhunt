@@ -10,6 +10,7 @@ public class AmbientSound : MonoBehaviour
     AudioClip wind;
     AudioClip[] events;
     AudioSource windSource;
+    AudioListener listener;
     float nextEvent;
 
     void Start()
@@ -46,7 +47,11 @@ public class AmbientSound : MonoBehaviour
     {
         float angle = Random.Range(0f, Mathf.PI * 2f);
         float dist = Random.Range(18f, 45f);
-        Vector3 pos = transform.position + new Vector3(Mathf.Cos(angle) * dist, 0f, Mathf.Sin(angle) * dist);
+        // 이 컴포넌트는 월드 원점의 GameSystems에 붙어 있으므로 transform.position을 쓰면
+        // 플레이어가 스폰에서 멀어질수록 "먼 소리"가 엉뚱한 곳에서 난다. 듣는 쪽(리스너) 기준으로 놓는다.
+        if (listener == null) listener = FindFirstObjectByType<AudioListener>();
+        Vector3 origin = listener != null ? listener.transform.position : transform.position;
+        Vector3 pos = origin + new Vector3(Mathf.Cos(angle) * dist, 0f, Mathf.Sin(angle) * dist);
         pos.y = 1f;
 
         var go = new GameObject("Distant Sound");

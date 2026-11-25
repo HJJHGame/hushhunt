@@ -13,7 +13,7 @@ public class TreeModels : MonoBehaviour
         var rand = new System.Random(11);
         var all = FindObjectsByType<Transform>(FindObjectsSortMode.None);
         var pines = new System.Collections.Generic.List<Transform>();
-        foreach (var cand in all) if (cand.name == "Pine Tree") pines.Add(cand);
+        foreach (var cand in all) if (cand.name == WorldConfig.Names.PineTree) pines.Add(cand);
         // 검색 순서가 실행마다 달라도 같은 숲이 나오도록 위치로 정렬한다.
         pines.Sort((p1, p2) =>
         {
@@ -22,20 +22,19 @@ public class TreeModels : MonoBehaviour
         });
         foreach (var t in pines)
         {
-
             // 기존 원뿔 나무의 재질(씬의 어두운 색)을 그대로 써서 안개/밤 분위기와 맞춘다.
             Material leafMat = null, barkMat = null;
             float oldScale = 1f;
-            var trunk = t.Find("Trunk");
+            var trunk = t.Find(WorldConfig.Names.PineTrunk);
             if (trunk != null)
             {
                 var tr = trunk.GetComponent<Renderer>();
                 if (tr != null) { barkMat = tr.sharedMaterial; tr.enabled = false; } // 충돌체는 남김
-                oldScale = trunk.localScale.x / 0.32f;
+                oldScale = trunk.localScale.x / WorldConfig.PineTrunkBaseWidth;
             }
             for (int i = 1; i <= 3; i++)
             {
-                var f = t.Find("Foliage" + i);
+                var f = t.Find(WorldConfig.Names.PineFoliagePrefix + i);
                 if (f == null) continue;
                 var fr = f.GetComponent<Renderer>();
                 if (leafMat == null && fr != null) leafMat = fr.sharedMaterial;
@@ -61,7 +60,7 @@ public class TreeModels : MonoBehaviour
             for (int i = 1; i < rends.Length; i++) b.Encapsulate(rends[i].bounds);
             if (b.size.y > 0.001f)
             {
-                float target = 9.5f * oldScale;
+                float target = WorldConfig.PineHeight * oldScale;
                 float k = target / b.size.y;
                 float girth = 0.9f + (float)rand.NextDouble() * 0.25f; // 굵기 변화
                 go.transform.localScale = new Vector3(k * girth, k, k * girth);

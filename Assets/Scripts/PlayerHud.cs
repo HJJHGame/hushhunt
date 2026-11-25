@@ -7,15 +7,6 @@ public class PlayerHud : MonoBehaviour
     Flashlight flash;
     GUIStyle hintStyle;
     float visibility;
-    MainMenu menu;
-
-    // 메뉴는 GameSystems가 씬에 하나만 붙인다. 찾으면 캐시한다 (issue #28).
-    bool MenuOpen()
-    {
-        if (menu == null) menu = FindFirstObjectByType<MainMenu>();
-        return menu != null && menu.IsOpen;
-    }
-
 
     void Start()
     {
@@ -26,7 +17,7 @@ public class PlayerHud : MonoBehaviour
     void OnGUI()
     {
         if (Event.current.type != EventType.Repaint) return;
-        if (MenuOpen()) return;
+        if (MainMenu.IsMenuOpen) return;
         GUI.depth = 0;
         float scale = Mathf.Clamp(Screen.height / 1080f, 0.75f, 1.5f);
         Color prev = GUI.color;
