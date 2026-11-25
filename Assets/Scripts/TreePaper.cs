@@ -35,5 +35,71 @@ public class TreePaper : MonoBehaviour
         var mat = RuntimeMaterials.CreateLit("A4 Page", new Color(0.9f, 0.88f, 0.82f), 0.02f);
         paper.GetComponent<Renderer>().sharedMaterial = mat;
         paper.GetComponent<Renderer>().shadowCastingMode = UnityEngine.Rendering.ShadowCastingMode.Off;
+
+        // 이 게임 유일의 위치 힌트 음 (발소리/바람 외 소리 금지 규칙의 사용자 명시 예외).
+        // 완전 3D라 멀리서도 어느 방향인지 들리고, 가까워질수록 커진다.
+        rustle = MakeRustle();
+        var src = paper.AddComponent<AudioSource>();
+        src.clip = rustle;
+        src.loop = true;
+        src.spatialBlend = 1f; // 완전 3D
+        src.rolloffMode = AudioRolloffMode.Linear;
+        src.minDistance = 2f;  // 이 안에서는 최대 음량
+        src.maxDistance = 30f; // 30m 밖에서는 들리지 않는다
+        src.dopplerLevel = 0f;
+        src.volume = 0.9f;
+        src.Play();
+
+        Debug.Log("[HushHunt] A4 용지 부착: " + tree.name + " 위치 (" + tree.position.x.ToString("0.0")
+            + ", " + tree.position.z.ToString("0.0") + ")");
+    }
+
+    AudioClip rustle;
+
+    void OnDestroy()
+    {
+        if (rustle != null) Destroy(rustle);
+    }
+
+    // 6초짜리 종이 바스락 소리. 바람에 펄럭이는 종이: 중역 노이즈 + 빠른 떨림 + 가끔 큰 펄럭임.
+    // 모든 진동이 6초의 정수배 주기라 반복해도 자연스럽고, 앞뒤 크로스페이드로 이음매를 지운다
+    // (AmbientSound.MakeWind 와 같은 방식).
+    static AudioClip MakeRustle()
+    {
+        const int rate = 22050;
+        const int n = rate * 6;
+        const int xf = rate / 2;
+        var buf = new float[n + xf];
+        var r = new System.Random(7);
+        float lo = 0f, mid = 0f, hi = 0f;
+
+        for (int i = 0; i < n + xf; i++)
+        {
+            float t = i / (float)rate;
+            float noise = (float)r.NextDouble() * 2f - 1f;
+            lo += (noise - lo) * 0.02f;
+            mid += (noise - mid) * 0.12f;
+            hi += (noise - hi) * 0.45f;
+            // 플러터: 초당 약 11번 떨림 (6초에 66주기 = 정수배)
+            float flutter = 0.6f + 0.4f * Mathf.Sin(2f * Mathf.PI * 66f * t / 6f
+                + Mathf.Sin(2f * Mathf.PI * 6f * t / 6f));
+            // 펄럭임: 6초에 3번 살짝 더 크게 (정수배)
+            float flap = 1f + 0.8f * Mathf.Max(0f, Mathf.Sin(2f * Mathf.PI * 3f * t / 6f + 0.7f));
+            buf[i] = ((mid - lo) * 1.1f + hi * 0.5f) * flutter * flap;
+        }
+
+        var s = new float[n];
+        for (int i = 0; i < n; i++) s[i] = buf[i];
+        for (int i = 0; i < xf; i++)
+            s[i] = Mathf.Lerp(buf[n + i], buf[i], i / (float)xf);
+
+        float max = 0.001f;
+        for (int i = 0; i < n; i++) max = Mathf.Max(max, Mathf.Abs(s[i]));
+        float k = 0.8f / max;
+        for (int i = 0; i < n; i++) s[i] *= k;
+
+        var clip = AudioClip.Create("Paper Rustle", n, 1, rate, false);
+        clip.SetData(s, 0);
+        return clip;
     }
 }
