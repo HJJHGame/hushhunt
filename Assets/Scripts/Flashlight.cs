@@ -13,9 +13,6 @@ public class Flashlight : MonoBehaviour
     public float spotAngle = 55f;
 
     Light lamp;
-    AudioSource clickSource;
-
-    AudioClip clickClip;
     Material lensMat;
     bool lensLit;
     readonly List<Material> propMats = new List<Material>();
@@ -57,10 +54,6 @@ public class Flashlight : MonoBehaviour
         lamp.shadowBias = 0.05f;
         lamp.enabled = startOn;
 
-        clickClip = MakeClick();
-        clickSource = gameObject.AddComponent<AudioSource>();
-        clickSource.spatialBlend = 0f;
-        clickSource.playOnAwake = false;
     }
 
     void Update()
@@ -69,10 +62,7 @@ public class Flashlight : MonoBehaviour
 
         // 메뉴(타이틀/일시정지)가 열려 있으면 토글 입력만 무시한다. 밝기 떨림 연출은 유지.
         if (!MainMenu.IsMenuOpen && Input.GetKeyDown(toggleKey))
-        {
             lamp.enabled = !lamp.enabled;
-            clickSource.PlayOneShot(clickClip, 0.6f);
-        }
 
         if (!lamp.enabled) { SetLens(false); return; }
         SetLens(true);
@@ -124,29 +114,7 @@ public class Flashlight : MonoBehaviour
 
     void OnDestroy()
     {
-        if (clickClip != null) Destroy(clickClip);
         foreach (var m in propMats) if (m != null) Destroy(m);
         propMats.Clear();
-    }
-
-    static AudioClip MakeClick()
-    {
-        const int rate = 44100;
-        int n = (int)(rate * 0.06f);
-        var s = new float[n];
-        var r = new System.Random(5);
-        for (int i = 0; i < n; i++)
-        {
-            float t = i / (float)rate;
-            s[i] = (Noise(r) * 0.6f + Mathf.Sin(2f * Mathf.PI * 1800f * t) * 0.4f) * Mathf.Exp(-t * 90f);
-        }
-        var clip = AudioClip.Create("FlashlightClick", n, 1, rate, false);
-        clip.SetData(s, 0);
-        return clip;
-    }
-
-    static float Noise(System.Random r)
-    {
-        return (float)r.NextDouble() * 2f - 1f;
     }
 }
