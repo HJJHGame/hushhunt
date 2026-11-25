@@ -48,14 +48,14 @@ public class PlayerCharacter : MonoBehaviour
         // 그것도 없으면 프리미티브 몸으로 되돌아간다.
         bool realistic = false;
         idleSpeed = 1f;
-        var prefab = Resources.Load<GameObject>("CharacterReal/ninja-rigged");
+        var prefab = Resources.Load<GameObject>("CharacterReal/hooded-rogue-rigged");
         if (prefab == null)
-            Debug.LogWarning("[PlayerCharacter] 닌자 모델 로드 실패: Resources/CharacterReal/ninja-rigged 를 찾지 못함");
+            Debug.LogWarning("[PlayerCharacter] 후드 로그 모델 로드 실패: Resources/CharacterReal/hooded-rogue-rigged 를 찾지 못함");
         if (prefab != null)
         {
             // 리깅 FBX 안에 walk/run 클립이 함께 들어 있다 (idle 클립은 없음).
-            clipWalk = LoadClip("CharacterReal/ninja-rigged", "walk");
-            clipRun = LoadClip("CharacterReal/ninja-rigged", "run");
+            clipWalk = LoadClip("CharacterReal/hooded-rogue-rigged", "walk");
+            clipRun = LoadClip("CharacterReal/hooded-rogue-rigged", "run");
             if (clipWalk != null && clipRun != null)
             {
                 realistic = true;
@@ -70,9 +70,9 @@ public class PlayerCharacter : MonoBehaviour
             {
                 // 어떤 클립이 들어 있는지 그대로 찍어 사용자가 보낼 수 있게 한다.
                 var names = new System.Text.StringBuilder();
-                foreach (var c in Resources.LoadAll<AnimationClip>("CharacterReal/ninja-rigged"))
+                foreach (var c in Resources.LoadAll<AnimationClip>("CharacterReal/hooded-rogue-rigged"))
                     names.Append(c.name).Append(' ');
-                Debug.LogWarning("[PlayerCharacter] 닌자 walk/run 클립 로드 실패. 실제 클립 목록: " + names);
+                Debug.LogWarning("[PlayerCharacter] 후드 로그 walk/run 클립 로드 실패. 실제 클립 목록: " + names);
                 prefab = null; // 클립이 안 읽히면 KayKit 경로로
             }
         }
@@ -147,10 +147,10 @@ public class PlayerCharacter : MonoBehaviour
             // Grab3D FBX는 텍스처를 포함하지 않고 제작자 PC의 절대 경로만 참조한다.
             // 그대로 두면 몸 전체가 회색으로 보이므로, 같은 패키지(GLB)에서 뽑은
             // 텍스처를 Resources에서 읽어 연결한다.
-            var baseTex = Resources.Load<Texture2D>("CharacterReal/ninja_basecolor");
-            var normalTex = Resources.Load<Texture2D>("CharacterReal/ninja_normal");
+            var baseTex = Resources.Load<Texture2D>("CharacterReal/rogue_basecolor");
+            var normalTex = Resources.Load<Texture2D>("CharacterReal/rogue_normal");
             if (baseTex == null)
-                Debug.LogWarning("[PlayerCharacter] 닌자 텍스처 로드 실패: Resources/CharacterReal/ninja_basecolor");
+                Debug.LogWarning("[PlayerCharacter] 후드 로그 텍스처 로드 실패: Resources/CharacterReal/rogue_basecolor");
             foreach (var r in rends)
             {
                 // 카메라 밖으로 나가도 그림자가 유지되게 (1인칭에서 자기 그림자용)
@@ -227,7 +227,7 @@ public class PlayerCharacter : MonoBehaviour
         currentState = "idle";
         graph.Play();
 
-        Debug.Log("[PlayerCharacter] 모델 적용: " + (realistic ? "닌자(사실적)" : "KayKit 도적")
+        Debug.Log("[PlayerCharacter] 모델 적용: " + (realistic ? "후드 로그(사실적)" : "KayKit 도적")
             + " / 스케일 " + model.transform.localScale.x.ToString("F4")
             + " / 클립 idle=" + (clipIdle != null ? clipIdle.name : "없음")
             + " walk=" + (clipWalk != null ? clipWalk.name : "없음")
