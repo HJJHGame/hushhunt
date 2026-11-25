@@ -6,6 +6,7 @@ using UnityEngine;
 using Names = WorldConfig.Names;
 
 // 처음 프로젝트를 열 때 Main 씬이 없으면 자동으로 만들어 준다.
+// 파일은 있는데 아무 씬도 열려 있지 않은 채 시작한 경우(Untitled)에는 열어 준다.
 // 씬 구성이 바뀌어 SceneVersion 이 올라가면 다음에 열 때 자동으로 다시 만든다.
 // 메뉴 Hush Hunt > Setup Main Scene 으로 수동 재생성도 가능.
 [InitializeOnLoad]
@@ -45,7 +46,15 @@ public static class SetupScene
         // 쓸 수 없다 (InvalidOperationException). 에디터 모드일 때만 만든다.
         if (EditorApplication.isPlayingOrWillChangePlaymode) return;
 
-        if (!force && File.Exists(ScenePath)) return;
+        if (!force && File.Exists(ScenePath))
+        {
+            // 아무 씬도 열려 있지 않은 채 시작한 경우(Untitled) Main을 열어 준다.
+            // 저장하지 않은 Untitled 작업이 있으면 덮지 않고 그대로 둔다.
+            var active = EditorSceneManager.GetActiveScene();
+            if (string.IsNullOrEmpty(active.path) && !active.isDirty)
+                EditorSceneManager.OpenScene(ScenePath);
+            return;
+        }
 
         // NewScene(Single)은 현재 열린 씬을 그대로 버린다. 저장하지 않은 수정이 있으면 먼저 묻는다.
         if (!EditorSceneManager.SaveCurrentModifiedScenesIfUserWantsTo()) return;
