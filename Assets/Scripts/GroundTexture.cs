@@ -52,10 +52,10 @@ public class GroundTexture : MonoBehaviour
         var rand = new System.Random(5);
         var px = new Color[Size * Size];
 
-        var soil = new Color(0.16f, 0.12f, 0.09f);
-        var dark = new Color(0.07f, 0.06f, 0.05f);
-        var moss = new Color(0.10f, 0.17f, 0.08f);
-        var leaf = new Color(0.27f, 0.17f, 0.07f);
+        var soil = new Color(0.10f, 0.075f, 0.055f);
+        var dark = new Color(0.045f, 0.038f, 0.032f);
+        var moss = new Color(0.06f, 0.11f, 0.05f);
+        var leaf = new Color(0.17f, 0.11f, 0.045f);
 
         for (int y = 0; y < Size; y++)
         {
@@ -73,7 +73,7 @@ public class GroundTexture : MonoBehaviour
         }
 
         // 잔디 포기: 짧은 세로 초록 획을 심는다.
-        var grass = new Color(0.14f, 0.22f, 0.10f);
+        var grass = new Color(0.09f, 0.14f, 0.065f);
         for (int i = 0; i < 700; i++)
         {
             int cx = rand.Next(Size), cy = rand.Next(Size);
@@ -85,7 +85,7 @@ public class GroundTexture : MonoBehaviour
         }
 
         // 잔돌: 밝은 회색 점을 흩뿌린다.
-        var gravel = new Color(0.35f, 0.35f, 0.36f);
+        var gravel = new Color(0.22f, 0.22f, 0.23f);
         for (int i = 0; i < 500; i++)
         {
             float shade = 0.5f + (float)rand.NextDouble() * 0.8f;
