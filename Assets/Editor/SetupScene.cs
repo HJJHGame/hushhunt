@@ -11,7 +11,7 @@ using UnityEngine;
 public static class SetupScene
 {
     const string ScenePath = "Assets/Scenes/Main.unity";
-    const int SceneVersion = 8; // 씬 구성을 바꾸면 1 올린다
+    const int SceneVersion = 9; // 씬 구성을 바꾸면 1 올린다 (v9: .meta GUID 정리로 깨진 스크립트 참조 복구용 재생성)
     const string VersionKey = "HushHunt.SceneVersion";
 
     static SetupScene()
