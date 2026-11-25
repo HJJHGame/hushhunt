@@ -10,7 +10,7 @@ using UnityEngine.Playables;
 // 애니메이션: Quaternius Universal Animation Library(CC0, Assets/Resources/Animations/UAL1_Standard)
 // 클립을 Humanoid 리타깃으로 재생한다.
 // 씬 수정 없이 시작할 때 적용된다.
-// 1인칭에서는 머리 뼈를 숨겨 카메라가 머리 안쪽을 보지 않게 하고,
+// 1인칭에서는 머리/목 뼈를 숨겨 카메라가 머리나 후드 안쪽을 보지 않게 하고,
 // 아래를 보면 실제 걷는 다리가 보인다. 멀티플레이어 원격 캐릭터에는 SetFirstPerson(false).
 //
 // 카메라(눈) 위치는 FirstPersonController가 관리한다. 여기서는 건드리지 않는다.
@@ -76,6 +76,7 @@ public class PlayerCharacter : MonoBehaviour
     CharacterController controller;
     Transform modelRoot;
     Transform headBone;
+    Transform neckBone;
     bool appliedFirstPerson;
     Vector3 lastPosition;
 
@@ -127,14 +128,14 @@ public class PlayerCharacter : MonoBehaviour
         if (realistic) ApplyRealisticMaterials(renderers);
         else ApplyKayKitMaterial(renderers);
 
-        FindHeadBone(model.transform);
-
         var animator = model.GetComponent<Animator>();
         if (animator == null) animator = model.gameObject.AddComponent<Animator>();
         animator.applyRootMotion = false;
         // Humanoid 임포트 이후 클립은 머슬 곡선이라 아바타 없이 재생하면 스키닝이 깨진다
         // (화면이 회색으로 깜빡이는 원인). 모델 FBX의 아바타를 명시적으로 연결한다.
         if (realistic && animator.avatar == null) AssignAvatar(animator);
+
+        FindHeadBone(animator, model.transform);
         BuildGraph(animator);
 
         Debug.Log("[PlayerCharacter] 모델 적용: " + (realistic ? "후드 로그(사실적)" : "KayKit 도적")
@@ -304,10 +305,22 @@ public class PlayerCharacter : MonoBehaviour
     }
 
     // 머리 뼈: 1인칭에서는 숨긴다 (카메라가 머리 안에 있으므로)
-    void FindHeadBone(Transform model)
+    void FindHeadBone(Animator animator, Transform model)
     {
-        headBone = FindDeep(model, "head");
+        // Humanoid 아바타의 뼈 매핑이 이름 검색보다 확실하다 (리그마다 뼈 이름이 다르다).
+        if (animator != null && animator.isHuman)
+            headBone = animator.GetBoneTransform(HumanBodyBones.Head);
+        if (headBone == null) headBone = FindDeep(model, "head");
         if (headBone == null) headBone = FindDeep(model, "Head");
+
+        // 목 뼈도 같이 숨긴다: 후드가 머리가 아니라 목 뼈에 붙은 모델은 머리만 숨기면
+        // 후드가 카메라를 감싼 채 남아 아래를 볼 때 화면이 회색으로 깜빡인다.
+        if (animator != null && animator.isHuman)
+            neckBone = animator.GetBoneTransform(HumanBodyBones.Neck);
+        if (neckBone == null && headBone != null && headBone.parent != null
+            && headBone.parent.name.ToLowerInvariant().Contains("neck"))
+            neckBone = headBone.parent;
+
         if (headBone != null) return;
 
         // 머리 뼈를 못 찾으면 1인칭에서 머리/두건 안쪽이 보여 화면이 회색이 된다.
@@ -350,9 +363,14 @@ public class PlayerCharacter : MonoBehaviour
     void LateUpdate()
     {
         if (firstPerson != appliedFirstPerson) ApplyFirstPerson();
-        // 애니메이션 클립에 뼈 스케일 키가 있으면 머리 숨김이 매 프레임 되돌아갈 수 있어 계속 강제한다.
-        if (firstPerson && headBone != null && headBone.localScale.x > HeadVisibleThreshold)
-            headBone.localScale = Vector3.one * HiddenHeadScale;
+        // 애니메이션 클립에 뼈 스케일 키가 있으면 숨김이 매 프레임 되돌아갈 수 있어 계속 강제한다.
+        if (firstPerson)
+        {
+            if (headBone != null && headBone.localScale.x > HeadVisibleThreshold)
+                headBone.localScale = Vector3.one * HiddenHeadScale;
+            if (neckBone != null && neckBone.localScale.x > HeadVisibleThreshold)
+                neckBone.localScale = Vector3.one * HiddenHeadScale;
+        }
         if (!graph.IsValid()) return;
 
         LoopClips();
@@ -506,8 +524,9 @@ public class PlayerCharacter : MonoBehaviour
     void ApplyFirstPerson()
     {
         appliedFirstPerson = firstPerson;
-        if (headBone != null)
-            headBone.localScale = firstPerson ? Vector3.one * HiddenHeadScale : Vector3.one;
+        var s = firstPerson ? Vector3.one * HiddenHeadScale : Vector3.one;
+        if (headBone != null) headBone.localScale = s;
+        if (neckBone != null) neckBone.localScale = s;
     }
 
     void OnDestroy()
