@@ -5,7 +5,7 @@ using UnityEngine;
 public class GroundTexture : MonoBehaviour
 {
     const int Size = 256;
-    const float TilesAcrossGround = 70f; // 200m 땅에 70번 반복 = 타일 하나가 약 2.9m
+    const float TilesAcrossGround = 140f; // 400m 땅에 140번 반복 = 타일 하나가 약 2.9m
 
     Texture2D tex;
     Material mat;
