@@ -28,6 +28,7 @@ public class GunHolder : MonoBehaviour
     public WeaponKind Weapon { get; private set; }
     public bool GotStartWeapon { get; set; } // 숨는 팀 시작 무기를 받았는지
     float nextKnifeAt;
+    public float LastShotAt { get; private set; } = -100f; // 마지막으로 쏜/휘두른 시각 (들고 있는 무기 연출용)
 
     public static string WeaponName(WeaponKind k)
     {
@@ -66,6 +67,7 @@ public class GunHolder : MonoBehaviour
     // 화면 가운데로 광선을 쏴 처음 맞은 상대 팀에게 한 발 피해를 준다.
     void Fire()
     {
+        LastShotAt = Time.unscaledTime;
         flashUntil = Time.unscaledTime + 0.06f;
         var cam = Camera.main;
         if (cam == null) return;
