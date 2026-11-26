@@ -192,25 +192,28 @@ public class TreePaper : MonoBehaviour
         }
         if (meshes.Count == 0) return false;
 
-        var oldLayers = new List<int>();
-        var cols = new List<MeshCollider>();
+        // 레이어와 임시 콜라이더를 동일한 Renderer 단위로 묶는다.
+        // 일부 Renderer는 MeshFilter가 없거나 메시가 너무 커서 건너뛸 수 있으므로
+        // 별도 리스트 인덱스를 맞춰 복구하면 잘못된 오브젝트의 레이어가 바뀔 수 있다.
+        var temporary = new List<(MeshRenderer renderer, int oldLayer, MeshCollider collider)>();
         foreach (var r in meshes)
         {
             var mf = r.GetComponent<MeshFilter>();
             if (mf == null || mf.sharedMesh == null) continue;
-            if (mf.sharedMesh.vertexCount > 20000) continue; // 수백만 삼각형 메시는 충돌체를 굽지 않는다 (아래 경계상자 계산으로 대체)
-            oldLayers.Add(r.gameObject.layer);
-            r.gameObject.layer = 31; // 임시: 이 레이어만 레이캐스트한다
+            if (mf.sharedMesh.vertexCount > 20000) continue;
+
+            int oldLayer = r.gameObject.layer;
+            r.gameObject.layer = 31;
             var mc = r.gameObject.AddComponent<MeshCollider>();
             mc.sharedMesh = mf.sharedMesh;
-            cols.Add(mc);
+            temporary.Add((r, oldLayer, mc));
         }
 
-        if (cols.Count == 0) return false;
+        if (temporary.Count == 0) return false;
 
         bool ok = false;
         var origin = new Vector3(tree.position.x, worldY, tree.position.z) + dir * 3f;
-        if (Physics.Raycast(origin, -dir, out var hit, 6f, 1 << 31))
+        if (Physics.Raycast(origin, -dir, out var hit, 6f, 1 << 31, QueryTriggerInteraction.Ignore))
         {
             point = hit.point;
             normal = hit.normal;
@@ -218,8 +221,11 @@ public class TreePaper : MonoBehaviour
             ok = true;
         }
 
-        foreach (var mc in cols) Destroy(mc);
-        for (int i = 0; i < oldLayers.Count; i++) meshes[i].gameObject.layer = oldLayers[i];
+        foreach (var item in temporary)
+        {
+            if (item.collider != null) Destroy(item.collider);
+            if (item.renderer != null) item.renderer.gameObject.layer = item.oldLayer;
+        }
         return ok;
     }
 
