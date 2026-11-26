@@ -1,30 +1,40 @@
 using UnityEngine;
 using System.Collections.Generic;
 
-// 나무 한 그루에 깨끗한 흰색 A4 용지 한 장을 붙인다 (슬렌더 페이지). 매 판 무작위 나무/무작위 방향.
-// 가까이 가면 용지가 어둠 속에서 환하게 빛나 눈에 띄고, E를 누르면 줍는다. 이 게임의 목표.
-// TreeModels(기본 순서)가 실제 모델로 교체한 뒤에 실행되어야 보이는 줄기 크기를 잴 수 있다.
+// 나무마다 깨끗한 흰색 A4 용지를 붙인다 (슬렌더 페이지). 한 나무에 한 장, 맵에 PaperCount장. 매 판 무작위 나무/방향.
+// 가까이 가면 용지가 어둠 속에서 환하게 빛나 눈에 띄고, 잡는 팀이 E를 누르면 줍고 총을 받는다 (Armory 규칙).
+// 숨는 팀은 용지를 못 줍는다. SpruceForest가 모델로 교체한 뒤에 실행되어야 보이는 줄기 크기를 잴 수 있다.
 [DefaultExecutionOrder(50)]
 public class TreePaper : MonoBehaviour
 {
     // 종이 소리는 잠시 꺼둠. 다시 켜려면 false를 true로 바꾼다.
     static bool PAPER_SOUND = false;
 
-    GameObject paper;
-    Renderer paperRenderer;
+    const int PaperCount = 8;          // 맵에 놓는 종이 수
+    const float MinPaperSpacing = 30f; // 종이끼리 최소 거리(m). 자리가 모자라면 줄인다
+
+    class Paper
+    {
+        public GameObject go;
+        public Renderer renderer;
+        public bool glowing;
+    }
+
+    readonly List<Paper> papers = new List<Paper>();
     Material litMat;
     Material glowMat;
-    bool glowing;
     Transform playerT;
+    GunHolder me;
+    Armory armory;
+    Paper prompt;     // 지금 줍기 안내를 띄우는 종이
     GUIStyle style;
-    bool taken;
-    float takenAt;
+    float takenAt = -100f;
     AudioClip rustle;
 
     void Start()
     {
-        var trees = new System.Collections.Generic.List<Transform>();
-        var deads = new System.Collections.Generic.List<Transform>();
+        var trees = new List<Transform>();
+        var deads = new List<Transform>();
         foreach (var t in FindObjectsByType<Transform>(FindObjectsSortMode.None))
         {
             if (t.parent != null || t.name != WorldConfig.Names.PineTree) continue;
@@ -34,10 +44,50 @@ public class TreePaper : MonoBehaviour
         if (trees.Count == 0) return;
 
         var rand = new System.Random();
-        // 용지는 dead-spruce에 붙는다. 모델이 없으면 아무 소나무나 사용.
-        var pool = deads.Count > 0 ? deads : trees;
-        var tree = pool[rand.Next(pool.Count)];
+        // 종이는 dead-spruce에 붙인다. 모자라면 다른 소나무로 채운다. 종이끼리는 서로 멀리 떨어뜨린다.
+        var order = new List<Transform>(Shuffled(deads, rand));
+        foreach (var t in Shuffled(trees, rand))
+            if (!deads.Contains(t)) order.Add(t);
 
+        var picks = new List<Transform>();
+        for (float spacing = MinPaperSpacing; picks.Count < PaperCount && spacing >= 0f; spacing -= 10f)
+        {
+            foreach (var t in order)
+            {
+                if (picks.Count >= PaperCount) break;
+                if (picks.Contains(t)) continue;
+                bool close = false;
+                foreach (var p in picks)
+                    if ((p.position - t.position).magnitude < spacing) { close = true; break; }
+                if (!close) picks.Add(t);
+            }
+        }
+
+        // 무늬 없는 깨끗한 흰색. glowMat는 빛이 없어도 항상 밝은 흰색 (가까이 왔을 때 표시용).
+        litMat = RuntimeMaterials.CreateLit("A4 Page", new Color(0.98f, 0.98f, 0.96f), 0.02f);
+        var unlit = Shader.Find("Unlit/Color");
+        if (unlit == null) unlit = Shader.Find("Unlit/Texture");
+        glowMat = new Material(unlit) { name = "A4 Page Glow", color = Color.white };
+        if (PAPER_SOUND) rustle = MakeRustle();
+
+        foreach (var tree in picks) PlacePaper(tree, rand);
+        Debug.Log("[HushHunt] A4 용지 " + papers.Count + "장 배치 (dead-spruce " + deads.Count + "그루 중 우선)");
+    }
+
+    static List<Transform> Shuffled(List<Transform> src, System.Random rand)
+    {
+        var list = new List<Transform>(src);
+        for (int i = list.Count - 1; i > 0; i--)
+        {
+            int j = rand.Next(i + 1);
+            var tmp = list[i]; list[i] = list[j]; list[j] = tmp;
+        }
+        return list;
+    }
+
+    // 나무 하나에 종이를 붙인다.
+    void PlacePaper(Transform tree, System.Random rand)
+    {
         float yaw = (float)rand.NextDouble() * 360f;
         var dir = Quaternion.Euler(0f, yaw, 0f) * Vector3.forward;
 
@@ -52,34 +102,23 @@ public class TreePaper : MonoBehaviour
         }
 
         // 얇은 상자: 어느 쪽에서 봐도 보인다 (Quad는 한쪽 면만 보임).
-        paper = GameObject.CreatePrimitive(PrimitiveType.Cube);
-        paper.name = "A4 Page";
-        Destroy(paper.GetComponent<Collider>()); // 걸리적거리지 않게
+        var go = GameObject.CreatePrimitive(PrimitiveType.Cube);
+        go.name = "A4 Page";
+        Destroy(go.GetComponent<Collider>()); // 걸리적거리지 않게
         // 표면에서 6mm + 두께의 절반만큼 바깥에 띄우고, 면이 바깥(법선)을 보게 세워 껍질에 붙인다.
-        paper.transform.position = surfacePos + outward * (0.006f + 0.0015f);
-        paper.transform.rotation = Quaternion.LookRotation(outward, Vector3.up);
-        paper.transform.localScale = new Vector3(0.21f, 0.297f, 0.003f); // A4 (m)
-        paper.transform.SetParent(tree, true); // 월드 위치/회전 유지
+        go.transform.position = surfacePos + outward * (0.006f + 0.0015f);
+        go.transform.rotation = Quaternion.LookRotation(outward, Vector3.up);
+        go.transform.localScale = new Vector3(0.21f, 0.297f, 0.003f); // A4 (m)
+        go.transform.SetParent(tree, true); // 월드 위치/회전 유지
 
-        Debug.Log("[HushHunt] A4 용지 배치: 나무 " + tree.name
-            + " 위치 " + paper.transform.position.ToString("0.00")
-            + " 바깥 방향 " + outward.ToString("0.00")
-            + " 회전 " + paper.transform.eulerAngles.ToString("0.0"));
-
-        // 무늬 없는 깨끗한 흰색. glowMat는 빛이 없어도 항상 밝은 흰색 (가까이 왔을 때 표시용).
-        litMat = RuntimeMaterials.CreateLit("A4 Page", new Color(0.98f, 0.98f, 0.96f), 0.02f);
-        var unlit = Shader.Find("Unlit/Color");
-        if (unlit == null) unlit = Shader.Find("Unlit/Texture");
-        glowMat = new Material(unlit) { name = "A4 Page Glow", color = Color.white };
-        paperRenderer = paper.GetComponent<Renderer>();
-        paperRenderer.sharedMaterial = litMat;
-        paperRenderer.shadowCastingMode = UnityEngine.Rendering.ShadowCastingMode.Off;
+        var item = new Paper { go = go, renderer = go.GetComponent<Renderer>() };
+        item.renderer.sharedMaterial = litMat;
+        item.renderer.shadowCastingMode = UnityEngine.Rendering.ShadowCastingMode.Off;
 
         if (PAPER_SOUND)
         {
             // 종이 바스락 소리. 완전 3D라 멀리서도 어느 방향인지 들리고, 가까워질수록 커진다.
-            rustle = MakeRustle();
-            var src = paper.AddComponent<AudioSource>();
+            var src = go.AddComponent<AudioSource>();
             src.clip = rustle;
             src.loop = true;
             src.spatialBlend = 1f; // 완전 3D
@@ -90,44 +129,58 @@ public class TreePaper : MonoBehaviour
             src.volume = 0.9f;
             src.Play();
         }
-
+        papers.Add(item);
         Debug.Log("[HushHunt] A4 용지 부착: " + tree.name + " 위치 (" + tree.position.x.ToString("0.0")
             + ", " + tree.position.z.ToString("0.0") + ")");
     }
 
-    // 가까이 가면 용지가 눈에 띄고, 2m 안에서 E를 누르면 줍는다.
+    // 가까이 가면 용지가 눈에 띄고, 잡는 팀이 2.2m 안에서 E를 누르면 줍는다.
     void Update()
     {
-        if (taken || paper == null) return;
+        prompt = null;
+        if (papers.Count == 0) return;
         if (playerT == null)
         {
             var f = FindFirstObjectByType<FirstPersonController>();
-            if (f != null) playerT = f.transform;
+            if (f != null) { playerT = f.transform; me = f.GetComponent<GunHolder>(); }
             return;
         }
+        if (armory == null) armory = FindFirstObjectByType<Armory>();
         if (MainMenu.IsMenuOpen) return;
-        Vector3 d = paper.transform.position - playerT.position;
-        d.y = 0f;
-        float dist = d.magnitude;
 
-        // 가까이 오면 용지만 환하게 빛나 어둠 속에서 눈에 띈다. 빛을 쏘지 않아 주변은 밝아지지 않는다.
-        bool near = dist < 8f;
-        if (near != glowing)
+        Paper nearest = null;
+        float nearestDist = 2.2f;
+        foreach (var p in papers)
         {
-            glowing = near;
-            paperRenderer.sharedMaterial = near ? glowMat : litMat;
+            if (p.go == null) continue;
+            Vector3 d = p.go.transform.position - playerT.position;
+            d.y = 0f;
+            float dist = d.magnitude;
+
+            // 가까이 오면 용지만 환하게 빛나 어둠 속에서 눈에 띈다. 빛을 쏘지 않아 주변은 밝아지지 않는다.
+            bool near = dist < 8f;
+            if (near != p.glowing)
+            {
+                p.glowing = near;
+                p.renderer.sharedMaterial = near ? glowMat : litMat;
+            }
+            if (dist < nearestDist) { nearest = p; nearestDist = dist; }
         }
 
-        if (dist < 2.2f && Input.GetKeyDown(KeyCode.E))
+        if (nearest == null || armory == null || !armory.CanTakePaper(me)) return;
+        prompt = nearest;
+        if (Input.GetKeyDown(KeyCode.E))
         {
-            taken = true;
             takenAt = Time.unscaledTime;
-            Destroy(paper);
-            Debug.Log("[HushHunt] A4 용지를 찾았다!");
+            Destroy(nearest.go);
+            papers.Remove(nearest);
+            prompt = null;
+            armory.OnPaperTaken(me); // 총 4발 지급
+            Debug.Log("[HushHunt] A4 용지를 찾았다! 남은 용지 " + papers.Count + "장");
         }
     }
 
-    // 근처에 오면 "용지 줍기 [E]", 주우면 잠시 "찾았다" 표시. 검정 화면에서도 읽히게 그림자를 깐다.
+    // 줍기 안내와, 주운 직후 "찾았다" 표시. 검정 화면에서도 읽히게 그림자를 깐다.
     void OnGUI()
     {
         if (MainMenu.IsMenuOpen) return;
@@ -138,15 +191,8 @@ public class TreePaper : MonoBehaviour
             style.fontStyle = FontStyle.Bold;
             style.fontSize = Mathf.RoundToInt(26f * Mathf.Clamp(Screen.height / 1080f, 0.75f, 1.5f));
         }
-        if (taken)
-        {
-            if (Time.unscaledTime - takenAt < 6f) ShadowText("A4 용지를 찾았다!");
-            return;
-        }
-        if (paper == null || playerT == null) return;
-        Vector3 d = paper.transform.position - playerT.position;
-        d.y = 0f;
-        if (d.magnitude < 2.2f) ShadowText("용지 줍기 [E]");
+        if (Time.unscaledTime - takenAt < 6f) { ShadowText("A4 용지를 찾았다! 총 " + GunHolder.MagazineRounds + "발"); return; }
+        if (prompt != null) ShadowText("용지 줍기 [E]");
     }
 
     void ShadowText(string msg)
