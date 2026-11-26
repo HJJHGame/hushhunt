@@ -53,6 +53,7 @@ public static class GameSystems
         AddOnce<RandomizeLayout>(root); // 매 판 집/나무/스폰 재배치
         AddOnce<ForestPerformance>(root); // 절차적 소나무 LOD/인스턴싱 (TreeModels 뒤, TreePaper 앞)
         AddOnce<TreePaper>(root);       // 나무에 붙은 A4 용지
+        AddOnce<SimplifiedTestMode>(root); // 테스트: 나무/땅만 남기기 (WorldConfig.SimplifiedTestMode)
         AddOnce<NightSky>(root);        // 별/달
         AddOnce<HorrorOverlay>(root);   // 비네팅/그레인
         AddOnce<FogMotes>(root);        // 떠다니는 먼지 입자
