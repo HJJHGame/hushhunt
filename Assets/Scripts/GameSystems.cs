@@ -50,6 +50,7 @@ public static class GameSystems
         AddOnce<PropModels>(root);      // 통나무/그루터기 모델 (폴더에 넣으면 교체)
         AddOnce<GroundCover>(root);     // 숲 바닥 덮개 (폴더에 넣으면 흩뿌림)
         AddOnce<RandomizeLayout>(root); // 매 판 집/나무/스폰 재배치
+        AddOnce<Armory>(root);          // 종이 -> 총 지급 규칙
         AddOnce<TreePaper>(root);       // 나무에 붙은 A4 용지
         AddOnce<SimplifiedTestMode>(root); // 테스트: 나무/땅만 남기기 (WorldConfig.SimplifiedTestMode)
         AddOnce<NightSky>(root);        // 별/달
@@ -62,6 +63,7 @@ public static class GameSystems
         if (fpc.GetComponent<PlayerBody>() == null) fpc.gameObject.AddComponent<PlayerBody>();
         if (fpc.GetComponent<Flashlight>() == null) fpc.gameObject.AddComponent<Flashlight>();
         if (fpc.GetComponent<Health>() == null) fpc.gameObject.AddComponent<Health>(); // 체력 100 (숨는 팀)
+        if (fpc.GetComponent<GunHolder>() == null) fpc.gameObject.AddComponent<GunHolder>(); // 총/탄
     }
 
     static void AddOnce<T>(GameObject root) where T : Component
