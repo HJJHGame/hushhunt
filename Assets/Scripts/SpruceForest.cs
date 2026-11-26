@@ -51,12 +51,22 @@ public class SpruceForest : MonoBehaviour
         Active = false;
         var young = LoadVariant(YoungName, "Young");
         var dead = LoadVariant(DeadName, "Dead");
-        if (young == null && dead == null) return; // 모델 없음: 기존 나무 유지
+        if (young == null && dead == null)
+        {
+            // 모델 없음: 기존 나무 유지
+            Debug.LogWarning("[HushHunt] SpruceForest: 모델 파일을 못 찾음 -> 옛 숲 유지. 필요한 경로: Assets/Models/young-spruce/lod0.glb, Assets/Models/dead-spruce/lod0.glb (glTFast 임포트 확인)");
+            return;
+        }
+        Debug.Log("[HushHunt] SpruceForest: 모델 로드 young=" + (young != null) + " dead=" + (dead != null));
 
         var pines = new List<Transform>();
         foreach (var cand in FindObjectsByType<Transform>(FindObjectsSortMode.None))
             if (cand.parent == null && cand.name == WorldConfig.Names.PineTree) pines.Add(cand);
-        if (pines.Count == 0) return;
+        if (pines.Count == 0)
+        {
+            Debug.LogWarning("[HushHunt] SpruceForest: 교체할 'Pine Tree' 오브젝트가 씬에 없음");
+            return;
+        }
         // 검색 순서가 실행마다 달라도 같은 숲이 나오도록 위치로 정렬한다.
         pines.Sort((p1, p2) =>
         {
@@ -80,7 +90,10 @@ public class SpruceForest : MonoBehaviour
             }
         }
         Active = placed > 0;
-        Debug.Log("[HushHunt] SpruceForest: 나무 " + placed + "그루 (dead " + deadCount + ")");
+        if (Active)
+            Debug.Log("[HushHunt] SpruceForest: 가문비 " + placed + "그루 배치 (young " + (placed - deadCount) + ", dead " + deadCount + ") / 소나무 슬롯 " + pines.Count);
+        else
+            Debug.LogWarning("[HushHunt] SpruceForest: 모델은 읽었지만 배치 0그루 (렌더러 없음/크기 0) -> 옛 숲 유지");
     }
 
     bool BuildTree(Transform tree, Variant v, System.Random rand)
