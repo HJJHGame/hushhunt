@@ -10,7 +10,10 @@ public class PlayerHud : MonoBehaviour
     float visibility;
     bool showCoords;
     Health health;
+    GunHolder gun;
+    Armory armory;
     GUIStyle hpStyle;
+    GUIStyle gunStyle;
     float flashUntil = -1f; // 피격 시 화면 붉은 번쩍임이 끝나는 시각
     const float FlashSeconds = 0.4f;
 
@@ -18,7 +21,8 @@ public class PlayerHud : MonoBehaviour
     {
         fpc = FindFirstObjectByType<FirstPersonController>();
         flash = FindFirstObjectByType<Flashlight>();
-        if (fpc != null) health = fpc.GetComponent<Health>();
+        if (fpc != null) { health = fpc.GetComponent<Health>(); gun = fpc.GetComponent<GunHolder>(); }
+        armory = FindFirstObjectByType<Armory>();
         if (health != null) health.Damaged += OnDamaged;
     }
 
@@ -96,8 +100,29 @@ public class PlayerHud : MonoBehaviour
         }
 
         DrawHealth(scale);
+        DrawGun(scale);
 
         GUI.color = prev;
+    }
+
+    // 오른쪽 아래(손전등 안내 위): 잡는 팀의 총/탄 또는 총 없음 안내. 첫 종이 발견 후엔 자동 지급 카운트다운.
+    void DrawGun(float scale)
+    {
+        if (gun == null || !gun.IsSeeker) return;
+        if (hpStyle == null)
+            hpStyle = new GUIStyle(GUI.skin.label) { alignment = TextAnchor.LowerLeft, fontStyle = FontStyle.Bold };
+        if (gunStyle == null) gunStyle = new GUIStyle(hpStyle) { alignment = TextAnchor.LowerRight };
+        gunStyle.fontSize = Mathf.RoundToInt(19f * scale);
+        string text;
+        if (gun.HasGun) text = "총 " + gun.Ammo + "/" + GunHolder.MagazineRounds;
+        else
+        {
+            text = "총 없음: 종이를 찾으세요";
+            float left = armory != null ? armory.AutoGrantLeft : -1f;
+            if (left > 0f) text += " (자동 지급 " + Mathf.CeilToInt(left) + "초)";
+        }
+        var r = new Rect(Screen.width - 420f * scale - 16f, Screen.height - 80f * scale, 420f * scale, 32f * scale);
+        HudText.Label(r, text, gunStyle);
     }
 
     // 왼쪽 아래 체력 막대 + 피격 시 붉은 번쩍임 + 사망 안내
