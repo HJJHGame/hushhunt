@@ -41,6 +41,7 @@ public static class GameSystems
         if (root == null) root = new GameObject(RootName);
 
         AddOnce<Crosshair>(root);       // 크로스헤어
+        AddOnce<SpruceForest>(root);    // 가문비 모델 숲 (모델 없으면 아무것도 안 함, TreeModels보다 먼저 실행)
         AddOnce<TreeModels>(root);      // 소나무 3D 모델 (없으면 기존 나무 유지)
         AddOnce<NightAtmosphere>(root); // 밤 조명/안개
         AddOnce<HouseGlow>(root);       // 집 창문 빛
