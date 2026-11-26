@@ -50,6 +50,7 @@ public static class GameSystems
         AddOnce<PropModels>(root);      // 통나무/그루터기 모델 (폴더에 넣으면 교체)
         AddOnce<GroundCover>(root);     // 숲 바닥 덮개 (폴더에 넣으면 흩뿌림)
         AddOnce<RandomizeLayout>(root); // 매 판 집/나무/스폰 재배치
+        AddOnce<ForestPerformance>(root); // 절차적 소나무 LOD/인스턴싱 (TreeModels 뒤, TreePaper 앞)
         AddOnce<TreePaper>(root);       // 나무에 붙은 A4 용지
         AddOnce<NightSky>(root);        // 별/달
         AddOnce<HorrorOverlay>(root);   // 비네팅/그레인
