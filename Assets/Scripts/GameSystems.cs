@@ -51,6 +51,7 @@ public static class GameSystems
         AddOnce<GroundCover>(root);     // 숲 바닥 덮개 (폴더에 넣으면 흩뿌림)
         AddOnce<RandomizeLayout>(root); // 매 판 집/나무/스폰 재배치
         AddOnce<Armory>(root);          // 종이 -> 총 지급 규칙
+        AddOnce<EscapeGate>(root);      // 탈출구 (잡는 팀 전멸 시 열림)
         AddOnce<TreePaper>(root);       // 나무에 붙은 A4 용지
         AddOnce<SimplifiedTestMode>(root); // 테스트: 나무/땅만 남기기 (WorldConfig.SimplifiedTestMode)
         AddOnce<NightSky>(root);        // 별/달
