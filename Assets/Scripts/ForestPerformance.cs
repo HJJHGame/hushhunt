@@ -102,7 +102,8 @@ public sealed class ForestPerformance : MonoBehaviour
 
         // TreeModels는 원본 렌더러를 전용 원거리 컬링 레이어(30)에 둔다.
         // 프록시가 기본 레이어(0)에 남으면 50m 레이어 컬링을 우회하므로 계층 전체에 레이어를 맞춘다.
-        int renderLayer = trunk.gameObject.layer;
+        var trunkT = model.Find("Trunk");
+        int renderLayer = trunkT != null ? trunkT.gameObject.layer : model.gameObject.layer;
         root.layer = renderLayer;
 
         CreateProxyPart(root.transform, "ProxyTrunk", proxyTrunkMesh, bark, renderLayer);
