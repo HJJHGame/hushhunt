@@ -1,12 +1,12 @@
 using System.Collections.Generic;
 using UnityEngine;
 
-// 손전등 (F 키). 카메라에 붙은 스포트라이트. 아주 미세한 밝기 떨림만 넣는다 (뚝 떨어지는 깜빡임은 화면이 깜빡이는 것처럼 느껴져 제거했다).
+// 손전등 (T 키). 카메라에 붙은 스포트라이트. 아주 미세한 밝기 떨림만 넣는다 (뚝 떨어지는 깜빡임은 화면이 깜빡이는 것처럼 느껴져 제거했다).
 // 그림자를 켜서 빛이 벽과 나무를 통과하지 않게 한다: 어둠 속에서 보이게 해주지만
 // 빛이 켜져 있으면 멀리서도 눈에 띈다는 점이 PvP 숨바꼭질의 긴장 요소.
 public class Flashlight : MonoBehaviour
 {
-    public KeyCode toggleKey = KeyCode.F;
+    public KeyCode toggleKey = KeyCode.T;
     public bool startOn = true;
     public float intensity = 5.0f; // 거의 검정인 맵에서 좁은 원뿔이 확실히 보이게
     public float range = 26f;
@@ -68,7 +68,7 @@ public class Flashlight : MonoBehaviour
         if (lamp == null) return;
 
         // 메뉴(타이틀/일시정지)가 열려 있으면 토글 입력만 무시한다. 밝기 떨림 연출은 유지.
-        if (!MainMenu.IsMenuOpen && Input.GetKeyDown(toggleKey))
+        if (!MainMenu.IsMenuOpen && Input.GetKeyDown(KeyCode.T))
         {
             lamp.enabled = !lamp.enabled;
             clickSource.PlayOneShot(clickClip, 0.6f);
