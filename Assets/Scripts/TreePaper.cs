@@ -169,7 +169,7 @@ public class TreePaper : MonoBehaviour
 
         if (nearest == null || armory == null || !armory.CanTakePaper(me)) return;
         prompt = nearest;
-        if (Input.GetKeyDown(KeyCode.E))
+        if (Input.GetKeyDown(KeyCode.F))
         {
             takenAt = Time.unscaledTime;
             Destroy(nearest.go);
@@ -192,7 +192,7 @@ public class TreePaper : MonoBehaviour
             style.fontSize = Mathf.RoundToInt(26f * Mathf.Clamp(Screen.height / 1080f, 0.75f, 1.5f));
         }
         if (Time.unscaledTime - takenAt < 6f) { ShadowText("A4 용지를 찾았다! 총 " + GunHolder.MagazineRounds + "발"); return; }
-        if (prompt != null) ShadowText("용지 줍기 [E]");
+        if (prompt != null) ShadowText("용지 줍기 [F]");
     }
 
     void ShadowText(string msg)
