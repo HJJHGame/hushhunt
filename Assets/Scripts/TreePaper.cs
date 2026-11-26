@@ -198,12 +198,15 @@ public class TreePaper : MonoBehaviour
         {
             var mf = r.GetComponent<MeshFilter>();
             if (mf == null || mf.sharedMesh == null) continue;
+            if (mf.sharedMesh.vertexCount > 20000) continue; // 수백만 삼각형 메시는 충돌체를 굽지 않는다 (아래 경계상자 계산으로 대체)
             oldLayers.Add(r.gameObject.layer);
             r.gameObject.layer = 31; // 임시: 이 레이어만 레이캐스트한다
             var mc = r.gameObject.AddComponent<MeshCollider>();
             mc.sharedMesh = mf.sharedMesh;
             cols.Add(mc);
         }
+
+        if (cols.Count == 0) return false;
 
         bool ok = false;
         var origin = new Vector3(tree.position.x, worldY, tree.position.z) + dir * 3f;
