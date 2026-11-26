@@ -1,12 +1,27 @@
 using UnityEngine;
 
-// 한 판의 흐름: 타이틀 대기 -> 숨는 시간(1분) -> 수색 시간(폭탄 타이머, 5분) -> 종료.
-// 규칙상 타이머가 끝나면 잡는 팀 승리. 캐릭터/무기/네트워크는 아직 없으므로
-// 이 단계에서는 단계 전환, 화면 표시, 종료 후 R 키 재시작만 담당한다.
+// 한 판의 흐름: 타이틀 대기 -> 숨는 시간(60초) -> 수색 시간(제한시간 10분) -> 종료.
+// 확정 규칙: 숨는 시간이 끝난 뒤부터 10분이 흐르고, 시간이 다 되면 숨는 팀 승리.
+// 잡는 팀이 숨는 팀을 전멸시키면 잡는 팀 승리, 숨는 팀이 탈출구로 나가면(살아 있는 한 명이면 됨) 숨는 팀 승리.
+// 전멸/탈출은 아직 없다. 나중 단계(종이->총, 체력, 탈출구)가 EndRound(결과)를 부르면 된다.
+// 캐릭터/무기/네트워크는 아직 없으므로 이 단계에서는 단계 전환, 화면 표시, 종료 후 R 키 재시작만 담당한다.
 // Waiting 단계는 MainMenu 타이틀 화면과 짝이다. 타이머는 돌지 않는다.
 public class GameManager : MonoBehaviour
 {
     public enum Phase { Waiting, Hiding, Seeking, Ended }
+    public enum Outcome { None, HidersWin, SeekersWin } // 판 결과 (Ended일 때 의미 있음)
+    public enum Role { Hider, Seeker }
+
+    // 확정 규칙 값. 씬에 저장된 값이 아니라 항상 이 상수를 쓴다 (Start에서 덮어씀).
+    public const float HideSeconds = 60f;
+    public const float MatchSeconds = 600f; // 숨는 시간이 끝난 뒤부터 10분
+
+    // 지금은 로컬 1인 플레이: 플레이어는 숨는 팀. (잡는 팀 시점은 숨는 시간 동안 검은 화면 + 타이머)
+    public static Role LocalRole = Role.Hider;
+
+    // 단계/결과가 바뀔 때 알린다. 종이/총/체력/탈출구 같은 다음 단계들이 여기에 붙는다.
+    public event System.Action<Phase> PhaseChanged;
+    public event System.Action<Outcome> RoundEnded;
 
     [Header("단계별 시간 (초)")]
     public float hideDuration = 60f;  // 숨는 팀이 숨는 시간
@@ -17,6 +32,7 @@ public class GameManager : MonoBehaviour
     public float urgentSeconds = 10f; // 남은 시간이 이 이하면 빨갛게 맥동
 
     public Phase CurrentPhase { get; private set; }
+    public Outcome Result { get; private set; }
     public float TimeLeft { get; private set; }
 
     // MainMenu가 열려 있으면 타이머를 멈춘다.
@@ -30,16 +46,35 @@ public class GameManager : MonoBehaviour
     void Start()
     {
         // 타이틀 화면에서 '연습 시작'을 누르면 BeginRound로 실제 판이 시작된다.
+        hideDuration = HideSeconds;
+        seekDuration = MatchSeconds;
+        Result = Outcome.None;
         CurrentPhase = Phase.Waiting;
         TimeLeft = hideDuration;
+    }
+
+    void SetPhase(Phase p)
+    {
+        CurrentPhase = p;
+        if (PhaseChanged != null) PhaseChanged(p);
+    }
+
+    // 판을 끝낸다. 시간 종료(숨는 팀 승리), 나중에 전멸(잡는 팀 승리)/탈출(숨는 팀 승리)이 부른다.
+    public void EndRound(Outcome result)
+    {
+        if (CurrentPhase == Phase.Ended || CurrentPhase == Phase.Waiting) return;
+        Result = result;
+        TimeLeft = 0f;
+        SetPhase(Phase.Ended);
+        if (RoundEnded != null) RoundEnded(result);
     }
 
     // 타이틀 메뉴에서 호출: 숨는 시간부터 판을 시작한다.
     public void BeginRound()
     {
         if (CurrentPhase != Phase.Waiting) return;
-        CurrentPhase = Phase.Hiding;
         TimeLeft = hideDuration;
+        SetPhase(Phase.Hiding);
     }
 
     void Update()
@@ -57,15 +92,14 @@ public class GameManager : MonoBehaviour
 
         if (CurrentPhase == Phase.Hiding)
         {
-            CurrentPhase = Phase.Seeking;
             TimeLeft = seekDuration;
             bannerUntil = Time.unscaledTime + bannerSeconds;
+            SetPhase(Phase.Seeking);
         }
         else
         {
-            // 폭탄 타이머 종료 = 잡는 팀 승리
-            CurrentPhase = Phase.Ended;
-            TimeLeft = 0f;
+            // 제한시간 종료 = 숨는 팀 승리
+            EndRound(Outcome.HidersWin);
         }
     }
 
@@ -91,20 +125,36 @@ public class GameManager : MonoBehaviour
         switch (CurrentPhase)
         {
             case Phase.Hiding:
-                DrawCenter("숨는 시간 " + FormatTime(TimeLeft), "숨을 곳을 찾으세요", timeColor);
+                if (LocalRole == Role.Seeker)
+                {
+                    // 잡는 팀은 숨는 시간 동안 맵 밖: 검은 화면과 타이머만 본다.
+                    DrawEndOverlayAlpha(1f);
+                    DrawCenter("숨는 시간 " + FormatTime(TimeLeft), "잠시 기다리세요", timeColor);
+                }
+                else
+                    DrawCenter("숨는 시간 " + FormatTime(TimeLeft), "숨을 곳을 찾으세요", timeColor);
                 break;
             case Phase.Seeking:
                 DrawTimer(FormatTime(TimeLeft), timeColor);
                 DrawProgress(TimeLeft / Mathf.Max(1f, seekDuration), urgent);
                 if (Time.unscaledTime < bannerUntil)
-                    DrawCenter("수색 시작", "잡는 팀이 움직입니다", Color.white);
+                    DrawCenter("수색 시작", "제한시간 10분을 버텨라", Color.white);
                 break;
             case Phase.Ended:
                 DrawEndOverlay();
-                DrawCenter("시간 종료 - 잡는 팀 승리", "R 키를 눌러 다시 시작", Color.white);
+                DrawCenter(EndTitle(), "R 키를 눌러 다시 시작", Color.white);
                 break;
         }
 
+    }
+
+    string EndTitle()
+    {
+        switch (Result)
+        {
+            case Outcome.SeekersWin: return "잡는 팀 승리";
+            default: return "시간 종료 - 숨는 팀 승리"; // 지금은 시간 종료만 있다
+        }
     }
 
     void EnsureStyles()
@@ -151,8 +201,13 @@ public class GameManager : MonoBehaviour
     // 종료 후 화면을 어둡게
     static void DrawEndOverlay()
     {
+        DrawEndOverlayAlpha(0.55f);
+    }
+
+    static void DrawEndOverlayAlpha(float alpha)
+    {
         Color prev = GUI.color;
-        GUI.color = new Color(0f, 0f, 0f, 0.55f);
+        GUI.color = new Color(0f, 0f, 0f, alpha);
         GUI.DrawTexture(new Rect(0f, 0f, Screen.width, Screen.height), Texture2D.whiteTexture);
         GUI.color = prev;
     }
