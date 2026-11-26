@@ -116,6 +116,7 @@ public class TreeModels : MonoBehaviour
 
     void Start()
     {
+        if (SpruceForest.Active) return; // 가문비(SpruceForest)가 숲을 채웠으면 기존 전나무/절차적 소나무는 쓰지 않는다
         var prefabs = Resources.LoadAll<GameObject>("Trees");
         bool hasModels = prefabs != null && prefabs.Length > 0;
 
