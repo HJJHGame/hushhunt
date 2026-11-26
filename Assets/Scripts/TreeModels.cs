@@ -13,6 +13,91 @@ public class TreeModels : MonoBehaviour
     bool farCullingReady;
     const int FarLayer = 30; // 31은 용지 표면 레이캐스트가 임시로 쓴다
 
+    Mesh firProxyMesh;
+    Material firProxyMat;
+
+    // 전나무 원본(수백만 삼각형)은 가까울 때만 그린다. 조금 멀어지면 같은 키/폭의 아주 가벼운 대역(원뿔 몇 개, 수백 삼각형)으로
+    // 바꾼다. 메시를 줄이는 계산은 없다 (원본 메시를 읽지 않는다). 대역 메시/재질은 한 번만 만들어 모두가 공유한다.
+    // 대역은 그림자를 드리운다 (멀리서도 그림자 모양 유지). 원본은 가까울 때만 그림자를 드리운다 (LOD0만 보이므로).
+    const float FirLod0Height = 0.30f; // 화면 높이의 30% 이상일 때 원본 (키 9.5m 기준 대략 27m 안)
+    const float FirLod1Height = 0.02f; // 이보다 작아지면 안 그림 (거리 컬링 50m가 먼저 걸린다)
+
+    void AddFirProxyLod(Transform tree, GameObject model, Renderer[] rends, Material leafMat)
+    {
+        if (tree.GetComponent<LODGroup>() != null || rends.Length == 0) return;
+        if (firProxyMesh == null) firProxyMesh = BuildFirProxyMesh();
+        if (firProxyMat == null)
+        {
+            firProxyMat = RuntimeMaterials.CreateLit("Fir Proxy (runtime)", new Color(0.03f, 0.05f, 0.035f), 0.05f);
+            firProxyMat.enableInstancing = true;
+        }
+        var b = rends[0].bounds;
+        for (int i = 1; i < rends.Length; i++) b.Encapsulate(rends[i].bounds);
+        float height = Mathf.Max(0.5f, b.size.y);
+        float radius = Mathf.Max(0.3f, Mathf.Max(b.size.x, b.size.z) * 0.5f);
+
+        var go = new GameObject("FirProxy"); // 이름이 "TreeModel"로 시작하면 TreePaper가 줄기로 착각한다
+        go.layer = FarLayer;
+        go.transform.SetParent(tree, true);
+        go.transform.position = new Vector3(b.center.x, b.min.y, b.center.z);
+        go.transform.rotation = Quaternion.identity;
+        go.transform.localScale = Vector3.one;
+        go.transform.localScale = new Vector3(radius / tree.lossyScale.x, height / tree.lossyScale.y, radius / tree.lossyScale.z);
+        go.AddComponent<MeshFilter>().sharedMesh = firProxyMesh;
+        var pr = go.AddComponent<MeshRenderer>();
+        pr.sharedMaterial = firProxyMat;
+        pr.shadowCastingMode = UnityEngine.Rendering.ShadowCastingMode.On;
+
+        foreach (var r in rends)
+            r.shadowCastingMode = UnityEngine.Rendering.ShadowCastingMode.On; // 가까운 원본은 그림자 그대로
+
+        var g = tree.gameObject.AddComponent<LODGroup>();
+        var lods = new LOD[2];
+        lods[0] = new LOD(FirLod0Height, rends);
+        lods[1] = new LOD(FirLod1Height, new Renderer[] { pr });
+        g.SetLODs(lods);
+        g.fadeMode = LODFadeMode.None;
+        g.RecalculateBounds();
+    }
+
+    // 높이 1, 반지름 1짜리 단위 전나무: 가는 줄기 + 아래로 갈수록 넓은 원뿔 4단 (정점 8각). 약 70 삼각형.
+    static Mesh BuildFirProxyMesh()
+    {
+        const int seg = 8;
+        var v = new System.Collections.Generic.List<Vector3>();
+        var n = new System.Collections.Generic.List<Vector3>();
+        var tri = new System.Collections.Generic.List<int>();
+        // 원뿔: 바닥 y0, 꼭대기 y1, 바닥 반지름 r
+        System.Action<float, float, float> cone = (y0, y1, r) =>
+        {
+            int apex = v.Count;
+            v.Add(new Vector3(0f, y1, 0f)); n.Add(Vector3.up);
+            int ring = v.Count;
+            for (int i = 0; i < seg; i++)
+            {
+                float a = i * Mathf.PI * 2f / seg;
+                var d = new Vector3(Mathf.Cos(a), 0f, Mathf.Sin(a));
+                v.Add(new Vector3(d.x * r, y0, d.z * r));
+                n.Add((d + Vector3.up * 0.6f).normalized);
+            }
+            for (int i = 0; i < seg; i++)
+            {
+                tri.Add(apex); tri.Add(ring + (i + 1) % seg); tri.Add(ring + i);
+            }
+        };
+        cone(0.00f, 0.35f, 0.05f);  // 줄기
+        cone(0.12f, 0.55f, 1.00f);
+        cone(0.32f, 0.75f, 0.75f);
+        cone(0.52f, 0.90f, 0.50f);
+        cone(0.70f, 1.00f, 0.28f);
+        var m = new Mesh { name = "Fir Proxy" };
+        m.SetVertices(v);
+        m.SetNormals(n);
+        m.SetTriangles(tri, 0);
+        m.RecalculateBounds();
+        return m;
+    }
+
     // 안개 시야(약 50m) 밖의 무거운 모델은 카메라 레이어 컬링으로 아예 그리지 않는다.
     void SetupFarCulling(GameObject go)
     {
@@ -168,7 +253,7 @@ public class TreeModels : MonoBehaviour
 
             // 재질: 전나무는 원래 실사 텍스처를 그대로 쓴다 (덮어쓰면 폴리헤이븐 재질이 날아감).
             // 다른 모델은 이름에 wood/bark 가 있으면 줄기색, 나머지는 잎색으로 맞춘다.
-            if (isFir) continue;
+            if (isFir) { AddFirProxyLod(t, go, rends, leafMat); continue; }
             foreach (var r in rends)
             {
                 var mats = r.sharedMaterials;
@@ -186,6 +271,8 @@ public class TreeModels : MonoBehaviour
 
     void OnDestroy()
     {
+        if (firProxyMesh != null) Destroy(firProxyMesh);
+        if (firProxyMat != null) Destroy(firProxyMat);
         if (barkMaterial != null) Destroy(barkMaterial);
         if (leafInst != null) Destroy(leafInst);
         ProceduralTree.ReleaseTexture();
