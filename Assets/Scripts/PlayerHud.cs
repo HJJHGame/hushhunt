@@ -9,11 +9,27 @@ public class PlayerHud : MonoBehaviour
     GUIStyle coordStyle;
     float visibility;
     bool showCoords;
+    Health health;
+    GUIStyle hpStyle;
+    float flashUntil = -1f; // 피격 시 화면 붉은 번쩍임이 끝나는 시각
+    const float FlashSeconds = 0.4f;
 
     void Start()
     {
         fpc = FindFirstObjectByType<FirstPersonController>();
         flash = FindFirstObjectByType<Flashlight>();
+        if (fpc != null) health = fpc.GetComponent<Health>();
+        if (health != null) health.Damaged += OnDamaged;
+    }
+
+    void OnDestroy()
+    {
+        if (health != null) health.Damaged -= OnDamaged;
+    }
+
+    void OnDamaged(Health h, float amount, GameObject source)
+    {
+        flashUntil = Time.unscaledTime + FlashSeconds;
     }
 
     void Update()
@@ -79,7 +95,38 @@ public class PlayerHud : MonoBehaviour
             HudText.Label(new Rect(16f, 12f, 700f * scale, 32f * scale), text, coordStyle);
         }
 
+        DrawHealth(scale);
+
         GUI.color = prev;
     }
 
+    // 왼쪽 아래 체력 막대 + 피격 시 붉은 번쩍임 + 사망 안내
+    void DrawHealth(float scale)
+    {
+        if (health == null) return;
+        if (hpStyle == null)
+            hpStyle = new GUIStyle(GUI.skin.label) { alignment = TextAnchor.LowerLeft, fontStyle = FontStyle.Bold };
+        hpStyle.fontSize = Mathf.RoundToInt(19f * scale);
+
+        if (Time.unscaledTime < flashUntil)
+        {
+            float a = 0.35f * (flashUntil - Time.unscaledTime) / FlashSeconds;
+            GUI.color = new Color(0.8f, 0f, 0f, a);
+            GUI.DrawTexture(new Rect(0f, 0f, Screen.width, Screen.height), Texture2D.whiteTexture);
+        }
+
+        float w = 220f * scale, h = 12f * scale;
+        float x = 16f * scale, y = Screen.height - 36f * scale;
+        HudText.Label(new Rect(x, y - 34f * scale, w, 30f * scale), "체력 " + Mathf.CeilToInt(health.Hp), hpStyle);
+        GUI.color = new Color(0f, 0f, 0f, 0.55f);
+        GUI.DrawTexture(new Rect(x - 3f, y - 3f, w + 6f, h + 6f), Texture2D.whiteTexture);
+        GUI.color = Color.Lerp(new Color(0.85f, 0.15f, 0.1f), new Color(0.75f, 0.85f, 0.7f), health.Hp01);
+        GUI.DrawTexture(new Rect(x, y, w * health.Hp01, h), Texture2D.whiteTexture);
+
+        if (health.IsDead)
+        {
+            var big = new GUIStyle(hpStyle) { alignment = TextAnchor.MiddleCenter, fontSize = Mathf.RoundToInt(44f * scale) };
+            HudText.Label(new Rect(0f, Screen.height * 0.5f - 30f * scale, Screen.width, 60f * scale), "사망", big, new Color(0.9f, 0.2f, 0.15f));
+        }
+    }
 }
