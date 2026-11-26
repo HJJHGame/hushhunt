@@ -168,7 +168,7 @@ public class TreeModels : MonoBehaviour
 
             // 재질: 전나무는 원래 실사 텍스처를 그대로 쓴다 (덮어쓰면 폴리헤이븐 재질이 날아감).
             // 다른 모델은 이름에 wood/bark 가 있으면 줄기색, 나머지는 잎색으로 맞춘다.
-            if (isFir) continue;
+            if (isFir) { FirLod.Apply(t, go); continue; } // 전나무: LOD + GPU 인스턴싱 (재질은 모델 그대로)
             foreach (var r in rends)
             {
                 var mats = r.sharedMaterials;
@@ -189,6 +189,7 @@ public class TreeModels : MonoBehaviour
         if (barkMaterial != null) Destroy(barkMaterial);
         if (leafInst != null) Destroy(leafInst);
         ProceduralTree.ReleaseTexture();
+        FirLod.Release();
         if (barkTex != null && barkTexOwned) Destroy(barkTex);
     }
 
