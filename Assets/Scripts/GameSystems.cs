@@ -65,6 +65,7 @@ public static class GameSystems
         if (fpc.GetComponent<Flashlight>() == null) fpc.gameObject.AddComponent<Flashlight>();
         if (fpc.GetComponent<Health>() == null) fpc.gameObject.AddComponent<Health>(); // 체력 100 (숨는 팀)
         if (fpc.GetComponent<GunHolder>() == null) fpc.gameObject.AddComponent<GunHolder>(); // 총/탄
+        if (fpc.GetComponent<HeldWeapon>() == null) fpc.gameObject.AddComponent<HeldWeapon>(); // 들고 있는 무기 표시
     }
 
     static void AddOnce<T>(GameObject root) where T : Component
