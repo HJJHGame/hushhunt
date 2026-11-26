@@ -12,6 +12,7 @@ public class FirstPersonController : MonoBehaviour
 
     [Header("Crouch")]
     public float crouchSpeed = 2f;
+    public float slowWalkSpeed = 2.6f;   // Ctrl 걷기(천천히). 기본(그냥 이동)은 walkSpeed, Shift는 달리기
     public float crouchHeight = 1.2f;   // 웅크렸을 때 캡슐 높이 (서 있을 때는 시작 시 값 사용)
 
     [Header("Stamina")]
@@ -102,8 +103,8 @@ public class FirstPersonController : MonoBehaviour
 
         bool moving = dir.sqrMagnitude > 0.01f;
 
-        // C 또는 왼쪽 Ctrl을 누르고 있는 동안 웅크린다. 일어설 땐 머리 위 공간을 확인한다.
-        bool wantCrouch = Input.GetKey(KeyCode.C) || Input.GetKey(KeyCode.LeftControl);
+        // C를 누르고 있는 동안 웅크린다. 일어설 땐 머리 위 공간을 확인한다. (Ctrl은 천천히 걷기)
+        bool wantCrouch = Input.GetKey(KeyCode.C);
         if (wantCrouch) IsCrouching = true;
         else if (IsCrouching && CanStand()) IsCrouching = false;
         ApplyCrouch();
@@ -113,7 +114,8 @@ public class FirstPersonController : MonoBehaviour
         IsSprinting = wantSprint && canSprint;
         UpdateStamina();
 
-        float speed = IsCrouching ? crouchSpeed : (IsSprinting ? sprintSpeed : walkSpeed);
+        bool slow = Input.GetKey(KeyCode.LeftControl) && !IsSprinting;
+        float speed = IsCrouching ? crouchSpeed : (IsSprinting ? sprintSpeed : (slow ? slowWalkSpeed : walkSpeed));
 
         if (controller.isGrounded)
         {
