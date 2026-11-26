@@ -25,17 +25,19 @@ public class TreePaper : MonoBehaviour
     {
         var trees = new System.Collections.Generic.List<Transform>();
         var firs = new System.Collections.Generic.List<Transform>();
+        var deads = new System.Collections.Generic.List<Transform>();
         foreach (var t in FindObjectsByType<Transform>(FindObjectsSortMode.None))
         {
             if (t.parent != null || t.name != WorldConfig.Names.PineTree) continue;
             trees.Add(t);
+            if (t.Find("TreeModel Spruce Dead") != null) deads.Add(t); // dead-spruce 모델이 달린 나무
             if (t.Find("TreeModel Fir") != null) firs.Add(t); // 전나무(Fir Tree 01) 모델이 달린 나무
         }
         if (trees.Count == 0) return;
 
         var rand = new System.Random();
         // 용지는 전나무(Fir Tree 01)에만 붙는다. 모델이 아직 없으면 아무 소나무나 사용.
-        var pool = firs.Count > 0 ? firs : trees;
+        var pool = deads.Count > 0 ? deads : (firs.Count > 0 ? firs : trees); // dead-spruce 우선
         var tree = pool[rand.Next(pool.Count)];
 
         float yaw = (float)rand.NextDouble() * 360f;
