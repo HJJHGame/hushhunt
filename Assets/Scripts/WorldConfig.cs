@@ -5,6 +5,9 @@ public static class WorldConfig
     // 맵 절반 크기(m). 경계 벽 안쪽 면은 ±(Half - 1), 미니맵은 ±Half로 그린다.
     public const float Half = 200f; // 400x400m 맵
 
+    // 테스트용: true면 나무와 땅만 남기고 바위/집/통나무/그루터기/울타리를 숨긴다 (코드는 그대로, false로 바꾸면 복구).
+    public static bool SimplifiedTestMode = true;
+
     // 소나무 규격. SetupScene이 만들고 TreeModels가 3D 모델 크기를 맞출 때 같은 값을 쓴다.
     public const float PineTrunkBaseWidth = 0.32f; // 크기 배율 1일 때 기둥 굵기(m)
     public const float PineHeight = 9.5f;          // 크기 배율 1일 때 나무 전체 높이(m)
