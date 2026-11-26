@@ -96,8 +96,8 @@ public class EscapeGate : MonoBehaviour
     {
         if (gm == null) return;
 
-        // 확인용(혼자 테스트): 수색 시간에 X 키로 탈출구를 강제로 연다. 상대 플레이어가 생기면 지운다.
-        if (!MainMenu.IsMenuOpen && Input.GetKeyDown(KeyCode.X)) Open();
+        // 확인용(혼자 테스트): 수색 시간에 O 키로 탈출구를 강제로 연다. 상대 플레이어가 생기면 지운다.
+        if (!MainMenu.IsMenuOpen && Input.GetKeyDown(KeyCode.O)) Open();
 
         if (!IsOpen || gm.CurrentPhase != GameManager.Phase.Seeking) return;
 
