@@ -41,8 +41,7 @@ public static class GameSystems
         if (root == null) root = new GameObject(RootName);
 
         AddOnce<Crosshair>(root);       // 크로스헤어
-        AddOnce<SpruceForest>(root);    // 가문비 모델 숲 (모델 없으면 아무것도 안 함, TreeModels보다 먼저 실행)
-        AddOnce<TreeModels>(root);      // 소나무 3D 모델 (없으면 기존 나무 유지)
+        AddOnce<SpruceForest>(root);    // 가문비 모델 숲 (모델 없으면 아무것도 안 함)
         AddOnce<NightAtmosphere>(root); // 밤 조명/안개
         AddOnce<HouseGlow>(root);       // 집 창문 빛
         AddOnce<GroundTexture>(root);   // 바닥 텍스처
@@ -51,7 +50,6 @@ public static class GameSystems
         AddOnce<PropModels>(root);      // 통나무/그루터기 모델 (폴더에 넣으면 교체)
         AddOnce<GroundCover>(root);     // 숲 바닥 덮개 (폴더에 넣으면 흩뿌림)
         AddOnce<RandomizeLayout>(root); // 매 판 집/나무/스폰 재배치
-        AddOnce<ForestPerformance>(root); // 절차적 소나무 LOD/인스턴싱 (TreeModels 뒤, TreePaper 앞)
         AddOnce<TreePaper>(root);       // 나무에 붙은 A4 용지
         AddOnce<SimplifiedTestMode>(root); // 테스트: 나무/땅만 남기기 (WorldConfig.SimplifiedTestMode)
         AddOnce<NightSky>(root);        // 별/달
