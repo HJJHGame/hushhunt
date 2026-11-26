@@ -100,13 +100,19 @@ public sealed class ForestPerformance : MonoBehaviour
         root.transform.localRotation = Quaternion.identity;
         root.transform.localScale = Vector3.one;
 
-        CreateProxyPart(root.transform, "ProxyTrunk", proxyTrunkMesh, bark);
-        CreateProxyPart(root.transform, "ProxyFoliage", proxyFoliageMesh, foliage);
+        // TreeModels는 원본 렌더러를 전용 원거리 컬링 레이어(30)에 둔다.
+        // 프록시가 기본 레이어(0)에 남으면 50m 레이어 컬링을 우회하므로 계층 전체에 레이어를 맞춘다.
+        int renderLayer = trunk.gameObject.layer;
+        root.layer = renderLayer;
+
+        CreateProxyPart(root.transform, "ProxyTrunk", proxyTrunkMesh, bark, renderLayer);
+        CreateProxyPart(root.transform, "ProxyFoliage", proxyFoliageMesh, foliage, renderLayer);
     }
 
-    static void CreateProxyPart(Transform parent, string name, Mesh mesh, Material material)
+    static void CreateProxyPart(Transform parent, string name, Mesh mesh, Material material, int layer)
     {
         var go = new GameObject(name);
+        go.layer = layer;
         go.transform.SetParent(parent, false);
         go.AddComponent<MeshFilter>().sharedMesh = mesh;
         var renderer = go.AddComponent<MeshRenderer>();
@@ -121,12 +127,14 @@ public sealed class ForestPerformance : MonoBehaviour
         {
             proxyTrunkMesh = BuildTrunkMesh();
             proxyTrunkMesh.name = "HushHunt Pine LOD Trunk";
+            proxyTrunkMesh.UploadMeshData(true);
         }
 
         if (proxyFoliageMesh == null)
         {
             proxyFoliageMesh = BuildFoliageMesh();
             proxyFoliageMesh.name = "HushHunt Pine LOD Foliage";
+            proxyFoliageMesh.UploadMeshData(true);
         }
     }
 
