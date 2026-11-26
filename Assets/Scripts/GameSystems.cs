@@ -61,6 +61,7 @@ public static class GameSystems
 
         if (fpc.GetComponent<PlayerBody>() == null) fpc.gameObject.AddComponent<PlayerBody>();
         if (fpc.GetComponent<Flashlight>() == null) fpc.gameObject.AddComponent<Flashlight>();
+        if (fpc.GetComponent<Health>() == null) fpc.gameObject.AddComponent<Health>(); // 체력 100 (숨는 팀)
     }
 
     static void AddOnce<T>(GameObject root) where T : Component
