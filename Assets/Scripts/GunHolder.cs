@@ -3,7 +3,7 @@ using UnityEngine;
 
 // 총을 가질 수 있는 플레이어(주로 잡는 팀). 탄은 4발 고정, 재장전 없음.
 // 총은 종이를 찾거나(Armory), 첫 종이가 발견된 뒤 1분이 지나면 자동으로 지급된다.
-// 쏘기/명중 처리는 다음 조각. 지금은 보유 여부와 남은 탄만 관리한다.
+// 로컬 플레이어는 좌클릭으로 쏜다(히트스캔). 수색 시간에만, 탄이 있을 때만.
 [RequireComponent(typeof(Health))]
 public class GunHolder : MonoBehaviour
 {
@@ -18,14 +18,72 @@ public class GunHolder : MonoBehaviour
 
     public static readonly List<GunHolder> All = new List<GunHolder>();
 
+    public const float Range = 150f; // 사거리(m)
+
     Health health;
+    GameManager gm;
+    float flashUntil, hitUntil;
 
     public bool IsSeeker { get { return health != null && health.team == Team.Seeker; } }
     public bool IsAlive { get { return health != null && !health.IsDead; } }
 
     void Awake() { health = GetComponent<Health>(); }
+    void Start() { gm = FindFirstObjectByType<GameManager>(); }
     void OnEnable() { if (!All.Contains(this)) All.Add(this); }
     void OnDisable() { All.Remove(this); }
+
+    void Update()
+    {
+        // 조작은 로컬 플레이어만.
+        if (GetComponent<FirstPersonController>() == null) return;
+        if (MainMenu.IsMenuOpen || !IsAlive || !HasGun) return;
+        if (gm == null || gm.CurrentPhase != GameManager.Phase.Seeking) return;
+        if (!Input.GetMouseButtonDown(0)) return;
+        if (!TryUseAmmo()) return;
+        Fire();
+    }
+
+    // 화면 가운데로 광선을 쏴 처음 맞은 상대 팀에게 한 발 피해를 준다.
+    void Fire()
+    {
+        flashUntil = Time.unscaledTime + 0.06f;
+        var cam = Camera.main;
+        if (cam == null) return;
+        var hits = Physics.RaycastAll(cam.transform.position, cam.transform.forward, Range, ~0, QueryTriggerInteraction.Ignore);
+        System.Array.Sort(hits, (a, b) => a.distance.CompareTo(b.distance));
+        foreach (var hit in hits)
+        {
+            if (hit.collider.transform.IsChildOf(transform)) continue; // 자기 몸은 통과
+            var target = hit.collider.GetComponentInParent<Health>();
+            if (target != null && target != health && !target.IsDead && target.team != health.team)
+            {
+                target.Hit(gameObject);
+                hitUntil = Time.unscaledTime + 0.25f;
+            }
+            break; // 처음 막힌 곳에서 끝
+        }
+    }
+
+    void OnGUI()
+    {
+        if (GetComponent<FirstPersonController>() == null) return;
+        if (Time.unscaledTime < flashUntil)
+        {
+            var old = GUI.color;
+            GUI.color = new Color(1f, 0.9f, 0.6f, 0.18f);
+            GUI.DrawTexture(new Rect(0, 0, Screen.width, Screen.height), Texture2D.whiteTexture);
+            GUI.color = old;
+        }
+        if (Time.unscaledTime < hitUntil)
+        {
+            var old = GUI.color;
+            GUI.color = Color.red;
+            float c = 7f;
+            GUI.DrawTexture(new Rect(Screen.width / 2f - c, Screen.height / 2f - 1f, 2f * c, 2f), Texture2D.whiteTexture);
+            GUI.DrawTexture(new Rect(Screen.width / 2f - 1f, Screen.height / 2f - c, 2f, 2f * c), Texture2D.whiteTexture);
+            GUI.color = old;
+        }
+    }
 
     // 총을 지급한다. 이미 있으면 아무 일도 없다.
     public void Grant(bool fromPaper)
