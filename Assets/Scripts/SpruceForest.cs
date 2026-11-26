@@ -17,7 +17,8 @@ public class SpruceForest : MonoBehaviour
     const float ExtraPerSlot = 1.5f;     // 기존 소나무 자리 하나당 추가로 심는 나무 수 (1.5면 전체 약 2.5배)
     const float ExtraMinDist = 2.5f;     // 기존 자리에서 떨어뜨리는 거리(m)
     const float ExtraMaxDist = 9f;
-    const float HouseClearance = 9f;     // 추가 나무는 집 중심에서 이 거리 안에는 안 심는다
+    const float HouseMargin = 1.5f;      // 추가 나무는 집 발자국 + 이 여유(m) 안에는 안 심는다
+    const float SpawnClearance = 6f;     // 플레이어 스폰 주변 비움(m)
     const float Lod0Height = 0.35f; // 화면 높이 비율. 키 10m 기준 대략 24m 안
     const float Lod1Height = 0.22f; // 대략 39m 안
     const float CullHeight = 0.01f;
@@ -135,7 +136,23 @@ public class SpruceForest : MonoBehaviour
         int extra = 0;
         if (placed > 0 && ExtraPerSlot > 0f)
         {
+            // 배치 순서: 집 -> 나무 -> 바위/소품. 집 발자국, 스폰, 이미 놓인 소품 자리를 피해 빈 곳에만 심는다.
+            // (SimplifiedTestMode로 집/소품이 숨겨져 있어도 위치는 그대로 있으므로 같은 기준으로 계산한다.)
             var houses = FindObjectsByType<HouseFootprint>(FindObjectsSortMode.None);
+            var fpc = FindFirstObjectByType<FirstPersonController>();
+            var spawnPos = fpc != null ? fpc.transform.position : Vector3.zero;
+            var props = new List<Vector3>(); // x, z, 반경
+            foreach (var pt in FindObjectsByType<Transform>(FindObjectsSortMode.None))
+            {
+                if (pt.parent != null) continue;
+                string pn = pt.name;
+                float pr = pn == WorldConfig.Names.Rock ? 2f
+                    : pn == WorldConfig.Names.FallenLog ? 3.5f
+                    : pn == WorldConfig.Names.Stump ? 1.5f
+                    : pn == WorldConfig.Names.OldFence ? 4f
+                    : 0f;
+                if (pr > 0f) props.Add(new Vector3(pt.position.x, pt.position.z, pr));
+            }
             var extraRoot = new GameObject("Spruce Extras").transform;
             float lim = WorldConfig.Half - 3f;
             foreach (var slot in pines)
@@ -147,14 +164,18 @@ public class SpruceForest : MonoBehaviour
                     float dist = ExtraMinDist + (float)rand.NextDouble() * (ExtraMaxDist - ExtraMinDist);
                     var pos = slot.position + new Vector3(Mathf.Cos(ang) * dist, 0f, Mathf.Sin(ang) * dist);
                     if (Mathf.Abs(pos.x) > lim || Mathf.Abs(pos.z) > lim) continue;
-                    bool nearHouse = false;
-                    foreach (var h in houses)
-                    {
-                        var d = h.transform.position - pos;
-                        d.y = 0f;
-                        if (d.sqrMagnitude < HouseClearance * HouseClearance) { nearHouse = true; break; }
-                    }
-                    if (nearHouse) continue;
+                    bool blocked = new Vector2(pos.x - spawnPos.x, pos.z - spawnPos.z).magnitude < SpawnClearance;
+                    if (!blocked)
+                        foreach (var h in houses)
+                        {
+                            var hp = h.transform.position;
+                            if (Mathf.Abs(pos.x - hp.x) < h.size.x * 0.5f + HouseMargin
+                                && Mathf.Abs(pos.z - hp.z) < h.size.y * 0.5f + HouseMargin) { blocked = true; break; }
+                        }
+                    if (!blocked)
+                        foreach (var pp in props)
+                            if (Vector2.Distance(new Vector2(pos.x, pos.z), new Vector2(pp.x, pp.y)) < pp.z + 1.5f) { blocked = true; break; }
+                    if (blocked) continue;
                     var go = new GameObject("Spruce Extra");
                     go.transform.SetParent(extraRoot, false);
                     go.transform.position = pos;
