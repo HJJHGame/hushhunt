@@ -1,8 +1,8 @@
 using UnityEngine;
 
-// 한 판의 흐름: 타이틀 대기 -> 숨는 시간(60초) -> 수색 시간(제한시간 10분) -> 종료.
-// 확정 규칙: 숨는 시간이 끝난 뒤부터 10분이 흐르고, 시간이 다 되면 숨는 팀 승리.
-// 잡는 팀이 숨는 팀을 전멸시키면 잡는 팀 승리, 숨는 팀이 탈출구로 나가면(살아 있는 한 명이면 됨) 숨는 팀 승리.
+// 한 판의 흐름: 타이틀 대기 -> 숨는 시간(60초) -> 수색 시간(9분) -> 종료. 제한시간은 숨는 시간을 포함해 총 10분.
+// 확정 규칙: 시간이 다 되면 숨는 팀 승리.
+// 잡는 팀이 숨는 팀을 전멸시키면 잡는 팀 승리, 살아 있는 숨는 팀 전원이 탈출구로 나가면 숨는 팀 승리.
 // 전멸/탈출은 아직 없다. 나중 단계(종이->총, 체력, 탈출구)가 EndRound(결과)를 부르면 된다.
 // 캐릭터/무기/네트워크는 아직 없으므로 이 단계에서는 단계 전환, 화면 표시, 종료 후 R 키 재시작만 담당한다.
 // Waiting 단계는 MainMenu 타이틀 화면과 짝이다. 타이머는 돌지 않는다.
@@ -14,7 +14,7 @@ public class GameManager : MonoBehaviour
 
     // 확정 규칙 값. 씬에 저장된 값이 아니라 항상 이 상수를 쓴다 (Start에서 덮어씀).
     public const float HideSeconds = 60f;
-    public const float MatchSeconds = 600f; // 숨는 시간이 끝난 뒤부터 10분
+    public const float MatchSeconds = 600f; // 한 판 총 제한시간 (숨는 시간 60초 포함). 수색 시간은 540초(9분)
 
     // 지금은 로컬 1인 플레이: 플레이어는 숨는 팀. (잡는 팀 시점은 숨는 시간 동안 검은 화면 + 타이머)
     public static Role LocalRole = Role.Hider;
@@ -47,7 +47,7 @@ public class GameManager : MonoBehaviour
     {
         // 타이틀 화면에서 '연습 시작'을 누르면 BeginRound로 실제 판이 시작된다.
         hideDuration = HideSeconds;
-        seekDuration = MatchSeconds;
+        seekDuration = MatchSeconds - HideSeconds;
         Result = Outcome.None;
         CurrentPhase = Phase.Waiting;
         TimeLeft = hideDuration;
@@ -138,7 +138,7 @@ public class GameManager : MonoBehaviour
                 DrawTimer(FormatTime(TimeLeft), timeColor);
                 DrawProgress(TimeLeft / Mathf.Max(1f, seekDuration), urgent);
                 if (Time.unscaledTime < bannerUntil)
-                    DrawCenter("수색 시작", "제한시간 10분을 버텨라", Color.white);
+                    DrawCenter("수색 시작", "남은 시간 " + Mathf.RoundToInt(seekDuration / 60f) + "분", Color.white);
                 break;
             case Phase.Ended:
                 DrawEndOverlay();
