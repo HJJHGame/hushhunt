@@ -58,6 +58,7 @@ public static class GameSystems
         AddOnce<HorrorOverlay>(root);   // 비네팅/그레인
         AddOnce<FogMotes>(root);        // 떠다니는 먼지 입자
         AddOnce<AmbientSound>(root);    // 바람/먼 소리
+        AddOnce<Inventory>(root);       // 인벤토리 5칸 (E)
         AddOnce<PlayerHud>(root);       // 스태미나/손전등 표시
         AddOnce<MainMenu>(root);        // 타이틀/일시정지/설정 메뉴
 
