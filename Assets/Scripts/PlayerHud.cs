@@ -108,13 +108,14 @@ public class PlayerHud : MonoBehaviour
     // 오른쪽 아래(손전등 안내 위): 잡는 팀의 총/탄 또는 총 없음 안내. 첫 종이 발견 후엔 자동 지급 카운트다운.
     void DrawGun(float scale)
     {
-        if (gun == null || !gun.IsSeeker) return;
+        if (gun == null || (!gun.IsSeeker && !gun.HasGun)) return;
         if (hpStyle == null)
             hpStyle = new GUIStyle(GUI.skin.label) { alignment = TextAnchor.LowerLeft, fontStyle = FontStyle.Bold };
         if (gunStyle == null) gunStyle = new GUIStyle(hpStyle) { alignment = TextAnchor.LowerRight };
         gunStyle.fontSize = Mathf.RoundToInt(19f * scale);
         string text;
-        if (gun.HasGun) text = "총 " + gun.Ammo + "/" + GunHolder.MagazineRounds;
+        if (gun.HasGun && gun.Weapon == WeaponKind.Knife) text = "칼";
+        else if (gun.HasGun) text = GunHolder.WeaponName(gun.Weapon) + " " + gun.Ammo + "/" + GunHolder.MagazineRounds;
         else
         {
             text = "총 없음: 종이를 찾으세요";
