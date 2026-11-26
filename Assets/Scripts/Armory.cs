@@ -34,8 +34,24 @@ public class Armory : MonoBehaviour
         who.Grant(true);
     }
 
+    GameManager gm0;
+
     void Update()
     {
+        // 숨는 팀은 판이 시작되면 무기(샷건/소총/칼) 중 하나를 무작위로 하나 받는다.
+        if (gm0 == null) gm0 = FindFirstObjectByType<GameManager>();
+        if (gm0 != null && (gm0.CurrentPhase == GameManager.Phase.Hiding || gm0.CurrentPhase == GameManager.Phase.Seeking))
+        {
+            foreach (var h in GunHolder.All)
+            {
+                if (h == null || !h.IsAlive || h.IsSeeker || h.GotStartWeapon) continue;
+                h.GotStartWeapon = true;
+                if (h.HasGun) continue;
+                var kinds = new[] { WeaponKind.Shotgun, WeaponKind.Rifle, WeaponKind.Knife };
+                h.Grant(false, kinds[Random.Range(0, kinds.Length)]);
+            }
+        }
+
         // 1분이 지나면 총이 없는 잡는 팀 모두에게 지급한다 (늦게 합류한 사람도 같다).
         if (firstPaperAt >= 0f && Time.time >= firstPaperAt + AutoGrantDelay)
             foreach (var h in GunHolder.All)
