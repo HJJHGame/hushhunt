@@ -24,11 +24,49 @@ public class SpruceForest : MonoBehaviour
     static GameObject LoadModel(string name, int lod)
     {
 #if UNITY_EDITOR
-        var asset = UnityEditor.AssetDatabase.LoadAssetAtPath<GameObject>("Assets/Models/" + name + "/lod" + lod + ".glb");
+        string path = "Assets/Models/" + name + "/lod" + lod + ".glb";
+        var asset = UnityEditor.AssetDatabase.LoadAssetAtPath<GameObject>(path);
         if (asset != null) return asset;
+        // 메인 에셋이 GameObject가 아니면 하위 에셋 중에서 GameObject를 찾는다.
+        var all = UnityEditor.AssetDatabase.LoadAllAssetsAtPath(path);
+        GameObject fallback = null;
+        foreach (var o in all)
+        {
+            var go = o as GameObject;
+            if (go == null) continue;
+            if (go.transform.parent == null) return go;
+            if (fallback == null) fallback = go;
+        }
+        if (fallback != null) return fallback.transform.root.gameObject;
+        // 경로가 달라도 이름으로 찾아본다.
+        foreach (var guid in UnityEditor.AssetDatabase.FindAssets("lod" + lod + " t:GameObject", new[] { "Assets" }))
+        {
+            string found = UnityEditor.AssetDatabase.GUIDToAssetPath(guid);
+            if (!found.Contains("/" + name + "/")) continue;
+            var g = UnityEditor.AssetDatabase.LoadAssetAtPath<GameObject>(found);
+            if (g != null) return g;
+        }
+        if (lod == 0) LogWhyMissing(path, all);
 #endif
         return Resources.Load<GameObject>("Models/" + name + "/lod" + lod);
     }
+
+#if UNITY_EDITOR
+    // 못 찾았을 때 원인을 콘솔에 남긴다 (파일 유무, 임포터 종류, 하위 에셋 종류).
+    static void LogWhyMissing(string path, Object[] all)
+    {
+        bool exists = System.IO.File.Exists(System.IO.Path.Combine(System.IO.Path.GetDirectoryName(Application.dataPath), path));
+        var imp = UnityEditor.AssetImporter.GetAtPath(path);
+        var main = UnityEditor.AssetDatabase.LoadMainAssetAtPath(path);
+        var types = new System.Text.StringBuilder();
+        foreach (var o in all) types.Append(o == null ? "null" : o.GetType().Name).Append(' ');
+        Debug.LogWarning("[HushHunt] SpruceForest 진단 " + path + ": 파일존재=" + exists
+            + ", 임포터=" + (imp == null ? "없음" : imp.GetType().Name)
+            + ", 메인에셋=" + (main == null ? "null" : main.GetType().Name)
+            + ", 하위에셋=" + all.Length + " [" + types + "]"
+            + " (임포터가 DefaultImporter/없음이면 .glb.meta를 지우고 Reimport 필요)");
+    }
+#endif
 
     class Variant
     {
