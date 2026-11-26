@@ -38,8 +38,8 @@ public class PlayerHud : MonoBehaviour
 
     void Update()
     {
-        // F 키처럼 일반 문자 키를 쓴다: F1은 원격 데스크톱/브라우저/유니티 도움말이 가로챌 수 있다.
-        if (!MainMenu.IsMenuOpen && Input.GetKeyDown(KeyCode.K))
+        // X 키처럼 일반 문자 키를 쓴다: F1은 원격 데스크톱/브라우저/유니티 도움말이 가로챌 수 있다.
+        if (!MainMenu.IsMenuOpen && Input.GetKeyDown(KeyCode.X))
             showCoords = !showCoords;
     }
 
@@ -81,7 +81,7 @@ public class PlayerHud : MonoBehaviour
                 hintStyle.fontStyle = FontStyle.Bold;
             }
             hintStyle.fontSize = Mathf.RoundToInt(19f * scale);
-            string text = "[F] 손전등 " + (flash.IsOn ? "켜짐" : "꺼짐");
+            string text = "[T] 손전등 " + (flash.IsOn ? "켜짐" : "꺼짐");
             HudText.Label(new Rect(Screen.width - 300f * scale - 16f, Screen.height - 44f * scale, 300f * scale, 32f * scale), text, hintStyle);
         }
 
@@ -95,7 +95,7 @@ public class PlayerHud : MonoBehaviour
             var p = fpc.transform.position;
             float edge = WorldConfig.Half - Mathf.Max(Mathf.Abs(p.x), Mathf.Abs(p.z));
             string text = "위치 (" + p.x.ToString("0.0") + ", " + p.z.ToString("0.0")
-                + ")  |  가장자리(±200m)까지 " + edge.ToString("0") + "m  |  맵 400x400m  [K] 끄기";
+                + ")  |  가장자리(±200m)까지 " + edge.ToString("0") + "m  |  맵 400x400m  [X] 끄기";
             HudText.Label(new Rect(16f, 12f, 700f * scale, 32f * scale), text, coordStyle);
         }
 
