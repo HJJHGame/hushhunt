@@ -4,6 +4,8 @@ using UnityEngine;
 // 총을 가질 수 있는 플레이어(주로 잡는 팀). 탄은 4발 고정, 재장전 없음.
 // 총은 종이를 찾거나(Armory), 첫 종이가 발견된 뒤 1분이 지나면 자동으로 지급된다.
 // 로컬 플레이어는 좌클릭으로 쏜다(히트스캔). 수색 시간에만, 탄이 있을 때만.
+public enum WeaponKind { None, Shotgun, Rifle, Knife }
+
 [RequireComponent(typeof(Health))]
 public class GunHolder : MonoBehaviour
 {
@@ -18,7 +20,20 @@ public class GunHolder : MonoBehaviour
 
     public static readonly List<GunHolder> All = new List<GunHolder>();
 
-    public const float Range = 150f; // 사거리(m)
+    public const float RifleRange = 150f;   // AR 사거리(m)
+    public const float ShotgunRange = 40f;  // 샷건 사거리(m)
+    public const float KnifeRange = 2.5f;   // 칼 닿는 거리(m)
+    public const float KnifeCooldown = 0.8f; // 칼 휘두르는 간격(초)
+
+    public WeaponKind Weapon { get; private set; }
+    public bool GotStartWeapon { get; set; } // 숨는 팀 시작 무기를 받았는지
+    float nextKnifeAt;
+
+    public static string WeaponName(WeaponKind k)
+    {
+        switch (k) { case WeaponKind.Shotgun: return "샷건"; case WeaponKind.Rifle: return "소총"; case WeaponKind.Knife: return "칼"; }
+        return "";
+    }
 
     Health health;
     GameManager gm;
@@ -39,7 +54,12 @@ public class GunHolder : MonoBehaviour
         if (MainMenu.IsMenuOpen || !IsAlive || !HasGun) return;
         if (gm == null || gm.CurrentPhase != GameManager.Phase.Seeking) return;
         if (!Input.GetMouseButtonDown(0)) return;
-        if (!TryUseAmmo()) return;
+        if (Weapon == WeaponKind.Knife)
+        {
+            if (Time.unscaledTime < nextKnifeAt) return;
+            nextKnifeAt = Time.unscaledTime + KnifeCooldown;
+        }
+        else if (!TryUseAmmo()) return;
         Fire();
     }
 
@@ -49,7 +69,8 @@ public class GunHolder : MonoBehaviour
         flashUntil = Time.unscaledTime + 0.06f;
         var cam = Camera.main;
         if (cam == null) return;
-        var hits = Physics.RaycastAll(cam.transform.position, cam.transform.forward, Range, ~0, QueryTriggerInteraction.Ignore);
+        float range = Weapon == WeaponKind.Knife ? KnifeRange : (Weapon == WeaponKind.Shotgun ? ShotgunRange : RifleRange);
+        var hits = Physics.RaycastAll(cam.transform.position, cam.transform.forward, range, ~0, QueryTriggerInteraction.Ignore);
         System.Array.Sort(hits, (a, b) => a.distance.CompareTo(b.distance));
         foreach (var hit in hits)
         {
@@ -86,11 +107,12 @@ public class GunHolder : MonoBehaviour
     }
 
     // 총을 지급한다. 이미 있으면 아무 일도 없다.
-    public void Grant(bool fromPaper)
+    public void Grant(bool fromPaper, WeaponKind kind = WeaponKind.Rifle)
     {
         if (HasGun) return;
         HasGun = true;
-        Ammo = MagazineRounds;
+        Weapon = kind;
+        Ammo = kind == WeaponKind.Knife ? 0 : MagazineRounds; // 칼은 탄이 없다
         if (fromPaper) GotGunFromPaper = true;
         GrantedAt = Time.unscaledTime;
         if (Granted != null) Granted(this);
@@ -99,7 +121,9 @@ public class GunHolder : MonoBehaviour
     // 한 발 쓴다. 쏠 수 있으면 true. (쏘기 조각이 부른다)
     public bool TryUseAmmo()
     {
-        if (!HasGun || Ammo <= 0) return false;
+        if (!HasGun) return false;
+        if (Weapon == WeaponKind.Knife) return true;
+        if (Ammo <= 0) return false;
         Ammo--;
         return true;
     }
