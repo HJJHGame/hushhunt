@@ -14,6 +14,10 @@ public class SpruceForest : MonoBehaviour
     public static bool Active;
 
     const float DeadChance = 0.15f;
+    const float ExtraPerSlot = 1.5f;     // 기존 소나무 자리 하나당 추가로 심는 나무 수 (1.5면 전체 약 2.5배)
+    const float ExtraMinDist = 2.5f;     // 기존 자리에서 떨어뜨리는 거리(m)
+    const float ExtraMaxDist = 9f;
+    const float HouseClearance = 9f;     // 추가 나무는 집 중심에서 이 거리 안에는 안 심는다
     const float Lod0Height = 0.35f; // 화면 높이 비율. 키 10m 기준 대략 24m 안
     const float Lod1Height = 0.22f; // 대략 39m 안
     const float CullHeight = 0.01f;
@@ -127,9 +131,52 @@ public class SpruceForest : MonoBehaviour
                 if (v == dead) deadCount++;
             }
         }
+        int slotCount = placed;
+        int extra = 0;
+        if (placed > 0 && ExtraPerSlot > 0f)
+        {
+            var houses = FindObjectsByType<HouseFootprint>(FindObjectsSortMode.None);
+            var extraRoot = new GameObject("Spruce Extras").transform;
+            float lim = WorldConfig.Half - 3f;
+            foreach (var slot in pines)
+            {
+                int n = (int)ExtraPerSlot + (rand.NextDouble() < ExtraPerSlot - (int)ExtraPerSlot ? 1 : 0);
+                for (int k = 0; k < n; k++)
+                {
+                    float ang = (float)rand.NextDouble() * Mathf.PI * 2f;
+                    float dist = ExtraMinDist + (float)rand.NextDouble() * (ExtraMaxDist - ExtraMinDist);
+                    var pos = slot.position + new Vector3(Mathf.Cos(ang) * dist, 0f, Mathf.Sin(ang) * dist);
+                    if (Mathf.Abs(pos.x) > lim || Mathf.Abs(pos.z) > lim) continue;
+                    bool nearHouse = false;
+                    foreach (var h in houses)
+                    {
+                        var d = h.transform.position - pos;
+                        d.y = 0f;
+                        if (d.sqrMagnitude < HouseClearance * HouseClearance) { nearHouse = true; break; }
+                    }
+                    if (nearHouse) continue;
+                    var go = new GameObject("Spruce Extra");
+                    go.transform.SetParent(extraRoot, false);
+                    go.transform.position = pos;
+                    Variant ev = (dead == null) ? young : (young == null ? dead : (rand.NextDouble() < DeadChance ? dead : young));
+                    if (BuildTree(go.transform, ev, rand))
+                    {
+                        // 줄기 충돌체 (기존 소나무 줄기와 비슷하게)
+                        var cap = go.AddComponent<CapsuleCollider>();
+                        cap.radius = 0.25f;
+                        cap.height = WorldConfig.PineHeight * 0.6f;
+                        cap.center = new Vector3(0f, cap.height * 0.5f, 0f);
+                        extra++;
+                        if (ev == dead) deadCount++;
+                    }
+                    else Destroy(go);
+                }
+            }
+        }
+        placed += extra;
         Active = placed > 0;
         if (Active)
-            Debug.Log("[HushHunt] SpruceForest: 가문비 " + placed + "그루 배치 (young " + (placed - deadCount) + ", dead " + deadCount + ") / 소나무 슬롯 " + pines.Count);
+            Debug.Log("[HushHunt] SpruceForest: 가문비 " + placed + "그루 배치 (young " + (placed - deadCount) + ", dead " + deadCount + ") / 기존 슬롯 " + slotCount + " + 추가 " + extra);
         else
             Debug.LogWarning("[HushHunt] SpruceForest: 모델은 읽었지만 배치 0그루 (렌더러 없음/크기 0) -> 옛 숲 유지");
     }
