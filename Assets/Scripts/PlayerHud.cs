@@ -95,7 +95,7 @@ public class PlayerHud : MonoBehaviour
             var p = fpc.transform.position;
             float edge = WorldConfig.Half - Mathf.Max(Mathf.Abs(p.x), Mathf.Abs(p.z));
             string text = "위치 (" + p.x.ToString("0.0") + ", " + p.z.ToString("0.0")
-                + ")  |  가장자리(±200m)까지 " + edge.ToString("0") + "m  |  맵 400x400m  [X] 끄기";
+                + ")  |  가장자리(±" + WorldConfig.Half + "m)까지 " + edge.ToString("0") + "m  |  맵 " + (WorldConfig.Half * 2f) + "m 정사각  [X] 끄기";
             HudText.Label(new Rect(16f, 12f, 700f * scale, 32f * scale), text, coordStyle);
         }
 
