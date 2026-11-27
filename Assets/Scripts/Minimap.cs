@@ -61,7 +61,7 @@ public class Minimap : MonoBehaviour
         float y = bigMap ? (Screen.height - size) * 0.5f : 16f;
         var map = new Rect(x, y, size, size);
 
-        // 테두리 + 지도 이미지. 지도의 사각 가장자리가 곧 실제 맵 경계(±100m)다.
+        // 테두리 + 지도 이미지. 지도의 사각 가장자리가 곧 실제 맵 경계(±WorldConfig.Half)다.
         GUI.color = new Color(0f, 0f, 0f, bigMap ? 0.85f : 0.6f);
         GUI.DrawTexture(new Rect(map.x - 4f, map.y - 4f, map.width + 8f, map.height + 8f), Texture2D.whiteTexture);
         GUI.color = Color.white;
