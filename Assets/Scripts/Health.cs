@@ -69,8 +69,8 @@ public class Health : MonoBehaviour
     public void TakeDamage(float amount, GameObject source)
     {
         if (IsDead || amount <= 0f) return;
-        // 판이 돌아가는 동안(숨는 시간/수색 시간)에만 피해를 받는다.
-        if (gm != null && gm.CurrentPhase != GameManager.Phase.Hiding && gm.CurrentPhase != GameManager.Phase.Seeking) return;
+        // 수색 시간에만 피해를 받는다. 숨는 시간(60초)엔 아무 피해도 없다 (테스트용 H 키 포함).
+        if (gm != null && gm.CurrentPhase != GameManager.Phase.Seeking) return;
 
         Hp = Mathf.Max(0f, Hp - amount);
         if (Damaged != null) Damaged(this, amount, source);
