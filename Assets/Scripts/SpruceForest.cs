@@ -2,7 +2,7 @@ using System.Collections.Generic;
 using UnityEngine;
 using UnityEngine.Rendering;
 
-// 숲의 모든 나무를 tevy 가문비 모델(young-spruce 85%, dead-spruce 15%)로 채운다.
+// 숲의 모든 나무를 tevy 가문비 모델(young-spruce 20%, dead-spruce 80%)로 채운다.
 // 모델 위치: Assets/Models/<이름>/lod0.glb, lod1.glb, lod2.glb (glTFast 패키지 필요).
 // 에디터에서는 AssetDatabase로, 빌드에서는 Resources/Models/<이름>/lod0 (확장자 없이)로 찾는다.
 // 모델이 하나도 없으면 아무것도 하지 않고 기존 나무(TreeModels)가 그대로 나온다.
@@ -13,7 +13,7 @@ public class SpruceForest : MonoBehaviour
 {
     public static bool Active;
 
-    const float DeadChance = 0.15f;
+    const float DeadChance = 0.8f; // 죽은 나무 비율 80% (잎 있는 나무 20%)
     const float ExtraPerSlot = 1.5f;     // 기존 소나무 자리 하나당 추가로 심는 나무 수 (1.5면 전체 약 2.5배)
     const float ExtraMinDist = 2.5f;     // 기존 자리에서 떨어뜨리는 거리(m)
     const float ExtraMaxDist = 9f;
