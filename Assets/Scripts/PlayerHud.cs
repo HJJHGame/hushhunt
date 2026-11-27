@@ -115,7 +115,7 @@ public class PlayerHud : MonoBehaviour
         gunStyle.fontSize = Mathf.RoundToInt(19f * scale);
         string text;
         if (gun.HasGun && gun.Weapon == WeaponKind.Knife) text = "칼";
-        else if (gun.HasGun) text = GunHolder.WeaponName(gun.Weapon) + " " + gun.Ammo + "/" + GunHolder.MagazineRounds;
+        else if (gun.HasGun) text = GunHolder.WeaponName(gun.Weapon) + " " + gun.Ammo + "/" + gun.MaxAmmo;
         else
         {
             text = "총 없음: 종이를 찾으세요";
