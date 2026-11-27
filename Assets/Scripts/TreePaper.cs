@@ -191,7 +191,7 @@ public class TreePaper : MonoBehaviour
             style.fontStyle = FontStyle.Bold;
             style.fontSize = Mathf.RoundToInt(26f * Mathf.Clamp(Screen.height / 1080f, 0.75f, 1.5f));
         }
-        if (Time.unscaledTime - takenAt < 6f) { ShadowText("A4 용지를 찾았다! 총 " + GunHolder.MagazineRounds + "발"); return; }
+        if (Time.unscaledTime - takenAt < 6f) { ShadowText("A4 용지를 찾았다! 총 " + GunHolder.SeekerRounds + "발"); return; }
         if (prompt != null) ShadowText("용지 줍기 [F]");
     }
 
