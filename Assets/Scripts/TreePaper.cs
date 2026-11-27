@@ -2,7 +2,7 @@ using UnityEngine;
 using System.Collections.Generic;
 
 // 나무마다 깨끗한 흰색 A4 용지를 붙인다 (슬렌더 페이지). 한 나무에 한 장, 맵에 PaperCount장. 매 판 무작위 나무/방향.
-// 가까이 가면 용지가 어둠 속에서 환하게 빛나 눈에 띄고, 잡는 팀이 E를 누르면 줍고 총을 받는다 (Armory 규칙).
+// 가까이 가면 용지가 어둠 속에서 환하게 빛나 눈에 띄고, 잡는 팀이 F를 3초 누르면 줍고 총을 받는다 (Armory 규칙).
 // 숨는 팀은 용지를 못 줍는다. SpruceForest가 모델로 교체한 뒤에 실행되어야 보이는 줄기 크기를 잴 수 있다.
 [DefaultExecutionOrder(50)]
 public class TreePaper : MonoBehaviour
@@ -137,7 +137,7 @@ public class TreePaper : MonoBehaviour
             + ", " + tree.position.z.ToString("0.0") + ")");
     }
 
-    // 가까이 가면 용지가 눈에 띄고, 잡는 팀이 2.2m 안에서 E를 누르면 줍는다.
+    // 가까이 가면 용지가 눈에 띄고, 잡는 팀이 2.2m 안에서 F를 3초 누르면 줍는다.
     void Update()
     {
         prompt = null;
