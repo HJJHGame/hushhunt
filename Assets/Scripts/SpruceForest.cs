@@ -13,11 +13,12 @@ public class SpruceForest : MonoBehaviour
 {
     public static bool Active;
 
-    const float DeadChance = 0.8f; // 죽은 나무 비율 80% (잎 있는 나무 20%)
-    const float ExtraPerSlot = 1.8f;     // 기존 소나무 자리 하나당 추가로 심는 나무 수 (1.8이면 전체 약 2.8배, 약 1960그루)
-    const int ExtraCandidates = 10;      // 추가 나무 하나마다 뽑는 후보 위치 수 (기존 나무에서 가장 먼 곳을 고른다)
-    const float ExtraMinDist = 2.5f;     // 기존 자리에서 떨어뜨리는 거리(m)
-    const float ExtraMaxDist = 9f;
+    // 나무 총 수는 TreeLayout.Total(1800). 종류별 개수는 정확히 맞춘다:
+    // 죽은 나무 900, 잎 있는 모델 중 가장 무거운 것 80, 나머지 잎 있는 나무(820)는 남은 모델들이 똑같이 나눈다.
+    const int DeadCount = 900;
+    const int HeavyCount = 80;
+    // 종이를 붙일 나무의 모델 이름(가장 무거운 잎 있는 모델). TreePaper가 읽는다.
+    public static string PaperLabel;
     const float HouseMargin = 1.5f;      // 추가 나무는 집 발자국 + 이 여유(m) 안에는 안 심는다
     const float SpawnClearance = 6f;     // 플레이어 스폰 주변 비움(m)
     const float Lod0Height = 0.35f; // 화면 높이 비율. 키 10m 기준 대략 24m 안
@@ -80,6 +81,7 @@ public class SpruceForest : MonoBehaviour
     {
         public string label;
         public float heightMul = 1f;
+        public int tris; // lod0 삼각형 수 (무게 비교용)
         public GameObject[] lods = new GameObject[3];
     }
 
@@ -151,19 +153,17 @@ public class SpruceForest : MonoBehaviour
         var hinoki = LoadKitVariant(kit, "JHN", "Hinoki", 1f);
         var kuromatsu = LoadKitVariant(kit, "JKR", "Kuromatsu", KuromatsuHeightMul);
         if (kit == null) Debug.LogWarning("[HushHunt] SpruceForest: 키트 모델 없음(Assets/Models/" + KitName + "/lod0.glb) -> 편백/흑송 없이 진행");
-        // 잎 있는 나무(20%)는 가문비(young)/편백/흑송이 똑같이 나눠 가진다.
+        // 잎 있는 모델 후보. lod0 삼각형 수가 많은 순으로 정렬해서 맨 앞이 "가장 무거운 모델"이 된다.
         var leafy = new List<Variant>();
         if (young != null) leafy.Add(young);
         if (hinoki != null) leafy.Add(hinoki);
         if (kuromatsu != null) leafy.Add(kuromatsu);
-        var counts = new Dictionary<string, int>();
-        Variant Pick(System.Random r)
-        {
-            if (dead == null) return leafy[r.Next(leafy.Count)];
-            if (leafy.Count == 0 || r.NextDouble() < DeadChance) return dead;
-            return leafy[r.Next(leafy.Count)];
-        }
-        Debug.Log("[HushHunt] SpruceForest: 모델 로드 young=" + (young != null) + " dead=" + (dead != null) + " hinoki=" + (hinoki != null) + " kuromatsu=" + (kuromatsu != null));
+        var triLog = new System.Text.StringBuilder();
+        foreach (var lv in leafy) { lv.tris = CountTris(lv.lods[0]); triLog.Append(lv.label).Append('=').Append(lv.tris).Append(' '); }
+        leafy.Sort((x, y) => y.tris.CompareTo(x.tris));
+        PaperLabel = leafy.Count > 0 ? leafy[0].label : (dead != null ? dead.label : null);
+        Debug.Log("[HushHunt] SpruceForest: 모델 로드 young=" + (young != null) + " dead=" + (dead != null) + " hinoki=" + (hinoki != null) + " kuromatsu=" + (kuromatsu != null)
+            + " / lod0 삼각형 " + triLog + "-> 가장 무거운 모델 " + PaperLabel + " (종이는 여기에)");
 
         var pines = new List<Transform>();
         foreach (var cand in FindObjectsByType<Transform>(FindObjectsSortMode.None))
@@ -181,87 +181,83 @@ public class SpruceForest : MonoBehaviour
         });
 
         var rand = new System.Random();
-        int deadIndex = rand.Next(pines.Count); // 용지용 dead-spruce는 최소 한 그루 보장
-        int placed = 0, deadCount = 0;
+        // 슬롯 밖 나머지 나무 위치: RandomizeLayout이 이미 정해 뒀으면 그걸 쓰고, 없으면 여기서 직접 만든다.
+        var extraPos = TreeLayout.Extra;
+        TreeLayout.Extra = null;
+        if (extraPos == null)
+        {
+            var houses = FindObjectsByType<HouseFootprint>(FindObjectsSortMode.None);
+            var fpc = FindFirstObjectByType<FirstPersonController>();
+            var spawnPos = fpc != null ? fpc.transform.position : Vector3.zero;
+            bool Blocked(float x, float z)
+            {
+                if (new Vector2(x - spawnPos.x, z - spawnPos.z).magnitude < SpawnClearance || Zones.Contains(x, z, 1f)) return true;
+                foreach (var h in houses)
+                {
+                    var hp = h.transform.position;
+                    if (Mathf.Abs(x - hp.x) < h.size.x * 0.5f + HouseMargin && Mathf.Abs(z - hp.z) < h.size.y * 0.5f + HouseMargin) return true;
+                }
+                return false;
+            }
+            var seeds = new List<Vector2>();
+            foreach (var pt in pines) seeds.Add(new Vector2(pt.position.x, pt.position.z));
+            extraPos = TreeLayout.Generate(Mathf.Max(0, TreeLayout.Total - pines.Count), Blocked, seeds, rand);
+        }
+
+        // 종류별 정확한 개수만큼 덱을 만들어 섞은 뒤 나무마다 한 장씩 뽑는다.
+        int total = pines.Count + extraPos.Count;
+        var deck = new List<Variant>(total);
+        int deadQ = dead == null ? 0 : (leafy.Count == 0 ? total : Mathf.Min(DeadCount, total));
+        for (int i = 0; i < deadQ; i++) deck.Add(dead);
+        int leafyQ = total - deadQ;
+        if (leafy.Count > 0)
+        {
+            int heavyQ = leafy.Count == 1 ? leafyQ : Mathf.Min(HeavyCount, leafyQ);
+            for (int i = 0; i < heavyQ; i++) deck.Add(leafy[0]);
+            int rest = leafyQ - heavyQ, others = leafy.Count - 1;
+            for (int k = 1; k <= others; k++)
+            {
+                int q = rest / others + (k <= rest % others ? 1 : 0);
+                for (int i = 0; i < q; i++) deck.Add(leafy[k]);
+            }
+        }
+        for (int i = deck.Count - 1; i > 0; i--)
+        {
+            int j = rand.Next(i + 1);
+            var tmp = deck[i]; deck[i] = deck[j]; deck[j] = tmp;
+        }
+
+        var counts = new Dictionary<string, int>();
+        int placed = 0, di = 0;
         for (int i = 0; i < pines.Count; i++)
         {
-            Variant v = (dead != null && i == deadIndex) ? dead : Pick(rand);
+            var v = deck[di++];
             if (BuildTree(pines[i], v, rand))
             {
                 placed++;
-                if (v == dead) deadCount++;
                 counts[v.label] = (counts.TryGetValue(v.label, out var n0) ? n0 : 0) + 1;
             }
         }
         int slotCount = placed;
         int extra = 0;
-        if (placed > 0 && ExtraPerSlot > 0f)
+        var extraRoot = new GameObject("Spruce Extras").transform;
+        foreach (var pos in extraPos)
         {
-            // 배치 순서: 집 -> 나무 -> 바위/소품. 집 발자국, 스폰, 이미 놓인 소품 자리를 피해 빈 곳에만 심는다.
-            // (SimplifiedTestMode로 집/소품이 숨겨져 있어도 위치는 그대로 있으므로 같은 기준으로 계산한다.)
-            var houses = FindObjectsByType<HouseFootprint>(FindObjectsSortMode.None);
-            var fpc = FindFirstObjectByType<FirstPersonController>();
-            var spawnPos = fpc != null ? fpc.transform.position : Vector3.zero;
-            var props = new List<Vector3>(); // x, z, 반경
-            foreach (var pt in FindObjectsByType<Transform>(FindObjectsSortMode.None))
+            var v = deck[di++];
+            var go = new GameObject("Spruce Extra");
+            go.transform.SetParent(extraRoot, false);
+            go.transform.position = new Vector3(pos.x, 0f, pos.y);
+            if (BuildTree(go.transform, v, rand))
             {
-                if (pt.parent != null) continue;
-                string pn = pt.name;
-                float pr = pn == WorldConfig.Names.Rock ? 2f
-                    : pn == WorldConfig.Names.FallenLog ? 3.5f
-                    : pn == WorldConfig.Names.Stump ? 1.5f
-                    : pn == WorldConfig.Names.OldFence ? 4f
-                    : 0f;
-                if (pr > 0f) props.Add(new Vector3(pt.position.x, pt.position.z, pr));
+                // 줄기 충돌체 (기존 소나무 줄기와 비슷하게)
+                var cap = go.AddComponent<CapsuleCollider>();
+                cap.radius = 0.25f;
+                cap.height = WorldConfig.PineHeight * 0.6f;
+                cap.center = new Vector3(0f, cap.height * 0.5f, 0f);
+                extra++;
+                counts[v.label] = (counts.TryGetValue(v.label, out var n1) ? n1 : 0) + 1;
             }
-            var extraRoot = new GameObject("Spruce Extras").transform;
-            float lim = WorldConfig.Half - 3f;
-            // 추가 나무: 기존 나무 주변 뭉치기 대신, 후보 여러 곳 중 기존 나무에서 가장 먼 빈 곳에 심는다 (여백을 메운다).
-            var grid = new PlacementGrid();
-            foreach (var pt in pines) grid.Add(new Vector2(pt.position.x, pt.position.z));
-            int totalExtra = Mathf.RoundToInt(pines.Count * ExtraPerSlot);
-            for (int k = 0; k < totalExtra; k++)
-            {
-                bool found = false;
-                Vector3 bestPos = Vector3.zero;
-                float bestD = -1f;
-                for (int c = 0; c < ExtraCandidates; c++)
-                {
-                    var pos = new Vector3((float)(rand.NextDouble() * 2.0 - 1.0) * lim, 0f, (float)(rand.NextDouble() * 2.0 - 1.0) * lim);
-                    bool blocked = new Vector2(pos.x - spawnPos.x, pos.z - spawnPos.z).magnitude < SpawnClearance || Zones.Contains(pos.x, pos.z, 1f);
-                    if (!blocked)
-                        foreach (var h in houses)
-                        {
-                            var hp = h.transform.position;
-                            if (Mathf.Abs(pos.x - hp.x) < h.size.x * 0.5f + HouseMargin
-                                && Mathf.Abs(pos.z - hp.z) < h.size.y * 0.5f + HouseMargin) { blocked = true; break; }
-                        }
-                    if (!blocked)
-                        foreach (var pp in props)
-                            if (Vector2.Distance(new Vector2(pos.x, pos.z), new Vector2(pp.x, pp.y)) < pp.z + 1.5f) { blocked = true; break; }
-                    if (blocked) continue;
-                    float d = grid.Nearest(new Vector2(pos.x, pos.z), 20f);
-                    if (d > bestD) { bestD = d; bestPos = pos; found = true; }
-                }
-                if (!found) continue;
-                var go = new GameObject("Spruce Extra");
-                go.transform.SetParent(extraRoot, false);
-                go.transform.position = bestPos;
-                Variant ev = Pick(rand);
-                if (BuildTree(go.transform, ev, rand))
-                {
-                    grid.Add(new Vector2(bestPos.x, bestPos.z));
-                    // 줄기 충돌체 (기존 소나무 줄기와 비슷하게)
-                    var cap = go.AddComponent<CapsuleCollider>();
-                    cap.radius = 0.25f;
-                    cap.height = WorldConfig.PineHeight * 0.6f;
-                    cap.center = new Vector3(0f, cap.height * 0.5f, 0f);
-                    extra++;
-                    if (ev == dead) deadCount++;
-                    counts[ev.label] = (counts.TryGetValue(ev.label, out var n1) ? n1 : 0) + 1;
-                }
-                else Destroy(go);
-            }
+            else Destroy(go);
         }
         placed += extra;
         Active = placed > 0;
@@ -269,10 +265,23 @@ public class SpruceForest : MonoBehaviour
         {
             var sb = new System.Text.StringBuilder();
             foreach (var kv in counts) sb.Append(kv.Key).Append(' ').Append(kv.Value).Append(", ");
-            Debug.Log("[HushHunt] SpruceForest: 나무 총 " + placed + "그루 배치 (" + sb + "잎 있는 나무 " + (placed - deadCount) + ") / 기존 슬롯 " + slotCount + " + 추가 " + extra);
+            Debug.Log("[HushHunt] SpruceForest: 나무 총 " + placed + "그루 배치 (" + sb + "목표 " + TreeLayout.Total + ", 정확히 맞음=" + (placed == TreeLayout.Total) + ") / 기존 슬롯 " + slotCount + " + 추가 " + extra);
         }
         else
             Debug.LogWarning("[HushHunt] SpruceForest: 모델은 읽었지만 배치 0그루 (렌더러 없음/크기 0) -> 옛 숲 유지");
+    }
+
+    // lod0 모델의 삼각형 수 (무게 비교용).
+    static int CountTris(GameObject go)
+    {
+        int n = 0;
+        foreach (var mf in go.GetComponentsInChildren<MeshFilter>(true))
+        {
+            var m = mf.sharedMesh;
+            if (m == null) continue;
+            for (int i = 0; i < m.subMeshCount; i++) n += (int)(m.GetIndexCount(i) / 3);
+        }
+        return n;
     }
 
     bool BuildTree(Transform tree, Variant v, System.Random rand)
