@@ -10,7 +10,7 @@ public class TreePaper : MonoBehaviour
     // 종이 소리는 잠시 꺼둠. 다시 켜려면 false를 true로 바꾼다.
     static bool PAPER_SOUND = false;
 
-    const int PaperCount = 8;          // 맵에 놓는 종이 수
+    const int PaperCount = 10;         // 맵에 놓는 종이 수
     const float MinPaperSpacing = 30f; // 종이끼리 최소 거리(m). 자리가 모자라면 줄인다
 
     class Paper
@@ -40,14 +40,15 @@ public class TreePaper : MonoBehaviour
         var deads = new List<Transform>();
         foreach (var t in FindObjectsByType<Transform>(FindObjectsSortMode.None))
         {
-            if (t.parent != null || t.name != WorldConfig.Names.PineTree) continue;
+            // 기존 소나무 자리 나무 + SpruceForest가 추가로 심은 나무("Spruce Extra") 둘 다 후보다.
+            if (!((t.parent == null && t.name == WorldConfig.Names.PineTree) || t.name == "Spruce Extra")) continue;
             trees.Add(t);
-            if (t.Find("TreeModel Spruce Dead") != null) deads.Add(t); // dead-spruce 모델이 달린 나무
+            if (t.Find("TreeModel Spruce " + (SpruceForest.PaperLabel ?? "Dead")) != null) deads.Add(t); // 가장 무거운 잎 있는 모델이 달린 나무(80그루 중 10장)
         }
         if (trees.Count == 0) return;
 
         var rand = new System.Random();
-        // 종이는 dead-spruce에 붙인다. 모자라면 다른 소나무로 채운다. 종이끼리는 서로 멀리 떨어뜨린다.
+        // 종이는 가장 무거운 잎 있는 모델(SpruceForest.PaperLabel)에 붙인다. 모자라면 다른 소나무로 채운다. 종이끼리는 서로 멀리 떨어뜨린다.
         var order = new List<Transform>(Shuffled(deads, rand));
         foreach (var t in Shuffled(trees, rand))
             if (!deads.Contains(t)) order.Add(t);
@@ -241,6 +242,7 @@ public class TreePaper : MonoBehaviour
             if (b.max.y < worldY - 0.3f || b.min.y > worldY + 0.3f) continue;
             var m = r.sharedMaterial;
             string n = m != null ? m.name.ToLowerInvariant() : "";
+            if (r.name.EndsWith("_Branches")) continue; // 키트 나무의 가지 메시는 줄기가 아니다
             if (n.Contains("bark") || n.Contains("wood") || n.Contains("trunk")) meshes.Add(r);
         }
         if (meshes.Count == 0)
