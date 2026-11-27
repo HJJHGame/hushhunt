@@ -1,6 +1,7 @@
 using UnityEngine;
 
-// 혼자 테스트용 봇 하나. 플레이어와 같은 몸 모델을 쓰고, 계속 돌아다니며, 몸이 빛나서 멀리서도 잘 보인다.
+// 혼자 테스트용 봇 하나. 걸음 소리는 기본 걸음 범위(12m) 안에서만 3D로 들린다.
+// 플레이어와 같은 몸 모델을 쓰고, 계속 돌아다니며, 몸이 빛나서 멀리서도 잘 보인다.
 // G(팀 전환)를 누르면 플레이어와 팀/위치를 서로 바꾼다. 쏘지는 않는다.
 // Health/GunHolder를 그대로 써서 피해, 숨는 시간 규칙, 사망, 관전 규칙이 플레이어와 같다.
 [DefaultExecutionOrder(50)]
@@ -103,7 +104,7 @@ public class Bot : MonoBehaviour
     {
         // 플레이어와 같은 몸(PlayerBody: 몸통/머리/후드/배낭/팔다리, 걸을 때 다리 흔들림). 봇은 전신이 보인다.
         var foot = GetComponent<Footsteps>();
-        if (foot == null) { foot = gameObject.AddComponent<Footsteps>(); foot.volume = 0f; } // 걸음 박자만 쓰고 소리는 끈다
+        if (foot == null) { foot = gameObject.AddComponent<Footsteps>(); foot.volume = 1f; foot.RemoteNoiseRadius = 12f; } // 다른 사람이 듣는 발소리: 기본 걸음 12m 안에서만 들린다
         var body = GetComponent<PlayerBody>();
         if (body == null) body = gameObject.AddComponent<PlayerBody>();
         body.SetFirstPerson(false);
