@@ -68,7 +68,11 @@ public static class GameSystems
 
         if (fpc.GetComponent<PlayerBody>() == null) fpc.gameObject.AddComponent<PlayerBody>();
         if (fpc.GetComponent<Flashlight>() == null) fpc.gameObject.AddComponent<Flashlight>();
-        if (fpc.GetComponent<Health>() == null) fpc.gameObject.AddComponent<Health>(); // 체력 100 (숨는 팀)
+        if (fpc.GetComponent<Health>() == null) fpc.gameObject.AddComponent<Health>(); // 체력 100
+        // 혼자 테스트: 봇이 있으면 플레이어는 잡는 팀으로 시작하고 봇이 숨는 팀이 된다 (G로 서로 바뀜).
+        bool seekerStart = Bot.Enabled;
+        fpc.GetComponent<Health>().team = seekerStart ? Team.Seeker : Team.Hider;
+        GameManager.LocalRole = seekerStart ? GameManager.Role.Seeker : GameManager.Role.Hider;
         if (fpc.GetComponent<GunHolder>() == null) fpc.gameObject.AddComponent<GunHolder>(); // 총/탄
         if (fpc.GetComponent<HeldWeapon>() == null) fpc.gameObject.AddComponent<HeldWeapon>(); // 들고 있는 무기 표시
 
