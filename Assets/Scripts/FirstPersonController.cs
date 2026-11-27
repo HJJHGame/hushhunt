@@ -74,6 +74,8 @@ public class FirstPersonController : MonoBehaviour
             LockCursor(true);
     }
 
+    GameManager gm;
+
     void Update()
     {
         // 메뉴가 열려 있으면 커서 잠금/시점/이동은 MainMenu가 관리한다.
@@ -81,7 +83,10 @@ public class FirstPersonController : MonoBehaviour
 
         mouseSensitivity = GameSettings.Sensitivity;
         Look();
-        Move();
+        // 숨는 시간 동안 술래는 제자리에 묶인다 (시점만 돌릴 수 있다).
+        if (gm == null) gm = FindFirstObjectByType<GameManager>();
+        bool frozen = gm != null && gm.CurrentPhase == GameManager.Phase.Hiding && GameManager.LocalRole == GameManager.Role.Seeker;
+        if (!frozen) Move();
 
         // Esc는 MainMenu가 처리한다. 종료 화면 등에서 커서가 풀려 있으면 클릭으로 다시 잠근다.
         if (Input.GetMouseButtonDown(0) && Cursor.lockState != CursorLockMode.Locked)
