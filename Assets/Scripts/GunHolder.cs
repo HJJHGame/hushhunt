@@ -6,6 +6,51 @@ using UnityEngine;
 // 로컬 플레이어는 좌클릭으로 쏜다(히트스캔). 수색 시간에만, 탄이 있을 때만.
 public enum WeaponKind { None, Shotgun, Rifle, Knife }
 
+// 총소리: 맵 전체에서 들리고 방향이 있다. 거리에 따라 볼륨만 줄어든다(사거리로 끊기지 않음). 칼은 소리 없음.
+public static class GunSound
+{
+    public const float MapWide = 450f; // 이 거리 밖에서도 작게 들린다
+    static AudioClip rifle, shotgun;
+    static AnimationCurve rolloff;
+
+    public static void Play(Vector3 pos, WeaponKind kind)
+    {
+        if (kind != WeaponKind.Rifle && kind != WeaponKind.Shotgun) return;
+        if (rifle == null) { rifle = Make(0.35f, 14f, 1f); shotgun = Make(0.55f, 9f, 1.4f); }
+        if (rolloff == null) rolloff = new AnimationCurve(new Keyframe(0f, 1f), new Keyframe(MapWide, 0.08f));
+        var go = new GameObject("Gunshot");
+        go.transform.position = pos;
+        var a = go.AddComponent<AudioSource>();
+        a.clip = kind == WeaponKind.Rifle ? rifle : shotgun;
+        a.spatialBlend = 1f; // 방향 있음
+        a.rolloffMode = AudioRolloffMode.Custom;
+        a.SetCustomCurve(AudioSourceCurveType.CustomRolloff, rolloff);
+        a.minDistance = 2f;
+        a.maxDistance = MapWide;
+        a.volume = 1f;
+        a.Play();
+        Object.Destroy(go, a.clip.length + 0.2f);
+    }
+
+    static AudioClip Make(float len, float decay, float gain)
+    {
+        int rate = 22050, n = (int)(rate * len);
+        var d = new float[n];
+        var rng = new System.Random(3);
+        float lp = 0f;
+        for (int i = 0; i < n; i++)
+        {
+            float t = (float)i / rate;
+            float noise = (float)(rng.NextDouble() * 2.0 - 1.0);
+            lp += (noise - lp) * 0.5f;
+            d[i] = Mathf.Clamp((lp + Mathf.Sin(2f * Mathf.PI * 90f * t) * 0.6f) * Mathf.Exp(-t * decay) * gain, -1f, 1f);
+        }
+        var c = AudioClip.Create("Gunshot", n, 1, rate, false);
+        c.SetData(d, 0);
+        return c;
+    }
+}
+
 [RequireComponent(typeof(Health))]
 public class GunHolder : MonoBehaviour
 {
@@ -73,6 +118,7 @@ public class GunHolder : MonoBehaviour
     // 화면 가운데로 광선을 쏴 처음 맞은 상대 팀에게 한 발 피해를 준다.
     void Fire()
     {
+        GunSound.Play(transform.position + Vector3.up, Weapon);
         LastShotAt = Time.unscaledTime;
         flashUntil = Time.unscaledTime + 0.06f;
         var cam = Camera.main;
