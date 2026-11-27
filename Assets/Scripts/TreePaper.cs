@@ -29,6 +29,9 @@ public class TreePaper : MonoBehaviour
     Paper prompt;     // 지금 줍기 안내를 띄우는 종이
     GUIStyle style;
     float takenAt = -100f;
+    public const float HoldSeconds = 3f; // F를 이만큼 꾹 눌러야 줍는다
+    float holdStart = -1f;
+    Paper holdPaper;
     AudioClip rustle;
 
     void Start()
@@ -167,10 +170,15 @@ public class TreePaper : MonoBehaviour
             if (dist < nearestDist) { nearest = p; nearestDist = dist; }
         }
 
-        if (nearest == null || armory == null || !armory.CanTakePaper(me)) return;
+        if (nearest == null || armory == null || !armory.CanTakePaper(me)) { holdStart = -1f; return; }
         prompt = nearest;
-        if (Input.GetKeyDown(KeyCode.F))
+        // 같은 종이에서 F를 계속 누르고 있어야 시간이 쌓인다. 떼거나 다른 종이로 옮기면 처음부터.
+        if (!Input.GetKey(KeyCode.F) || holdPaper != nearest) holdStart = -1f;
+        holdPaper = nearest;
+        if (Input.GetKeyDown(KeyCode.F)) holdStart = Time.unscaledTime;
+        if (holdStart >= 0f && Time.unscaledTime - holdStart >= HoldSeconds)
         {
+            holdStart = -1f;
             takenAt = Time.unscaledTime;
             Destroy(nearest.go);
             papers.Remove(nearest);
@@ -192,7 +200,15 @@ public class TreePaper : MonoBehaviour
             style.fontSize = Mathf.RoundToInt(26f * Mathf.Clamp(Screen.height / 1080f, 0.75f, 1.5f));
         }
         if (Time.unscaledTime - takenAt < 6f) { ShadowText("A4 용지를 찾았다! 총 " + GunHolder.SeekerRounds + "발"); return; }
-        if (prompt != null) ShadowText("용지 줍기 [F]");
+        if (prompt != null)
+        {
+            if (holdStart >= 0f)
+            {
+                float p01 = Mathf.Clamp01((Time.unscaledTime - holdStart) / HoldSeconds);
+                ShadowText("줍는 중... " + Mathf.RoundToInt(p01 * 100f) + "%  (F를 계속 누르세요)");
+            }
+            else ShadowText("용지 줍기: F를 3초 꾹 누르세요");
+        }
     }
 
     void ShadowText(string msg)
