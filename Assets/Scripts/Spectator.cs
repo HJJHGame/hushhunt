@@ -42,10 +42,13 @@ public class Spectator : MonoBehaviour
             originalParent = cam.parent; originalLocalPos = cam.localPosition; originalLocalRot = cam.localRotation;
         }
         // 생존자 눈 높이에 카메라를 붙인다 (생존자 시점의 시선 방향은 그 사람의 몸 방향을 따른다).
-        if (cam.parent != target.transform)
+        // 카메라 피벗(눈)에 붙이면 좌우뿐 아니라 위아래 시선도 그 사람과 똑같이 따라간다.
+        var tf = target.GetComponent<FirstPersonController>();
+        Transform anchor = (tf != null && tf.cameraPivot != null) ? tf.cameraPivot : target.transform;
+        if (cam.parent != anchor)
         {
-            cam.SetParent(target.transform, false);
-            cam.localPosition = new Vector3(0f, 0.72f, 0.12f);
+            cam.SetParent(anchor, false);
+            cam.localPosition = anchor == target.transform ? new Vector3(0f, 0.72f, 0.12f) : Vector3.zero;
             cam.localRotation = Quaternion.identity;
         }
         if (!MainMenu.IsMenuOpen && Input.GetMouseButtonDown(0))
