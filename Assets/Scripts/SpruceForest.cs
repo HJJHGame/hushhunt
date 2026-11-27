@@ -14,7 +14,8 @@ public class SpruceForest : MonoBehaviour
     public static bool Active;
 
     const float DeadChance = 0.8f; // 죽은 나무 비율 80% (잎 있는 나무 20%)
-    const float ExtraPerSlot = 1.5f;     // 기존 소나무 자리 하나당 추가로 심는 나무 수 (1.5면 전체 약 2.5배)
+    const float ExtraPerSlot = 1.8f;     // 기존 소나무 자리 하나당 추가로 심는 나무 수 (1.8이면 전체 약 2.8배, 약 1960그루)
+    const int ExtraCandidates = 10;      // 추가 나무 하나마다 뽑는 후보 위치 수 (기존 나무에서 가장 먼 곳을 고른다)
     const float ExtraMinDist = 2.5f;     // 기존 자리에서 떨어뜨리는 거리(m)
     const float ExtraMaxDist = 9f;
     const float HouseMargin = 1.5f;      // 추가 나무는 집 발자국 + 이 여유(m) 안에는 안 심는다
@@ -155,15 +156,18 @@ public class SpruceForest : MonoBehaviour
             }
             var extraRoot = new GameObject("Spruce Extras").transform;
             float lim = WorldConfig.Half - 3f;
-            foreach (var slot in pines)
+            // 추가 나무: 기존 나무 주변 뭉치기 대신, 후보 여러 곳 중 기존 나무에서 가장 먼 빈 곳에 심는다 (여백을 메운다).
+            var grid = new PlacementGrid();
+            foreach (var pt in pines) grid.Add(new Vector2(pt.position.x, pt.position.z));
+            int totalExtra = Mathf.RoundToInt(pines.Count * ExtraPerSlot);
+            for (int k = 0; k < totalExtra; k++)
             {
-                int n = (int)ExtraPerSlot + (rand.NextDouble() < ExtraPerSlot - (int)ExtraPerSlot ? 1 : 0);
-                for (int k = 0; k < n; k++)
+                bool found = false;
+                Vector3 bestPos = Vector3.zero;
+                float bestD = -1f;
+                for (int c = 0; c < ExtraCandidates; c++)
                 {
-                    float ang = (float)rand.NextDouble() * Mathf.PI * 2f;
-                    float dist = ExtraMinDist + (float)rand.NextDouble() * (ExtraMaxDist - ExtraMinDist);
-                    var pos = slot.position + new Vector3(Mathf.Cos(ang) * dist, 0f, Mathf.Sin(ang) * dist);
-                    if (Mathf.Abs(pos.x) > lim || Mathf.Abs(pos.z) > lim) continue;
+                    var pos = new Vector3((float)(rand.NextDouble() * 2.0 - 1.0) * lim, 0f, (float)(rand.NextDouble() * 2.0 - 1.0) * lim);
                     bool blocked = new Vector2(pos.x - spawnPos.x, pos.z - spawnPos.z).magnitude < SpawnClearance || Zones.Contains(pos.x, pos.z, 1f);
                     if (!blocked)
                         foreach (var h in houses)
@@ -176,22 +180,26 @@ public class SpruceForest : MonoBehaviour
                         foreach (var pp in props)
                             if (Vector2.Distance(new Vector2(pos.x, pos.z), new Vector2(pp.x, pp.y)) < pp.z + 1.5f) { blocked = true; break; }
                     if (blocked) continue;
-                    var go = new GameObject("Spruce Extra");
-                    go.transform.SetParent(extraRoot, false);
-                    go.transform.position = pos;
-                    Variant ev = (dead == null) ? young : (young == null ? dead : (rand.NextDouble() < DeadChance ? dead : young));
-                    if (BuildTree(go.transform, ev, rand))
-                    {
-                        // 줄기 충돌체 (기존 소나무 줄기와 비슷하게)
-                        var cap = go.AddComponent<CapsuleCollider>();
-                        cap.radius = 0.25f;
-                        cap.height = WorldConfig.PineHeight * 0.6f;
-                        cap.center = new Vector3(0f, cap.height * 0.5f, 0f);
-                        extra++;
-                        if (ev == dead) deadCount++;
-                    }
-                    else Destroy(go);
+                    float d = grid.Nearest(new Vector2(pos.x, pos.z), 20f);
+                    if (d > bestD) { bestD = d; bestPos = pos; found = true; }
                 }
+                if (!found) continue;
+                var go = new GameObject("Spruce Extra");
+                go.transform.SetParent(extraRoot, false);
+                go.transform.position = bestPos;
+                Variant ev = (dead == null) ? young : (young == null ? dead : (rand.NextDouble() < DeadChance ? dead : young));
+                if (BuildTree(go.transform, ev, rand))
+                {
+                    grid.Add(new Vector2(bestPos.x, bestPos.z));
+                    // 줄기 충돌체 (기존 소나무 줄기와 비슷하게)
+                    var cap = go.AddComponent<CapsuleCollider>();
+                    cap.radius = 0.25f;
+                    cap.height = WorldConfig.PineHeight * 0.6f;
+                    cap.center = new Vector3(0f, cap.height * 0.5f, 0f);
+                    extra++;
+                    if (ev == dead) deadCount++;
+                }
+                else Destroy(go);
             }
         }
         placed += extra;
