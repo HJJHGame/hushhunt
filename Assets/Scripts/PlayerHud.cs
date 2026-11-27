@@ -36,6 +36,14 @@ public class PlayerHud : MonoBehaviour
         flashUntil = Time.unscaledTime + FlashSeconds;
     }
 
+    GameManager gmRef;
+    // 숨는 시간 중의 술래: 위치를 알려 주는 표시를 모두 가린다.
+    bool SeekerHiding()
+    {
+        if (gmRef == null) gmRef = FindFirstObjectByType<GameManager>();
+        return gmRef != null && gmRef.CurrentPhase == GameManager.Phase.Hiding && GameManager.LocalRole == GameManager.Role.Seeker;
+    }
+
     void Update()
     {
         // X 키처럼 일반 문자 키를 쓴다: F1은 원격 데스크톱/브라우저/유니티 도움말이 가로챌 수 있다.
@@ -86,7 +94,7 @@ public class PlayerHud : MonoBehaviour
         }
 
         // X: 현재 좌표와 가장자리까지 거리. 맵 크기(WorldConfig.Half)를 직접 확인할 수 있다.
-        if (showCoords && fpc != null)
+        if (showCoords && fpc != null && !SeekerHiding())
         {
             if (coordStyle == null)
                 coordStyle = new GUIStyle(GUI.skin.label) { alignment = TextAnchor.UpperLeft };
