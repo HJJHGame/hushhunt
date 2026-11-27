@@ -61,6 +61,7 @@ public static class GameSystems
         AddOnce<AmbientSound>(root);    // 바람/먼 소리
         AddOnce<Inventory>(root);       // 인벤토리 5칸 (E)
         AddOnce<FlashlightBeacons>(root); // 멀리서 보이는 다른 사람 손전등 점
+        AddOnce<Spectator>(root);       // 사망 후 같은 팀 생존자 시점 관전
         AddOnce<Heartbeat>(root);       // 가까운 술래가 있으면 심장박동 (숨는 팀)
         AddOnce<PlayerHud>(root);       // 스태미나/손전등 표시
         AddOnce<MainMenu>(root);        // 타이틀/일시정지/설정 메뉴
