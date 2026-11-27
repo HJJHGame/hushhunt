@@ -94,7 +94,7 @@ public static class MapImage
         }
     }
 
-    // 4) 경계 프레임: 지도 가장자리가 곧 맵 경계(±100m 벽)
+    // 4) 경계 프레임: 지도 가장자리가 곧 맵 경계(±WorldConfig.Half 벽)
     static void PaintFrame(Color[] px, int size)
     {
         var frame = new Color(0.02f, 0.025f, 0.025f);
