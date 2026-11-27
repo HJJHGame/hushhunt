@@ -86,8 +86,10 @@ public class Armory : MonoBehaviour
                     hp.ReviveForTest(); // 죽어 있었어도 다시 움직일 수 있게
                     h.ResetForTeamSwitch();
                     // 팀에 맞는 시작 위치로: 잡는 팀은 술래 구역, 숨는 팀은 구역 밖 아무 곳.
-                    Zones.Teleport(h.GetComponent<FirstPersonController>(), hp.team == Team.Seeker ? Zones.SeekerSpawnPoint(0) : Zones.HiderSpawnPoint());
-                    msg = "테스트: 내 팀 = " + (hp.team == Team.Seeker ? "잡는 팀 (종이를 찾으세요)" : "숨는 팀 (무기 새로 받음)");
+                    // 봇이 있으면 봇과 팀/위치를 서로 바꾼다. 없으면 팀 시작 위치로.
+                    bool swapped = Bot.SwapWithPlayer(h.GetComponent<FirstPersonController>(), hp.team);
+                    if (!swapped) Zones.Teleport(h.GetComponent<FirstPersonController>(), hp.team == Team.Seeker ? Zones.SeekerSpawnPoint(0) : Zones.HiderSpawnPoint());
+                    msg = "테스트: 내 팀 = " + (hp.team == Team.Seeker ? "잡는 팀 (종이를 찾으세요)" : "숨는 팀 (무기 새로 받음)") + (swapped ? " / 봇과 자리 교환" : "");
                     msgUntil = Time.unscaledTime + 3f;
                     Debug.Log("[HushHunt] 테스트: 내 팀을 " + (hp.team == Team.Seeker ? "잡는 팀" : "숨는 팀") + "으로 바꿈");
                 }
