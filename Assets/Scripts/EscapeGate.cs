@@ -84,7 +84,7 @@ public class EscapeGate : MonoBehaviour
         int alive = 0, outCount = 0;
         foreach (var h in GunHolder.All)
         {
-            if (h == null || !h.IsAlive || h.IsSeeker) continue;
+            if (h == null || !h.IsAlive || h.IsSeeker || h.GetComponent<Bot>() != null) continue; // 봇은 탈출하지 않으니 세지 않는다
             alive++;
             if (escaped.Contains(h)) outCount++;
         }
