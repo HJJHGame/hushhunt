@@ -29,9 +29,11 @@ public class NightAtmosphere : MonoBehaviour
 
         // 안개: 푸른 먹빛. 멀리 나무 실루엣이 겹쳐 보이게.
         RenderSettings.fog = true;
-        RenderSettings.fogMode = FogMode.Exponential;
-        RenderSettings.fogColor = FogBase;
-        RenderSettings.fogDensity = BaseFogDensity;
+        // 안개 효과는 없다. 시야 제한은 검은 거리 컷(Flashlight)이 한다. 시작값만 맞춘다.
+        RenderSettings.fogMode = FogMode.Linear;
+        RenderSettings.fogColor = Color.black;
+        RenderSettings.fogStartDistance = 3f;
+        RenderSettings.fogEndDistance = 5f;
 
         // 달빛: 차가운 색 + 그림자. 어두워진 환경광과 대비되도록 강도를 올린다.
         foreach (var l in FindObjectsByType<Light>(FindObjectsSortMode.None))
@@ -72,7 +74,6 @@ public class NightAtmosphere : MonoBehaviour
     // 안개 농도가 숨 쉬듯 천천히 변한다 (시야가 미세하게 좁아졌다 넓어졌다).
     void Update()
     {
-        float t = Time.time;
-        RenderSettings.fogDensity = BaseFogDensity * (1f + 0.10f * Mathf.Sin(t * 0.23f) + 0.04f * Mathf.Sin(t * 0.71f));
+        // 안개 농도 변화 없음 (확정 규칙: 안개 없음)
     }
 }
