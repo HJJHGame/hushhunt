@@ -13,6 +13,7 @@ public class FlashlightBeacons : MonoBehaviour
     readonly List<Transform> pool = new List<Transform>();
     Material mat;
     Transform camT;
+    GameManager gm;
 
     void Start()
     {
@@ -46,6 +47,10 @@ public class FlashlightBeacons : MonoBehaviour
         foreach (var f in Flashlight.All)
         {
             if (f == null || !f.IsOn || f.GetComponent<FirstPersonController>() != null) continue;
+            // 숨는 시간 동안 잡는 팀은 맵 밖에 있는 것으로 친다: 손전등 빛도 보이면 안 된다.
+            if (gm == null) gm = FindFirstObjectByType<GameManager>();
+            var fhp = f.GetComponent<Health>();
+            if (gm != null && gm.CurrentPhase == GameManager.Phase.Hiding && fhp != null && fhp.team == Team.Seeker) continue;
             Vector3 target = f.LampPosition;
             Vector3 to = target - camT.position;
             float d = to.magnitude;
