@@ -82,12 +82,18 @@ public class Health : MonoBehaviour
         IsDead = true;
         var move = GetComponent<FirstPersonController>();
         if (move != null) move.enabled = false;
-        if (Died != null) Died(this);
+        // 구독자(HUD/관전 등)에서 예외가 나도 아래 전멸 판정이 건너뛰어지지 않게 감싼다.
+        try { if (Died != null) Died(this); } catch (System.Exception e) { Debug.LogException(e); }
 
-        // 같은 팀이 모두 죽었는지 확인한다.
+        // 같은 팀이 모두 죽었는지 확인한다 (사라졌거나 꺼진 대상은 세지 않는다).
         foreach (var h in all)
-            if (h != null && h.team == team && !h.IsDead) return;
-        if (TeamWiped != null) TeamWiped(team);
-        if (team == Team.Hider && gm != null) gm.EndRound(GameManager.Outcome.SeekersWin);
+            if (h != null && h.isActiveAndEnabled && h.team == team && !h.IsDead) return;
+        Debug.Log("[HushHunt] " + (team == Team.Hider ? "숨는" : "잡는") + " 팀 전멸");
+        try { if (TeamWiped != null) TeamWiped(team); } catch (System.Exception e) { Debug.LogException(e); }
+        if (team == Team.Hider)
+        {
+            if (gm == null) gm = FindFirstObjectByType<GameManager>(); // 캐시가 비어 있어도 판을 끝낸다
+            if (gm != null) gm.EndRound(GameManager.Outcome.SeekersWin);
+        }
     }
 }
