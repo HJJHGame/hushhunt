@@ -41,7 +41,7 @@ public class Inventory : MonoBehaviour
         if (i == 0) return flash != null ? (flash.IsOn ? "켜짐" : "꺼짐") : "";
         if (!Has(i)) return "";
         if (i == 1) return "받음";
-        return i == 4 ? "" : gun.Ammo + "/" + GunHolder.MagazineRounds;
+        return i == 4 ? "" : gun.Ammo + "/" + gun.MaxAmmo;
     }
 
     void OnGUI()
