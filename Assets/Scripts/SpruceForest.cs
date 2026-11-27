@@ -2,22 +2,23 @@ using System.Collections.Generic;
 using UnityEngine;
 using UnityEngine.Rendering;
 
-// 숲의 모든 나무를 tevy 모델 3종(dead-spruce, young-spruce, bald-cypress)으로 채운다.
+// 숲의 모든 나무를 tevy 모델 4종(dead-spruce, young-spruce, bald-cypress, ginkgo-tree)으로 채운다.
 // 모델 위치: Assets/Models/<이름>/lod0.glb, lod1.glb, lod2.glb (glTFast 패키지 필요).
 // 에디터에서는 AssetDatabase로, 빌드에서는 Resources/Models/<이름>/lod0 (확장자 없이)로 찾는다.
 // 모델이 하나도 없으면 아무것도 하지 않고 기존 나무(TreeModels)가 그대로 나온다.
 // 나무마다 LODGroup: LOD0 가까이 / LOD1 중간 / LOD2 멀리(그림자 끔) / 그 밖은 안 그림.
-// 용지(TreePaper)는 가장 무거운 잎 있는 모델(낙우송) 80그루 중 10그루에 붙는다 (PaperLabel).
+// 용지(TreePaper)는 노란 은행나무 80그루 중 10그루에 붙는다 (PaperLabel). 은행나무 모델이 없으면 낙우송에 붙는다.
 [DefaultExecutionOrder(-60)] // TreeModels(-50)보다 먼저: 성공하면 TreeModels는 건너뛴다
 public class SpruceForest : MonoBehaviour
 {
     public static bool Active;
 
     // 나무 총 수는 TreeLayout.Total(1800). 종류별 개수는 정확히 맞춘다:
-    // 죽은 나무 900, 잎 있는 모델 중 가장 무거운 것(낙우송) 80, 나머지 820은 가문비(young).
+    // 죽은 나무 900, 낙우송 80, 은행나무 80, 나머지 740은 가문비(young). 없는 모델의 몫은 가문비가 채운다.
     const int DeadCount = 900;
-    const int HeavyCount = 80;
-    // 종이를 붙일 나무의 모델 이름(가장 무거운 잎 있는 모델). TreePaper가 읽는다.
+    const int CypressCount = 80;
+    const int GinkgoCount = 80;
+    // 종이를 붙일 나무의 모델 이름(은행나무, 없으면 낙우송). TreePaper가 읽는다.
     public static string PaperLabel;
     const float HouseMargin = 1.5f;      // 추가 나무는 집 발자국 + 이 여유(m) 안에는 안 심는다
     const float SpawnClearance = 6f;     // 플레이어 스폰 주변 비움(m)
@@ -27,6 +28,8 @@ public class SpruceForest : MonoBehaviour
 
     const string CypressName = "bald-cypress"; // tevy Bald Cypress (CC0). 파일: Assets/Models/bald-cypress/lod0.glb, lod1.glb, lod2.glb
     const float CypressHeightMul = 1.2f;       // 높이 약 20m짜리 큰 나무라 가문비 기준 키의 1.2배로 줄여 쓴다(약 11m, 폭 약 10m)
+    const string GinkgoName = "ginkgo-tree";   // tevy Ginkgo Tree (CC0). 가로수 격자/흙은 뺀 파일. Assets/Models/ginkgo-tree/lod0.glb, lod1.glb, lod2.glb
+    const float GinkgoHeightMul = 1.3f;        // 원본 13.6m. 노란 눈에 띄는 표지판 역할이라 가문비 기준 키의 1.3배(약 12m)
     const string YoungName = "young-spruce";
     const string DeadName = "dead-spruce";
 
@@ -109,16 +112,12 @@ public class SpruceForest : MonoBehaviour
         var cypress = LoadVariant(CypressName, "Cypress");
         if (cypress != null) cypress.heightMul = CypressHeightMul;
         else Debug.LogWarning("[HushHunt] SpruceForest: 낙우송 모델 없음(Assets/Models/" + CypressName + "/lod0.glb) -> 가문비만으로 진행");
-        // 잎 있는 모델 후보. lod0 삼각형 수가 많은 순으로 정렬해서 맨 앞이 "가장 무거운 모델"이 된다.
-        var leafy = new List<Variant>();
-        if (young != null) leafy.Add(young);
-        if (cypress != null) leafy.Add(cypress);
-        var triLog = new System.Text.StringBuilder();
-        foreach (var lv in leafy) { lv.tris = CountTris(lv.lods[0]); triLog.Append(lv.label).Append('=').Append(lv.tris).Append(' '); }
-        leafy.Sort((x, y) => y.tris.CompareTo(x.tris));
-        PaperLabel = leafy.Count > 0 ? leafy[0].label : (dead != null ? dead.label : null);
+        var ginkgo = LoadVariant(GinkgoName, "Ginkgo");
+        if (ginkgo != null) ginkgo.heightMul = GinkgoHeightMul;
+        else Debug.LogWarning("[HushHunt] SpruceForest: 은행나무 모델 없음(Assets/Models/" + GinkgoName + "/lod0.glb) -> 용지는 낙우송에");
+        PaperLabel = ginkgo != null ? ginkgo.label : (cypress != null ? cypress.label : (young != null ? young.label : (dead != null ? dead.label : null)));
         Debug.Log("[HushHunt] SpruceForest: 모델 로드 young=" + (young != null) + " dead=" + (dead != null) + " cypress=" + (cypress != null)
-            + " / lod0 삼각형 " + triLog + "-> 가장 무거운 모델 " + PaperLabel + " (종이는 여기에)");
+            + " ginkgo=" + (ginkgo != null) + " / 종이는 " + PaperLabel + " 나무에");
 
         var pines = new List<Transform>();
         foreach (var cand in FindObjectsByType<Transform>(FindObjectsSortMode.None))
@@ -162,20 +161,12 @@ public class SpruceForest : MonoBehaviour
         // 종류별 정확한 개수만큼 덱을 만들어 섞은 뒤 나무마다 한 장씩 뽑는다.
         int total = pines.Count + extraPos.Count;
         var deck = new List<Variant>(total);
-        int deadQ = dead == null ? 0 : (leafy.Count == 0 ? total : Mathf.Min(DeadCount, total));
-        for (int i = 0; i < deadQ; i++) deck.Add(dead);
-        int leafyQ = total - deadQ;
-        if (leafy.Count > 0)
-        {
-            int heavyQ = leafy.Count == 1 ? leafyQ : Mathf.Min(HeavyCount, leafyQ);
-            for (int i = 0; i < heavyQ; i++) deck.Add(leafy[0]);
-            int rest = leafyQ - heavyQ, others = leafy.Count - 1;
-            for (int k = 1; k <= others; k++)
-            {
-                int q = rest / others + (k <= rest % others ? 1 : 0);
-                for (int i = 0; i < q; i++) deck.Add(leafy[k]);
-            }
-        }
+        int rem = total;
+        void AddCards(Variant vv, int q) { if (vv == null) return; for (int i = 0; i < q; i++) deck.Add(vv); rem -= q; }
+        AddCards(dead, dead == null ? 0 : Mathf.Min(DeadCount, rem));
+        AddCards(cypress, cypress == null ? 0 : Mathf.Min(CypressCount, rem));
+        AddCards(ginkgo, ginkgo == null ? 0 : Mathf.Min(GinkgoCount, rem));
+        AddCards(young ?? dead ?? cypress ?? ginkgo, rem); // 나머지는 가문비(없으면 다른 모델)
         for (int i = deck.Count - 1; i > 0; i--)
         {
             int j = rand.Next(i + 1);
