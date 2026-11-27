@@ -35,6 +35,7 @@ public class Armory : MonoBehaviour
     }
 
     GameManager gm0;
+    static readonly WeaponKind[] kinds3 = { WeaponKind.Shotgun, WeaponKind.Rifle, WeaponKind.Knife }; // 자동 지급은 랜덤 무기
 
     void Update()
     {
@@ -55,7 +56,7 @@ public class Armory : MonoBehaviour
         // 1분이 지나면 총이 없는 잡는 팀 모두에게 지급한다 (늦게 합류한 사람도 같다).
         if (firstPaperAt >= 0f && Time.time >= firstPaperAt + AutoGrantDelay)
             foreach (var h in GunHolder.All)
-                if (h != null && h.IsAlive && h.IsSeeker && !h.HasGun) h.Grant(false);
+                if (h != null && h.IsAlive && h.IsSeeker && !h.HasGun) h.Grant(false, kinds3[Random.Range(0, kinds3.Length)]);
 
         // 확인용(혼자 테스트): 수색 시간에 G 키로 나를 숨는 팀/잡는 팀으로 바꾼다.
         // 잡는 팀일 때만 종이를 줍고 총을 받는다. 상대 플레이어가 생기면 지운다.
