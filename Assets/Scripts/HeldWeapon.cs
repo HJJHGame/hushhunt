@@ -1,6 +1,6 @@
 using UnityEngine;
 
-// 1인칭 화면에 들고 있는 무기(소총/샷건/칼)를 보여 준다. 단순 도형 조립이라 외부 모델이 필요 없다.
+// 1인칭 화면에 들고 있는 무기(소총/권총/칼)를 보여 준다. 단순 도형 조립이라 외부 모델이 필요 없다.
 // 무기가 바뀌면 다시 만들고, 쏘면 살짝 뒤로 밀렸다 돌아온다. 충돌체와 그림자는 없다.
 [RequireComponent(typeof(GunHolder))]
 public class HeldWeapon : MonoBehaviour
@@ -56,11 +56,9 @@ public class HeldWeapon : MonoBehaviour
                 Part(root, "Stock", new Vector3(0f, -0.02f, -0.18f), new Vector3(0.05f, 0.1f, 0.22f), wood);
                 Part(root, "Mag", new Vector3(0f, -0.11f, 0.12f), new Vector3(0.04f, 0.12f, 0.07f), metal);
                 break;
-            case WeaponKind.Shotgun:
-                Part(root, "Barrel", new Vector3(0f, 0.02f, 0.4f), new Vector3(0.04f, 0.04f, 0.75f), metal);
-                Part(root, "Pump", new Vector3(0f, -0.02f, 0.3f), new Vector3(0.06f, 0.05f, 0.2f), wood);
-                Part(root, "Body", new Vector3(0f, 0f, -0.05f), new Vector3(0.06f, 0.08f, 0.22f), metal);
-                Part(root, "Stock", new Vector3(0f, -0.03f, -0.28f), new Vector3(0.055f, 0.1f, 0.26f), wood);
+            case WeaponKind.Pistol:
+                Part(root, "Slide", new Vector3(0f, 0.02f, 0.2f), new Vector3(0.04f, 0.05f, 0.24f), metal);
+                Part(root, "Grip", new Vector3(0f, -0.06f, 0.1f), new Vector3(0.04f, 0.12f, 0.06f), wood);
                 break;
             default: // Knife
                 root.transform.localRotation = Quaternion.Euler(-70f, -10f, 10f);
