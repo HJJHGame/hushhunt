@@ -64,10 +64,17 @@ public class RandomizeLayout : MonoBehaviour
         // 나무: 스폰/집을 피해 다시 심는다 (크기/기울기는 유지, 위치만 바꾼다).
         int movedTrees = 0;
         var treePos = new List<Vector2>(); // 소품이 나무를 피하도록 위치 기록
+        // 완전 무작위로 심으면 뭉치는 곳과 텅 빈 곳이 생긴다. 나무마다 후보 여러 곳을 뽑아
+        // 기존 나무에서 가장 먼 곳을 고른다 (균일하되 자연스러운 배치).
+        var grid = new PlacementGrid();
+        const int TreeCandidates = 14;
         foreach (var t in FindObjectsByType<Transform>(FindObjectsSortMode.None))
         {
             if (t.parent != null || t.name != WorldConfig.Names.PineTree) continue;
-            for (int tries = 0; tries < 40; tries++)
+            bool found = false;
+            Vector2 best = Vector2.zero;
+            float bestD = -1f;
+            for (int c = 0; c < TreeCandidates; c++)
             {
                 float x = (float)(rand.NextDouble() * 2.0) * spread - spread;
                 float z = (float)(rand.NextDouble() * 2.0) * spread - spread;
@@ -76,11 +83,14 @@ public class RandomizeLayout : MonoBehaviour
                 foreach (var r in placed)
                     if (Mathf.Abs(x - r.x) < r.z + 1.5f && Mathf.Abs(z - r.y) < r.w + 1.5f) { inHouse = true; break; }
                 if (inHouse) continue;
-                t.position = new Vector3(x, t.position.y, z);
-                treePos.Add(new Vector2(x, z));
-                movedTrees++;
-                break;
+                float d = grid.Nearest(new Vector2(x, z), 20f);
+                if (d > bestD) { bestD = d; best = new Vector2(x, z); found = true; }
             }
+            if (!found) continue;
+            t.position = new Vector3(best.x, t.position.y, best.y);
+            grid.Add(best);
+            treePos.Add(best);
+            movedTrees++;
         }
 
         // 소품(바위/통나무/그루터기/울타리): 스폰/집/나무/다른 소품을 피해 매 판 새 위치로 옮긴다.
