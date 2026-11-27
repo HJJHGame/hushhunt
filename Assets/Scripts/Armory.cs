@@ -9,6 +9,7 @@ public class Armory : MonoBehaviour
     public const float AutoGrantDelay = 60f; // 첫 종이 발견 후 자동 지급까지(초)
 
     float firstPaperAt = -1f;
+    float clock; // 일시정지 중엔 멈추는 게임 시계(초). 자동 지급 타이머가 쓴다.
 
     // 첫 종이가 발견됐고 자동 지급 시각이 아직 안 지났으면 남은 초, 아니면 -1.
     public float AutoGrantLeft
@@ -16,7 +17,7 @@ public class Armory : MonoBehaviour
         get
         {
             if (firstPaperAt < 0f) return -1f;
-            float left = firstPaperAt + AutoGrantDelay - Time.time;
+            float left = firstPaperAt + AutoGrantDelay - clock;
             return left > 0f ? left : -1f;
         }
     }
@@ -30,7 +31,7 @@ public class Armory : MonoBehaviour
     public void OnPaperTaken(GunHolder who)
     {
         if (!CanTakePaper(who)) return;
-        if (firstPaperAt < 0f) firstPaperAt = Time.time;
+        if (firstPaperAt < 0f) firstPaperAt = clock;
         who.Grant(true);
     }
 
@@ -51,6 +52,7 @@ public class Armory : MonoBehaviour
     {
         // 숨는 팀은 판이 시작되면 무기(샷건/소총/칼) 중 하나를 무작위로 하나 받는다.
         if (gm0 == null) gm0 = FindFirstObjectByType<GameManager>();
+        if (!MainMenu.IsMenuOpen && (gm0 == null || !gm0.paused)) clock += Time.deltaTime;
         if (gm0 != null && (gm0.CurrentPhase == GameManager.Phase.Hiding || gm0.CurrentPhase == GameManager.Phase.Seeking))
         {
             foreach (var h in GunHolder.All)
@@ -64,7 +66,7 @@ public class Armory : MonoBehaviour
         }
 
         // 1분이 지나면 총이 없는 잡는 팀 모두에게 지급한다 (늦게 합류한 사람도 같다).
-        if (firstPaperAt >= 0f && Time.time >= firstPaperAt + AutoGrantDelay)
+        if (firstPaperAt >= 0f && clock >= firstPaperAt + AutoGrantDelay)
             foreach (var h in GunHolder.All)
                 if (h != null && h.IsAlive && h.IsSeeker && !h.HasGun) h.Grant(false, kinds3[Random.Range(0, kinds3.Length)]);
 
@@ -80,6 +82,7 @@ public class Armory : MonoBehaviour
                     if (h == null || h.GetComponent<FirstPersonController>() == null) continue;
                     var hp = h.GetComponent<Health>();
                     hp.team = hp.team == Team.Hider ? Team.Seeker : Team.Hider;
+                    GameManager.LocalRole = hp.team == Team.Seeker ? GameManager.Role.Seeker : GameManager.Role.Hider; // 숨는 시간 검은 화면이 같은 팀을 보게
                     hp.ReviveForTest(); // 죽어 있었어도 다시 움직일 수 있게
                     h.ResetForTeamSwitch();
                     // 팀에 맞는 시작 위치로: 잡는 팀은 술래 구역, 숨는 팀은 구역 밖 아무 곳.
