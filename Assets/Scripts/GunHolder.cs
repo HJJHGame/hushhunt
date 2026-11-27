@@ -4,24 +4,24 @@ using UnityEngine;
 // 총을 가질 수 있는 플레이어(주로 잡는 팀). 탄은 4발 고정, 재장전 없음.
 // 총은 종이를 찾거나(Armory), 첫 종이가 발견된 뒤 1분이 지나면 자동으로 지급된다.
 // 로컬 플레이어는 좌클릭으로 쏜다(히트스캔). 수색 시간에만, 탄이 있을 때만.
-public enum WeaponKind { None, Shotgun, Rifle, Knife }
+public enum WeaponKind { None, Pistol, Rifle, Knife }
 
 // 총소리: 맵 전체에서 들리고 방향이 있다. 거리에 따라 볼륨만 줄어든다(사거리로 끊기지 않음). 칼은 소리 없음.
 public static class GunSound
 {
     public const float MapWide = 450f; // 이 거리 밖에서도 작게 들린다
-    static AudioClip rifle, shotgun;
+    static AudioClip rifle, pistol;
     static AnimationCurve rolloff;
 
     public static void Play(Vector3 pos, WeaponKind kind)
     {
-        if (kind != WeaponKind.Rifle && kind != WeaponKind.Shotgun) return;
-        if (rifle == null) { rifle = Make(0.35f, 14f, 1f); shotgun = Make(0.55f, 9f, 1.4f); }
+        if (kind != WeaponKind.Rifle && kind != WeaponKind.Pistol) return;
+        if (rifle == null) { rifle = Make(0.35f, 14f, 1f); pistol = Make(0.28f, 18f, 0.9f); }
         if (rolloff == null) rolloff = new AnimationCurve(new Keyframe(0f, 1f), new Keyframe(MapWide, 0.08f));
         var go = new GameObject("Gunshot");
         go.transform.position = pos;
         var a = go.AddComponent<AudioSource>();
-        a.clip = kind == WeaponKind.Rifle ? rifle : shotgun;
+        a.clip = kind == WeaponKind.Rifle ? rifle : pistol;
         a.spatialBlend = 1f; // 방향 있음
         a.rolloffMode = AudioRolloffMode.Custom;
         a.SetCustomCurve(AudioSourceCurveType.CustomRolloff, rolloff);
@@ -69,21 +69,20 @@ public class GunHolder : MonoBehaviour
 
     public const float RifleRange = 1000f;  // 소총: 사거리 제한 없음
     public const float RifleSpreadDeg = 0.5f; // 소총 탄 퍼짐(도, 약간)
-    public const int ShotgunPellets = 8;    // 샷건 펠릿 수
-    public const float ShotgunSpreadDeg = 4f;
-    public const float ShotgunFullRange = 5f;  // 이 안은 풀데미지
-    public const float ShotgunZeroRange = 12f; // 여기서 데미지 0 (사이는 직선으로 감소)
+    public const float PistolRange = 60f;      // 권총: 사거리(m). 이 안에서는 거리와 상관없이 같은 피해
+    public const float PistolSpreadDeg = 1f;   // 권총 탄 퍼짐(도, 아주 약간)
     public const float KnifeRange = 2f;     // 칼 닿는 거리(m)
     public const float KnifeCooldown = 1f;  // 칼 휘두르는 간격(초)
 
     public WeaponKind Weapon { get; private set; }
+    public bool Escaped { get; set; } // 탈출에 성공한 사람: 이후 피해를 받지 않는다
     public bool GotStartWeapon { get; set; } // 숨는 팀 시작 무기를 받았는지
     float nextKnifeAt;
     public float LastShotAt { get; private set; } = -100f; // 마지막으로 쏜/휘두른 시각 (들고 있는 무기 연출용)
 
     public static string WeaponName(WeaponKind k)
     {
-        switch (k) { case WeaponKind.Shotgun: return "샷건"; case WeaponKind.Rifle: return "소총"; case WeaponKind.Knife: return "칼"; }
+        switch (k) { case WeaponKind.Pistol: return "권총"; case WeaponKind.Rifle: return "소총"; case WeaponKind.Knife: return "칼"; }
         return "";
     }
 
@@ -126,10 +125,10 @@ public class GunHolder : MonoBehaviour
         flashUntil = Time.unscaledTime + 0.06f;
         var cam = Camera.main;
         if (cam == null) return;
-        if (Weapon == WeaponKind.Shotgun) { FireShotgun(cam); return; }
-        float range = Weapon == WeaponKind.Knife ? KnifeRange : RifleRange;
+        float range = Weapon == WeaponKind.Knife ? KnifeRange : (Weapon == WeaponKind.Pistol ? PistolRange : RifleRange);
         Vector3 dirF = cam.transform.forward;
         if (Weapon == WeaponKind.Rifle) dirF = Spread(cam.transform, RifleSpreadDeg);
+        else if (Weapon == WeaponKind.Pistol) dirF = Spread(cam.transform, PistolSpreadDeg);
         int n = Physics.RaycastNonAlloc(cam.transform.position, dirF, hitBuf, range, ~0, QueryTriggerInteraction.Ignore);
         var target = FirstTarget(n);
         if (target != null)
@@ -164,28 +163,6 @@ public class GunHolder : MonoBehaviour
         return q * cam.forward;
     }
 
-    // 샷건: 펠릿마다 광선을 쏜다. 한 발의 피해는 맞은 펠릿 비율 x 거리 감소(5m 풀, 12m에서 0).
-    static readonly List<Health> sgTargets = new List<Health>();
-    static readonly List<float> sgDamage = new List<float>();
-
-    void FireShotgun(Camera cam)
-    {
-        sgTargets.Clear(); sgDamage.Clear();
-        for (int i = 0; i < ShotgunPellets; i++)
-        {
-            int n = Physics.RaycastNonAlloc(cam.transform.position, Spread(cam.transform, ShotgunSpreadDeg), hitBuf, ShotgunZeroRange, ~0, QueryTriggerInteraction.Ignore);
-            var t = FirstTarget(n);
-            if (t == null) continue;
-            float d = Vector3.Distance(cam.transform.position, t.transform.position);
-            float f = Mathf.Clamp01(1f - (d - ShotgunFullRange) / (ShotgunZeroRange - ShotgunFullRange));
-            float add = CombatRules.HitDamage(t.team) * f / ShotgunPellets;
-            int k = sgTargets.IndexOf(t);
-            if (k < 0) { sgTargets.Add(t); sgDamage.Add(add); } else sgDamage[k] += add;
-        }
-        for (int k = 0; k < sgTargets.Count; k++)
-            if (sgDamage[k] > 0f) { sgTargets[k].TakeDamage(sgDamage[k], gameObject); hitUntil = Time.unscaledTime + 0.25f; }
-    }
-
     string sayText; float sayUntil;
     GUIStyle sayStyle;
     void Say(string t) { sayText = t; sayUntil = Time.unscaledTime + 2f; }
@@ -194,7 +171,7 @@ public class GunHolder : MonoBehaviour
     public void ResetForTeamSwitch()
     {
         HasGun = false; Ammo = 0; Weapon = WeaponKind.None;
-        GotGunFromPaper = false; GotStartWeapon = false;
+        GotGunFromPaper = false; GotStartWeapon = false; Escaped = false;
     }
 
     void OnGUI()
