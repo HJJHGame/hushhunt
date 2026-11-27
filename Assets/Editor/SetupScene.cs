@@ -96,7 +96,8 @@ public static class SetupScene
         var groundMat = MakeMaterial("Ground", new Color(0.05f, 0.06f, 0.05f));
         var ground = GameObject.CreatePrimitive(PrimitiveType.Plane);
         ground.name = Names.Ground;
-        ground.transform.localScale = new Vector3(40f, 1f, 40f);
+        float groundScale = WorldConfig.Half * 2f / 10f; // 내장 Plane은 10x10m
+        ground.transform.localScale = new Vector3(groundScale, 1f, groundScale);
         ground.GetComponent<Renderer>().sharedMaterial = groundMat;
 
         // 큰 소나무들: 갈색 원기둥 기둥 + 짙은 초록 원뿔 3단. 키 크고 가는 실루엣.
