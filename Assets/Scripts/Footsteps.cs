@@ -68,7 +68,7 @@ public class Footsteps : MonoBehaviour
                 contactParity = (contactParity + contacts) % 2;
                 source.pitch = 0.85f + (float)rng.NextDouble() * 0.3f;
                 // 웅크리면 살금살금(35%), 달리면 쿵쿵(160%), 걷기는 기본.
-                float state = fpc != null && fpc.IsCrouching ? 0.35f
+                float state = fpc != null && fpc.IsCrouching ? 0f
                     : fpc != null && fpc.IsSprinting ? 1.6f : 1f;
                 float v = volume * state * (0.8f + (float)rng.NextDouble() * 0.4f);
                 source.PlayOneShot(steps[rng.Next(steps.Length)], v);
