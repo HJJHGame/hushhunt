@@ -12,6 +12,7 @@ public class TreePaper : MonoBehaviour
 
     const int PaperCount = 10;         // 맵에 놓는 종이 수
     const float MinPaperSpacing = 30f; // 종이끼리 최소 거리(m). 자리가 모자라면 줄인다
+    const float GlowDistance = 15f;    // 이 거리 안에 오면 용지가 환하게 빛난다(m). 멀리서도 눈에 띄게
 
     class Paper
     {
@@ -43,12 +44,12 @@ public class TreePaper : MonoBehaviour
             // 기존 소나무 자리 나무 + SpruceForest가 추가로 심은 나무("Spruce Extra") 둘 다 후보다.
             if (!((t.parent == null && t.name == WorldConfig.Names.PineTree) || t.name == "Spruce Extra")) continue;
             trees.Add(t);
-            if (t.Find("TreeModel Spruce " + (SpruceForest.PaperLabel ?? "Dead")) != null) deads.Add(t); // 가장 무거운 잎 있는 모델이 달린 나무(80그루 중 10장)
+            if (t.Find("TreeModel Spruce " + (SpruceForest.PaperLabel ?? "Dead")) != null) deads.Add(t); // 가장 무거운 잎 있는 모델이 달린 나무(은행나무 80그루 중 10장)
         }
         if (trees.Count == 0) return;
 
         var rand = new System.Random();
-        // 종이는 가장 무거운 잎 있는 모델(SpruceForest.PaperLabel)에 붙인다. 모자라면 다른 소나무로 채운다. 종이끼리는 서로 멀리 떨어뜨린다.
+        // 종이는 은행나무(SpruceForest.PaperLabel)에 붙인다. 모자라면 다른 소나무로 채운다. 종이끼리는 서로 멀리 떨어뜨린다.
         var order = new List<Transform>(Shuffled(deads, rand));
         foreach (var t in Shuffled(trees, rand))
             if (!deads.Contains(t)) order.Add(t);
@@ -162,7 +163,7 @@ public class TreePaper : MonoBehaviour
             float dist = d.magnitude;
 
             // 가까이 오면 용지만 환하게 빛나 어둠 속에서 눈에 띈다. 빛을 쏘지 않아 주변은 밝아지지 않는다.
-            bool near = dist < 8f;
+            bool near = dist < GlowDistance;
             if (near != p.glowing)
             {
                 p.glowing = near;
