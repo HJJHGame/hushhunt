@@ -1,7 +1,7 @@
 using UnityEngine;
 
 // 한 판의 흐름: 타이틀 대기 -> 숨는 시간(60초) -> 수색 시간(9분) -> 종료. 제한시간은 숨는 시간을 포함해 총 10분.
-// 확정 규칙: 시간이 다 되면 숨는 팀 승리.
+// 확정 규칙: 시간이 다 되면 숨는 팀 승리(단, 술래 전멸 후 탈출구가 열렸는데 전원 탈출 못 하면 숨는 팀 패배).
 // 잡는 팀이 숨는 팀을 전멸시키면 잡는 팀 승리, 살아 있는 숨는 팀 전원이 탈출구로 나가면 숨는 팀 승리.
 // 전멸/탈출은 아직 없다. 나중 단계(종이->총, 체력, 탈출구)가 EndRound(결과)를 부르면 된다.
 // 캐릭터/무기/네트워크는 아직 없으므로 이 단계에서는 단계 전환, 화면 표시, 종료 후 R 키 재시작만 담당한다.
@@ -98,8 +98,10 @@ public class GameManager : MonoBehaviour
         }
         else
         {
-            // 제한시간 종료 = 숨는 팀 승리
-            EndRound(Outcome.HidersWin);
+            // 제한시간 종료: 술래가 살아 있으면 숨는 팀 승리.
+            // 술래가 전멸해 탈출구가 열렸는데 전원 탈출 못 했으면 숨는 팀 패배.
+            var gate = FindFirstObjectByType<EscapeGate>();
+            EndRound(gate != null && gate.IsOpen ? Outcome.SeekersWin : Outcome.HidersWin);
         }
     }
 
