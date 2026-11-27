@@ -85,7 +85,7 @@ public class PlayerHud : MonoBehaviour
             HudText.Label(new Rect(Screen.width - 300f * scale - 16f, Screen.height - 44f * scale, 300f * scale, 32f * scale), text, hintStyle);
         }
 
-        // F1: 현재 좌표와 가장자리까지 거리. 맵이 진짜 400x400m인지 직접 확인할 수 있다.
+        // X: 현재 좌표와 가장자리까지 거리. 맵 크기(WorldConfig.Half)를 직접 확인할 수 있다.
         if (showCoords && fpc != null)
         {
             if (coordStyle == null)
