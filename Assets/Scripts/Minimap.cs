@@ -44,16 +44,26 @@ public class Minimap : MonoBehaviour
         mapTex = MapImage.Build(1024, worldHalf, houses);
     }
 
+    GameManager gm;
+
+    // 숨는 시간 동안 술래는 지도를 볼 수 없다 (작은 지도도, M 큰 지도도).
+    bool MapBlocked()
+    {
+        if (gm == null) gm = FindFirstObjectByType<GameManager>();
+        return gm != null && gm.CurrentPhase == GameManager.Phase.Hiding && GameManager.LocalRole == GameManager.Role.Seeker;
+    }
+
     void Update()
     {
         if (MainMenu.IsMenuOpen) return;
+        if (MapBlocked()) { bigMap = false; return; }
         if (Input.GetKeyDown(KeyCode.M))
             bigMap = !bigMap;
     }
 
     void OnGUI()
     {
-        if (MainMenu.IsMenuOpen) return;
+        if (MainMenu.IsMenuOpen || MapBlocked()) return;
         if (Event.current.type != EventType.Repaint) return;
 
         int size = bigMap ? Mathf.RoundToInt(Screen.height * bigSizeRatio) : smallSize;
