@@ -81,6 +81,8 @@ public class Armory : MonoBehaviour
                     var hp = h.GetComponent<Health>();
                     hp.team = hp.team == Team.Hider ? Team.Seeker : Team.Hider;
                     h.ResetForTeamSwitch();
+                    // 팀에 맞는 시작 위치로: 잡는 팀은 술래 구역, 숨는 팀은 구역 밖 아무 곳.
+                    Zones.Teleport(h.GetComponent<FirstPersonController>(), hp.team == Team.Seeker ? Zones.SeekerSpawnPoint(0) : Zones.HiderSpawnPoint());
                     msg = "테스트: 내 팀 = " + (hp.team == Team.Seeker ? "잡는 팀 (종이를 찾으세요)" : "숨는 팀 (무기 새로 받음)");
                     msgUntil = Time.unscaledTime + 3f;
                     Debug.Log("[HushHunt] 테스트: 내 팀을 " + (hp.team == Team.Seeker ? "잡는 팀" : "숨는 팀") + "으로 바꿈");
