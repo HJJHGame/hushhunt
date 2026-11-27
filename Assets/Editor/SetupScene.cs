@@ -92,7 +92,7 @@ public static class SetupScene
         light.intensity = 0.6f;
         lightGo.transform.rotation = Quaternion.Euler(32f, -30f, 0f); // 낮게 걸린 달: 그림자가 길고 하늘에서 달이 보인다
 
-        // 땅: 내장 Plane(10x10m)을 40배 -> 400x400m, 어두운 흙색
+        // 땅: 내장 Plane(10x10m)을 40배 -> WorldConfig.Half 기준 크기(현재 300x300m), 어두운 흙색
         var groundMat = MakeMaterial("Ground", new Color(0.05f, 0.06f, 0.05f));
         var ground = GameObject.CreatePrimitive(PrimitiveType.Plane);
         ground.name = Names.Ground;
@@ -281,7 +281,7 @@ public static class SetupScene
             housesPlaced++;
         }
 
-        // 맵 가장자리 벽: 400x400m 경계(±Half)를 어두운 벽 네 면으로 둘러싼다.
+        // 맵 가장자리 벽: 경계(±Half)를 어두운 벽 네 면으로 둘러싼다.
         // 땅과 같은 재질이라 안개 속에서 지형처럼 보이고, 미니맵에는 맵 경계로 보인다.
         // 벽 안쪽 면이 정확히 ±200m(Half)라 플레이어는 절대 맵 밖으로 못 나간다.
         float wallOffset = WorldConfig.Half + 0.5f;   // 벽 두께 1m의 중심: 안쪽 면이 ±Half
@@ -342,11 +342,12 @@ public static class SetupScene
         EditorBuildSettings.scenes = scenes.ToArray();
     }
 
-    // 움직이지 않는 오브젝트(땅/집/바위/울타리/경계벽)는 정적 배칭 대상으로 표시해 렌더링 비용을 줄인다.
-    // 나무는 시작할 때 모델로 교체되므로 제외한다.
+    // 땅/경계벽은 움직이지 않으므로 정적 배칭 대상. 바위/울타리/통나무/그루터기는 RandomizeLayout이 매 판 옮기므로
+    // 배칭 정적은 빼고 컬링용(OccludeeStatic)만 준다. 나무는 시작할 때 모델로 교체되므로 제외한다.
     static void MarkStatic()
     {
-        const StaticEditorFlags flags = StaticEditorFlags.BatchingStatic | StaticEditorFlags.OccludeeStatic;
+        const StaticEditorFlags fixedFlags = StaticEditorFlags.BatchingStatic | StaticEditorFlags.OccludeeStatic;
+        const StaticEditorFlags movableFlags = StaticEditorFlags.OccludeeStatic;
         foreach (var t in Object.FindObjectsByType<Transform>(FindObjectsSortMode.None))
         {
             string n = t.name;
@@ -354,6 +355,7 @@ public static class SetupScene
             if (n == Names.Ground || n == Names.Rock || n == Names.EdgeWall || n == Names.OldFence
                 || n == Names.FallenLog || n == Names.Stump)
             {
+                var flags = (n == Names.Ground || n == Names.EdgeWall) ? fixedFlags : movableFlags;
                 foreach (var child in t.GetComponentsInChildren<Transform>(true))
                     GameObjectUtility.SetStaticEditorFlags(child.gameObject, flags);
             }
