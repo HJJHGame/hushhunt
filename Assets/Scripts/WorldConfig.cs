@@ -3,7 +3,7 @@
 public static class WorldConfig
 {
     // 맵 절반 크기(m). 경계 벽 안쪽 면은 ±(Half - 1), 미니맵은 ±Half로 그린다.
-    public const float Half = 200f; // 400x400m 맵
+    public const float Half = 150f; // 300x300m 맵 (크기는 이 값 하나로 바꾼다. 바꾼 뒤 Hush Hunt > Setup Main Scene을 다시 실행)
 
     // 테스트용: true면 나무와 땅만 남기고 바위/집/통나무/그루터기/울타리를 숨긴다 (코드는 그대로, false로 바꾸면 복구).
     public static bool SimplifiedTestMode = true;
