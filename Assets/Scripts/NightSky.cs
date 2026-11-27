@@ -5,7 +5,7 @@ using UnityEngine;
 // 달 위치는 씬의 방향광(달빛) 반대 방향이라 그림자 방향과 맞는다.
 public class NightSky : MonoBehaviour
 {
-    public float domeRadius = 100f;
+    public float domeRadius = 45f; // 카메라 먼 거리(50m)보다 안쪽이어야 그려진다
     public int starCount = 1400;
     public float moonSize = 0.055f; // 라디안 (달 반지름)
 
@@ -18,6 +18,8 @@ public class NightSky : MonoBehaviour
     void Start()
     {
         cam = Camera.main;
+        // 씬에 저장된 값(예전 100m)이 남아 있어도 먼 거리 안으로 맞춘다.
+        if (cam != null) domeRadius = Mathf.Min(domeRadius, cam.farClipPlane * 0.9f);
 
         Vector3 moonDir = new Vector3(-0.35f, 0.55f, 0.75f).normalized;
         foreach (var l in FindObjectsByType<Light>(FindObjectsSortMode.None))
