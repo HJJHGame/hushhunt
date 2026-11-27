@@ -9,8 +9,8 @@ public class Flashlight : MonoBehaviour
     public KeyCode toggleKey = KeyCode.T;
     public bool startOn = true;
     public float intensity = 5.0f; // 거의 검정인 맵에서 좁은 원뿔이 확실히 보이게
-    public const float OnVision = 10f;  // 손전등 켰을 때 보이는 거리(m), 그 너머는 완전한 어둠
-    public const float OffVision = 5f;  // 껐을 때 보이는 거리(m)
+    public const float OnVision = 20f;  // 손전등 켰을 때 보이는 거리(m), 그 너머는 완전한 어둠
+    public const float OffVision = 10f;  // 껐을 때 보이는 거리(m)
     public float range = 10f;
     public float spotAngle = 42f;
 
