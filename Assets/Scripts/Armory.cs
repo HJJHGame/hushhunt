@@ -80,6 +80,7 @@ public class Armory : MonoBehaviour
                     if (h == null || h.GetComponent<FirstPersonController>() == null) continue;
                     var hp = h.GetComponent<Health>();
                     hp.team = hp.team == Team.Hider ? Team.Seeker : Team.Hider;
+                    hp.ReviveForTest(); // 죽어 있었어도 다시 움직일 수 있게
                     h.ResetForTeamSwitch();
                     // 팀에 맞는 시작 위치로: 잡는 팀은 술래 구역, 숨는 팀은 구역 밖 아무 곳.
                     Zones.Teleport(h.GetComponent<FirstPersonController>(), hp.team == Team.Seeker ? Zones.SeekerSpawnPoint(0) : Zones.HiderSpawnPoint());
