@@ -9,14 +9,14 @@ using UnityEngine;
 public class GameManager : MonoBehaviour
 {
     public enum Phase { Waiting, Hiding, Seeking, Ended }
-    public enum Outcome { None, HidersWin, SeekersWin } // 판 결과 (Ended일 때 의미 있음)
+    public enum Outcome { None, HidersWin, SeekersWin, HidersEscaped } // 판 결과 (Ended일 때 의미 있음)
     public enum Role { Hider, Seeker }
 
     // 확정 규칙 값. 씬에 저장된 값이 아니라 항상 이 상수를 쓴다 (Start에서 덮어씀).
     public const float HideSeconds = 60f;
     public const float MatchSeconds = 600f; // 한 판 총 제한시간 (숨는 시간 60초 포함). 수색 시간은 540초(9분)
 
-    // 지금은 로컬 1인 플레이: 플레이어는 숨는 팀. (잡는 팀 시점은 숨는 시간 동안 검은 화면 + 타이머)
+    // 로컬 플레이어의 팀. 혼자 테스트에서는 GameSystems가 시작할 때 정하고 G로 바뀐다. (잡는 팀 시점은 숨는 시간 동안 검은 화면 + 타이머)
     public static Role LocalRole = Role.Hider;
 
     // 단계/결과가 바뀔 때 알린다. 종이/총/체력/탈출구 같은 다음 단계들이 여기에 붙는다.
@@ -59,7 +59,7 @@ public class GameManager : MonoBehaviour
         if (PhaseChanged != null) PhaseChanged(p);
     }
 
-    // 판을 끝낸다. 시간 종료(숨는 팀 승리), 나중에 전멸(잡는 팀 승리)/탈출(숨는 팀 승리)이 부른다.
+    // 판을 끝낸다. 시간 종료(숨는 팀 승리), 전멸(잡는 팀 승리), 탈출(숨는 팀 승리)이 부른다.
     public void EndRound(Outcome result)
     {
         if (CurrentPhase == Phase.Ended || CurrentPhase == Phase.Waiting) return;
@@ -161,7 +161,8 @@ public class GameManager : MonoBehaviour
         switch (Result)
         {
             case Outcome.SeekersWin: return "잡는 팀 승리";
-            default: return "시간 종료 - 숨는 팀 승리"; // 지금은 시간 종료만 있다
+            case Outcome.HidersEscaped: return "탈출 성공 - 숨는 팀 승리";
+            default: return "시간 종료 - 숨는 팀 승리";
         }
     }
 
