@@ -46,6 +46,7 @@ public static class GameSystems
         AddOnce<HouseGlow>(root);       // 집 창문 빛
         AddOnce<GroundTexture>(root);   // 바닥 텍스처
         AddOnce<PropTextures>(root);    // 집/소품 질감
+        AddOnce<WallTextures>(root);    // 모든 벽 질감 (집 벽 이어 붙이기, 가장자리/구역 돌벽)
         AddOnce<RockModels>(root);      // 바위 모델/절차적 메시
         AddOnce<PropModels>(root);      // 통나무/그루터기 모델 (폴더에 넣으면 교체)
         AddOnce<GroundCover>(root);     // 숲 바닥 덮개 (폴더에 넣으면 흩뿌림)
