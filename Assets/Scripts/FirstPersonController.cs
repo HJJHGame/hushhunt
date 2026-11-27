@@ -110,7 +110,8 @@ public class FirstPersonController : MonoBehaviour
         bool moving = dir.sqrMagnitude > 0.01f;
 
         // C를 누르고 있는 동안 웅크린다. 일어설 땐 머리 위 공간을 확인한다. (Ctrl은 천천히 걷기)
-        bool wantCrouch = Input.GetKey(KeyCode.C);
+        // 확정 규칙: 움직이면 앉기가 풀린다. 앉은 채 이동(무음 이동)은 없다. 가만히 있을 때만 웅크린다.
+        bool wantCrouch = Input.GetKey(KeyCode.C) && !moving;
         if (wantCrouch) IsCrouching = true;
         else if (IsCrouching && CanStand()) IsCrouching = false;
         ApplyCrouch();
