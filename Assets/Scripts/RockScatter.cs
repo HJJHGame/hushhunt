@@ -2,10 +2,10 @@ using System.Collections.Generic;
 using UnityEngine;
 using UnityEngine.Rendering;
 
-// 화강암 돌 3종(tevy, CC0)을 맵 곳곳에 흩뿌린다. 돌마다 LODGroup(가까이 / 중간 / 멀리 / 안 그림)이 붙는다.
+// 화강암 돌 3종과 통나무 더미(tevy, CC0)를 맵 곳곳에 흩뿌린다. 돌마다 LODGroup(가까이 / 중간 / 멀리 / 안 그림)이 붙는다.
 // 모델 위치: Assets/Models/<이름>/lod0.glb, lod1.glb, lod2.glb (glTFast 필요). 빌드에서는 Resources/Models/<이름>/lod0 (확장자 없이).
 // 모델이 하나도 없으면 아무것도 하지 않는다.
-// 피하는 곳: 술래 봉쇄 구역 5곳, 집, 나무, 플레이어 시작 위치, 기존 바위/통나무/그루터기/울타리.
+// 피하는 곳: 술래 봉쇄 구역 5곳, 집, 나무, 플레이어 시작 위치, 기존 바위/통나무/그루터기/울타리. 큰 물건(통나무 더미)은 pad만큼 더 넓게 비운다.
 [DefaultExecutionOrder(-40)] // RandomizeLayout(Awake)이 끝난 뒤, 나무/집 위치가 정해진 다음
 public class RockScatter : MonoBehaviour
 {
@@ -13,6 +13,8 @@ public class RockScatter : MonoBehaviour
     class Kind
     {
         public string name; public float minSize, maxSize; public int count;
+        public float pad = 0f;                 // 큰 물건이 장애물과 더 떨어지도록 더하는 여유(m)
+        public float lod0 = Lod0Height, lod1 = Lod1Height, cull = CullHeight; // 화면 비율. 큰 물건은 더 크게 잡아 같은 거리에서 전환
         public GameObject[] lods = new GameObject[3];
         public Vector3 size0; // 배율 1일 때 lod0 크기(m)
     }
@@ -20,6 +22,8 @@ public class RockScatter : MonoBehaviour
     // 조절값: 개수와 크기. 원본 크기는 0.4~0.9m라 그대로면 숲에서 안 보여서 키워 쓴다.
     static readonly Kind[] Kinds =
     {
+        // 통나무 더미: 원본 5.2 x 2.1 x 1.2m. 큰 물건이라 먼저 놓는다. LOD0 약 25m, LOD1 약 55m, 약 100m 밖은 안 그림.
+        new Kind { name = "log-pile", minSize = 4.6f, maxSize = 5.6f, count = 25, pad = 2.2f, lod0 = 0.18f, lod1 = 0.08f, cull = 0.04f },
         new Kind { name = "granite-pond-edge-stone-1",   minSize = 1.4f, maxSize = 2.6f, count = 80 },
         new Kind { name = "granite-pond-edge-stone-4",   minSize = 1.4f, maxSize = 2.6f, count = 80 },
         new Kind { name = "granite-river-stone-veined",  minSize = 0.8f, maxSize = 1.6f, count = 80 },
@@ -121,15 +125,15 @@ public class RockScatter : MonoBehaviour
                 float x = (float)(rand.NextDouble() * 2.0 - 1.0) * lim;
                 float z = (float)(rand.NextDouble() * 2.0 - 1.0) * lim;
                 var p = new Vector2(x, z);
-                if (Zones.Contains(x, z, ZoneMargin)) continue;
-                if (Vector2.Distance(p, player) < PlayerClear) continue;
+                if (Zones.Contains(x, z, ZoneMargin + k.pad)) continue;
+                if (Vector2.Distance(p, player) < PlayerClear + k.pad) continue;
                 bool bad = false;
                 foreach (var h in houses)
-                    if (Mathf.Abs(x - h.x) < h.z + HouseClear && Mathf.Abs(z - h.y) < h.w + HouseClear) { bad = true; break; }
+                    if (Mathf.Abs(x - h.x) < h.z + HouseClear + k.pad && Mathf.Abs(z - h.y) < h.w + HouseClear + k.pad) { bad = true; break; }
                 if (bad) continue;
-                if (trees.Nearest(p, TreeClear) < TreeClear) continue;
-                if (props.Nearest(p, PropClear) < PropClear) continue;
-                if (placed.Nearest(p, RockClear) < RockClear) continue;
+                if (trees.Nearest(p, TreeClear + k.pad) < TreeClear + k.pad) continue;
+                if (props.Nearest(p, PropClear + k.pad) < PropClear + k.pad) continue;
+                if (placed.Nearest(p, RockClear + k.pad) < RockClear + k.pad) continue;
 
                 float want = Mathf.Lerp(k.minSize, k.maxSize, (float)rand.NextDouble());
                 float yaw = (float)rand.NextDouble() * 360f;
@@ -139,7 +143,7 @@ public class RockScatter : MonoBehaviour
             }
             total += made;
         }
-        Debug.Log("[HushHunt] RockScatter: 돌 " + total + "개 배치 (모델 " + kinds.Count + "종)");
+        Debug.Log("[HushHunt] RockScatter: 돌/통나무 더미 " + total + "개 배치 (모델 " + kinds.Count + "종)");
     }
 
     static void Build(Kind k, Transform parent, float x, float z, float want, float yaw)
@@ -184,9 +188,9 @@ public class RockScatter : MonoBehaviour
 
         var g = root.gameObject.AddComponent<LODGroup>();
         var lods = new LOD[3];
-        lods[0] = new LOD(Lod0Height, groups[0].ToArray());
-        lods[1] = new LOD(Lod1Height, groups[1].ToArray());
-        lods[2] = new LOD(CullHeight, groups[2].ToArray());
+        lods[0] = new LOD(k.lod0, groups[0].ToArray());
+        lods[1] = new LOD(k.lod1, groups[1].ToArray());
+        lods[2] = new LOD(k.cull, groups[2].ToArray());
         g.SetLODs(lods);
         g.fadeMode = LODFadeMode.None;
         g.RecalculateBounds();
