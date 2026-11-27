@@ -38,6 +38,10 @@ public class FirstPersonController : MonoBehaviour
 
     public bool IsSprinting { get; private set; }
     public bool IsCrouching { get; private set; }
+    public bool IsSlowWalking { get; private set; }
+
+    // 발소리가 다른 사람에게 들리는 거리(m). 달리기 25, 기본 12, 천천히 걷기 5, 웅크리기 무음, 멈춰 있으면 0.
+    public float NoiseRadius { get; private set; }
     public bool IsExhausted { get; private set; }
     public float Stamina01 { get { return staminaMax > 0f ? stamina / staminaMax : 1f; } }
 
@@ -117,6 +121,8 @@ public class FirstPersonController : MonoBehaviour
         UpdateStamina();
 
         bool slow = Input.GetKey(KeyCode.LeftControl) && !IsSprinting;
+        IsSlowWalking = slow && !IsCrouching;
+        NoiseRadius = !moving || IsCrouching ? 0f : (IsSprinting ? 25f : (slow ? 5f : 12f));
         float speed = IsCrouching ? crouchSpeed : (IsSprinting ? sprintSpeed : (slow ? slowWalkSpeed : walkSpeed));
 
         if (controller.isGrounded)
