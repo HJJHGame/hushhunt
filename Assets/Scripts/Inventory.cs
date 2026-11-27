@@ -1,7 +1,7 @@
 using UnityEngine;
 
 // 인벤토리 5칸. E 키로 열고 닫는다 (화면 아래 가운데에 표시).
-// 1번 손전등(항상 가지고 있음, T로 켜고 끔), 2번 종이, 3번 샷건, 4번 소총(AR), 5번 칼.
+// 1번 손전등(항상 가지고 있음, T로 켜고 끔), 2번 종이, 3번 권총, 4번 소총(AR), 5번 칼.
 // 지금은 가지고 있는 것을 보여 주는 표시 전용이다. 칸 선택/버리기는 나중.
 // 종이는 줍는 순간 총으로 바뀌므로, 종이로 총을 받은 사람 칸에 "받음"으로 표시한다.
 public class Inventory : MonoBehaviour
@@ -15,7 +15,7 @@ public class Inventory : MonoBehaviour
     Flashlight flash;
     GUIStyle numStyle, nameStyle;
 
-    static readonly string[] SlotNames = { "손전등", "종이", "샷건", "소총", "칼" };
+    static readonly string[] SlotNames = { "손전등", "종이", "권총", "소총", "칼" };
 
     void Update()
     {
@@ -30,7 +30,7 @@ public class Inventory : MonoBehaviour
         {
             case 0: return true;
             case 1: return gun != null && gun.GotGunFromPaper;
-            case 2: return gun != null && gun.HasGun && gun.Weapon == WeaponKind.Shotgun;
+            case 2: return gun != null && gun.HasGun && gun.Weapon == WeaponKind.Pistol;
             case 3: return gun != null && gun.HasGun && gun.Weapon == WeaponKind.Rifle;
             default: return gun != null && gun.HasGun && gun.Weapon == WeaponKind.Knife;
         }
