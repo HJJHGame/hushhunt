@@ -1,6 +1,6 @@
 using UnityEngine;
 
-// 혼자 테스트용 봇 하나. 플레이어의 상대 팀으로 시작하고, 계속 돌아다니며, 몸이 빛나서 멀리서도 잘 보인다.
+// 혼자 테스트용 봇 하나. 플레이어와 같은 몸 모델을 쓰고, 계속 돌아다니며, 몸이 빛나서 멀리서도 잘 보인다.
 // G(팀 전환)를 누르면 플레이어와 팀/위치를 서로 바꾼다. 쏘지는 않는다.
 // Health/GunHolder를 그대로 써서 피해, 숨는 시간 규칙, 사망, 관전 규칙이 플레이어와 같다.
 [DefaultExecutionOrder(50)]
@@ -19,7 +19,8 @@ public class Bot : MonoBehaviour
     CharacterController cc;
     GameManager gm;
     Transform visual;
-    Material mat;
+    readonly System.Collections.Generic.List<Material> mats = new System.Collections.Generic.List<Material>();
+    readonly System.Collections.Generic.List<Color> baseColors = new System.Collections.Generic.List<Color>();
     Light glow;
     Vector3 target;
     Vector3 lastPos;
@@ -78,19 +79,20 @@ public class Bot : MonoBehaviour
     {
         // 쓰러진 모습: 눕히고 불빛을 끈다. 몸은 남는다.
         tipped = true;
-        if (visual != null) { visual.localRotation = Quaternion.Euler(90f, 0f, 0f); visual.localPosition = new Vector3(0f, -0.55f, 0f); }
+        if (visual != null) { visual.localRotation = Quaternion.Euler(90f, 0f, 0f); visual.localPosition = new Vector3(0f, -0.8f, 0f); }
         if (glow != null) glow.enabled = false;
-        if (mat != null) mat.SetColor("_EmissionColor", Color.black);
+        foreach (var m in mats) RuntimeMaterials.SetEmission(m, Color.black);
     }
 
     // 팀 색: 잡는 팀 빨강, 숨는 팀 청록. 살아나면 다시 세우고 불을 켠다.
     void Refresh()
     {
         Color col = health.team == Team.Seeker ? new Color(1f, 0.15f, 0.1f) : new Color(0.1f, 1f, 0.8f);
-        if (mat != null)
+        // 플레이어와 같은 몸 모델(PlayerBody)의 재질에 팀 색을 섞고 자체 발광을 준다.
+        for (int i = 0; i < mats.Count; i++)
         {
-            mat.color = col;
-            mat.SetColor("_EmissionColor", col * 2.5f);
+            mats[i].color = Color.Lerp(baseColors[i], col, 0.55f);
+            RuntimeMaterials.SetEmission(mats[i], col * 1.6f);
         }
         if (glow != null) { glow.color = col; glow.enabled = !hiddenNow; }
         if (tipped && visual != null) { visual.localRotation = Quaternion.identity; visual.localPosition = Vector3.zero; }
@@ -99,29 +101,20 @@ public class Bot : MonoBehaviour
 
     void BuildVisual()
     {
-        var shader = Shader.Find("Standard");
-        if (shader == null) shader = Shader.Find("Sprites/Default");
-        mat = new Material(shader);
-        mat.EnableKeyword("_EMISSION");
-
-        var body = GameObject.CreatePrimitive(PrimitiveType.Capsule);
-        body.name = "Bot Body";
-        Destroy(body.GetComponent<Collider>()); // 충돌은 CharacterController만 쓴다
-        body.transform.SetParent(transform, false);
-        body.transform.localScale = new Vector3(0.8f, 1f, 0.8f);
-        var r = body.GetComponent<Renderer>();
-        r.sharedMaterial = mat;
-        r.shadowCastingMode = UnityEngine.Rendering.ShadowCastingMode.Off;
-        visual = body.transform;
-
-        // 앞쪽 표시: 어느 쪽으로 가는지 보이게 작은 코
-        var nose = GameObject.CreatePrimitive(PrimitiveType.Cube);
-        nose.name = "Bot Nose";
-        Destroy(nose.GetComponent<Collider>());
-        nose.transform.SetParent(visual, false);
-        nose.transform.localPosition = new Vector3(0f, 0.5f, 0.45f);
-        nose.transform.localScale = new Vector3(0.3f, 0.2f, 0.4f);
-        nose.GetComponent<Renderer>().sharedMaterial = mat;
+        // 플레이어와 같은 몸(PlayerBody: 몸통/머리/후드/배낭/팔다리, 걸을 때 다리 흔들림). 봇은 전신이 보인다.
+        var foot = GetComponent<Footsteps>();
+        if (foot == null) { foot = gameObject.AddComponent<Footsteps>(); foot.volume = 0f; } // 걸음 박자만 쓰고 소리는 끈다
+        var body = GetComponent<PlayerBody>();
+        if (body == null) body = gameObject.AddComponent<PlayerBody>();
+        body.SetFirstPerson(false);
+        visual = transform.Find("Character Model");
+        if (visual != null)
+            foreach (var r in visual.GetComponentsInChildren<Renderer>())
+            {
+                r.shadowCastingMode = UnityEngine.Rendering.ShadowCastingMode.Off;
+                var m = r.sharedMaterial;
+                if (m != null && !mats.Contains(m)) { mats.Add(m); baseColors.Add(m.color); }
+            }
 
         var lg = new GameObject("Bot Glow");
         lg.transform.SetParent(transform, false);
