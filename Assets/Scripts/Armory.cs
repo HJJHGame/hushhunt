@@ -46,11 +46,11 @@ public class Armory : MonoBehaviour
         msgStyle.fontSize = Mathf.RoundToInt(26f * Mathf.Clamp(Screen.height / 1080f, 0.75f, 1.5f));
         HudText.Label(new Rect(0f, Screen.height * 0.25f, Screen.width, 44f), msg, msgStyle);
     }
-    static readonly WeaponKind[] kinds3 = { WeaponKind.Shotgun, WeaponKind.Rifle, WeaponKind.Knife }; // 자동 지급은 랜덤 무기
+    static readonly WeaponKind[] kinds3 = { WeaponKind.Pistol, WeaponKind.Rifle, WeaponKind.Knife }; // 자동 지급은 랜덤 무기
 
     void Update()
     {
-        // 숨는 팀은 판이 시작되면 무기(샷건/소총/칼) 중 하나를 무작위로 하나 받는다.
+        // 숨는 팀은 판이 시작되면 무기(권총/소총/칼) 중 하나를 무작위로 하나 받는다.
         if (gm0 == null) gm0 = FindFirstObjectByType<GameManager>();
         if (!MainMenu.IsMenuOpen && (gm0 == null || !gm0.paused)) clock += Time.deltaTime;
         if (gm0 != null && (gm0.CurrentPhase == GameManager.Phase.Hiding || gm0.CurrentPhase == GameManager.Phase.Seeking))
@@ -60,7 +60,7 @@ public class Armory : MonoBehaviour
                 if (h == null || !h.IsAlive || h.IsSeeker || h.GotStartWeapon) continue;
                 h.GotStartWeapon = true;
                 if (h.HasGun) continue;
-                var kinds = new[] { WeaponKind.Shotgun, WeaponKind.Rifle, WeaponKind.Knife };
+                var kinds = new[] { WeaponKind.Pistol, WeaponKind.Rifle, WeaponKind.Knife };
                 h.Grant(false, kinds[Random.Range(0, kinds.Length)]);
             }
         }
