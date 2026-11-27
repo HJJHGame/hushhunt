@@ -60,6 +60,8 @@ public class FirstPersonController : MonoBehaviour
 
     void Start()
     {
+        // 확정 이동속도(m/s). 씬에 저장된 값이 달라도 항상 이 값을 쓴다.
+        crouchSpeed = 1.5f; slowWalkSpeed = 2.5f; walkSpeed = 4f; sprintSpeed = 6f;
         // 기존 씬에도 적용되도록 시작할 때 눈 위치를 맞춘다.
         if (cameraPivot != null)
             cameraPivot.localPosition = new Vector3(0f, standingEyeY, eyeForward);
