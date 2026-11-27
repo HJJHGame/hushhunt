@@ -50,6 +50,29 @@ public class Zones : MonoBehaviour
         return new Vector3(c.x + o.x, 1.1f, c.y + o.y);
     }
 
+    // 숨는 팀 시작 위치: 구역 밖 아무 곳 (구역에서 10m 이상 떨어진 곳).
+    public static Vector3 HiderSpawnPoint()
+    {
+        Init();
+        float lim = WorldConfig.Half - 20f;
+        for (int i = 0; i < 200; i++)
+        {
+            float x = Random.Range(-lim, lim), z = Random.Range(-lim, lim);
+            if (!Contains(x, z, 10f)) return new Vector3(x, 1.1f, z);
+        }
+        return new Vector3(0f, 1.1f, WorldConfig.Half * 0.5f);
+    }
+
+    // 플레이어를 그 자리로 옮긴다 (CharacterController를 잠시 꺼야 충돌 상태가 꼬이지 않는다).
+    public static void Teleport(FirstPersonController fpc, Vector3 p)
+    {
+        if (fpc == null) return;
+        var cc = fpc.GetComponent<CharacterController>();
+        if (cc != null) cc.enabled = false;
+        fpc.transform.position = p;
+        if (cc != null) cc.enabled = true;
+    }
+
     readonly List<GameObject> walls = new List<GameObject>();
     GameManager gm;
     AudioSource src;
