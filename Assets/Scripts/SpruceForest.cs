@@ -22,14 +22,17 @@ public class SpruceForest : MonoBehaviour
     public static string PaperLabel;
     const float HouseMargin = 1.5f;      // 추가 나무는 집 발자국 + 이 여유(m) 안에는 안 심는다
     const float SpawnClearance = 6f;     // 플레이어 스폰 주변 비움(m)
-    const float Lod0Height = 0.35f; // 화면 높이 비율. 키 10m 기준 대략 24m 안
-    const float Lod1Height = 0.22f; // 대략 39m 안
-    const float CullHeight = 0.01f;
+    // 모든 나무의 최종 키(m)는 이 범위 안에서 무작위. 모델마다 실제 키(렌더러 경계)를 재서 정확히 맞춘다.
+    const float MinTreeHeight = 12f;
+    const float MaxTreeHeight = 15f;
+    const float Lod0Height = 0.26f; // 화면 높이 비율. 키 13.5m 기준 대략 24m 안 (예전 10m 나무와 같은 거리)
+    const float Lod1Height = 0.165f; // 대략 39m 안
+    const float CullHeight = 0.0075f;
 
     const string CypressName = "bald-cypress"; // tevy Bald Cypress (CC0). 파일: Assets/Models/bald-cypress/lod0.glb, lod1.glb, lod2.glb
-    const float CypressHeightMul = 1.2f;       // 높이 약 20m짜리 큰 나무라 가문비 기준 키의 1.2배로 줄여 쓴다(약 11m, 폭 약 10m)
+    const float CypressHeightMul = 1.2f;       // 높이 약 20m짜리 큰 나무라 가문비 기준 키의 1.2배로 줄여 쓴다(약 11m, 폭 약 10m) // (지금은 안 씀: 키는 MinTreeHeight~MaxTreeHeight로 통일)
     const string GinkgoName = "ginkgo-tree";   // tevy Ginkgo Tree (CC0). 가로수 격자/흙은 뺀 파일. Assets/Models/ginkgo-tree/lod0.glb, lod1.glb, lod2.glb
-    const float GinkgoHeightMul = 1.3f;        // 원본 13.6m. 노란 눈에 띄는 표지판 역할이라 가문비 기준 키의 1.3배(약 12m)
+    const float GinkgoHeightMul = 1.3f;        // 원본 13.6m. 노란 눈에 띄는 표지판 역할이라 가문비 기준 키의 1.3배(약 12m) // (지금은 안 씀)
     const string YoungName = "young-spruce";
     const string DeadName = "dead-spruce";
 
@@ -197,8 +200,8 @@ public class SpruceForest : MonoBehaviour
             {
                 // 줄기 충돌체 (기존 소나무 줄기와 비슷하게)
                 var cap = go.AddComponent<CapsuleCollider>();
-                cap.radius = 0.25f;
-                cap.height = WorldConfig.PineHeight * 0.6f;
+                cap.radius = 0.3f;
+                cap.height = MinTreeHeight * 0.5f;
                 cap.center = new Vector3(0f, cap.height * 0.5f, 0f);
                 extra++;
                 counts[v.label] = (counts.TryGetValue(v.label, out var n1) ? n1 : 0) + 1;
@@ -247,7 +250,7 @@ public class SpruceForest : MonoBehaviour
             if (f != null) f.gameObject.SetActive(false);
         }
 
-        float target = v.heightMul * WorldConfig.PineHeight * oldScale * (0.85f + (float)rand.NextDouble() * 0.3f);
+        float target = Mathf.Lerp(MinTreeHeight, MaxTreeHeight, (float)rand.NextDouble()); // 12~15m, 모델 종류와 무관
         float girth = 0.92f + (float)rand.NextDouble() * 0.16f;
         var rot = Quaternion.Euler((float)(rand.NextDouble() * 4.0 - 2.0), (float)rand.NextDouble() * 360f,
             (float)(rand.NextDouble() * 4.0 - 2.0));
