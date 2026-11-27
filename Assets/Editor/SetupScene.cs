@@ -13,7 +13,7 @@ using Names = WorldConfig.Names;
 public static class SetupScene
 {
     const string ScenePath = "Assets/Scenes/Main.unity";
-    const int SceneVersion = 14; // 씬 구성을 바꾸면 1 올린다 (v14: 숲 밀도 대폭 증가: 나무 700, 바위 120, 통나무 90, 그루터기 110)
+    const int SceneVersion = 15; // 씬 구성을 바꾸면 1 올린다 (v15: 나무 80% 죽은 나무, 잎은 높이 4m 위부터. v14: 숲 밀도 증가: 나무 700, 바위 120, 통나무 90, 그루터기 110)
     const string VersionKey = "HushHunt.SceneVersion";
 
     static SetupScene()
@@ -131,7 +131,8 @@ public static class SetupScene
             if (NearSpawn(x, z, 6f)) continue; // 스폰 지점 비우기
 
             float scale = 0.9f + (float)rand.NextDouble() * 0.7f; // 0.9~1.6배 크기
-            MakePineTree(new Vector3(x, 0f, z), scale, trunkMat, pineMat, coneMesh);
+            bool bare = rand.NextDouble() < 0.8; // 죽은 나무(잎 없음) 80%
+            MakePineTree(new Vector3(x, 0f, z), scale, trunkMat, pineMat, coneMesh, bare, rand);
             props.Add(new Vector3(x, z, 2.5f));
             placed++;
         }
@@ -558,12 +559,15 @@ public static class SetupScene
 
     // 소나무 한 그루: 기둥 위에 원뿔 3단 (아래로 갈수록 넓음). 총 높이 약 9.5m x scale.
     // 키 크고 가는 실루엣이 나오도록 기둥은 가늘고 수형은 높게.
-    static void MakePineTree(Vector3 pos, float scale, Material trunkMat, Material pineMat, Mesh coneMesh)
+    static void MakePineTree(Vector3 pos, float scale, Material trunkMat, Material pineMat, Mesh coneMesh, bool bare, System.Random rand)
     {
         var tree = new GameObject(Names.PineTree);
         tree.transform.position = pos;
 
-        float trunkH = 3.2f * scale;
+        if (bare) { MakeDeadTree(pos, scale, trunkMat, rand); return; }
+
+        // 잎은 눈높이(1.7m)보다 훨씬 위(약 3.8m x scale)부터 시작해서 시야와 손전등 불빛을 가리지 않는다.
+        float trunkH = 4.2f * scale;
         float trunkW = WorldConfig.PineTrunkBaseWidth * scale;
         var trunk = GameObject.CreatePrimitive(PrimitiveType.Cylinder);
         trunk.name = Names.PineTrunk;
@@ -573,8 +577,8 @@ public static class SetupScene
         trunk.GetComponent<Renderer>().sharedMaterial = trunkMat;
 
         float baseRadius = 1.9f * scale;
-        float layerH = 2.8f * scale;
-        float y = trunkH * 0.85f; // 첫 단은 기둥 꼭대기 부근부터 시작
+        float layerH = 2.4f * scale;
+        float y = trunkH * 0.9f; // 첫 단은 기둥 꼭대기 부근부터 시작
         for (int i = 0; i < 3; i++)
         {
             float radius = baseRadius * (1f - 0.25f * i);
@@ -585,6 +589,40 @@ public static class SetupScene
             layer.AddComponent<MeshFilter>().sharedMesh = coneMesh;
             layer.AddComponent<MeshRenderer>().sharedMaterial = pineMat;
             y += layerH * 0.72f; // 겹치게 쌓아 단 사이 틈이 안 보이게
+        }
+    }
+
+    // 죽은 나무: 잎 없는 가는 기둥과 마른 가지 몇 개. 이름은 소나무와 같게 둬서 다른 시스템이 그대로 다룬다(Trunk).
+    static void MakeDeadTree(Vector3 pos, float scale, Material trunkMat, System.Random rand)
+    {
+        var tree = new GameObject(Names.PineTree);
+        tree.transform.position = pos;
+        float trunkH = 8.5f * scale;
+        float trunkW = WorldConfig.PineTrunkBaseWidth * scale;
+        var trunk = GameObject.CreatePrimitive(PrimitiveType.Cylinder);
+        trunk.name = Names.PineTrunk;
+        trunk.transform.SetParent(tree.transform);
+        trunk.transform.localPosition = new Vector3(0f, trunkH * 0.5f, 0f);
+        trunk.transform.localScale = new Vector3(trunkW, trunkH * 0.5f, trunkW);
+        trunk.GetComponent<Renderer>().sharedMaterial = trunkMat;
+
+        // 마른 가지: 눈높이보다 위(3m 이상)에서만 뻗는다.
+        int branches = 4 + rand.Next(3);
+        for (int i = 0; i < branches; i++)
+        {
+            float h = (3.2f + (float)rand.NextDouble() * 4.6f) * scale;
+            float len = (1.2f + (float)rand.NextDouble() * 1.4f) * scale;
+            float yaw = (float)rand.NextDouble() * 360f;
+            var b = GameObject.CreatePrimitive(PrimitiveType.Cylinder);
+            b.name = "Dead Branch";
+            Object.DestroyImmediate(b.GetComponent<Collider>());
+            b.transform.SetParent(tree.transform);
+            b.transform.localRotation = Quaternion.Euler(0f, yaw, 0f) * Quaternion.Euler(0f, 0f, 55f);
+            // 가지 한쪽 끝이 기둥에 닿도록: 중심을 바깥쪽으로 len/2만큼
+            Vector3 outward = Quaternion.Euler(0f, yaw, 0f) * Vector3.right;
+            b.transform.localPosition = new Vector3(0f, h, 0f) + (outward * Mathf.Sin(55f * Mathf.Deg2Rad) + Vector3.up * Mathf.Cos(55f * Mathf.Deg2Rad)) * (len * 0.5f);
+            b.transform.localScale = new Vector3(0.07f * scale, len * 0.5f, 0.07f * scale);
+            b.GetComponent<Renderer>().sharedMaterial = trunkMat;
         }
     }
 
