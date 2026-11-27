@@ -79,6 +79,12 @@ public class GameManager : MonoBehaviour
 
     void Update()
     {
+        // 테스트용: R은 판 도중에도 바로 재시작한다 (타이틀 화면이 열려 있을 땐 무시).
+        if (CurrentPhase != Phase.Waiting && !MainMenu.IsMenuOpen && Input.GetKeyDown(KeyCode.R))
+        {
+            Restart();
+            return;
+        }
         if (CurrentPhase == Phase.Ended)
         {
             if (Input.GetKeyDown(KeyCode.R))
