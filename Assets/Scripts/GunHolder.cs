@@ -130,8 +130,8 @@ public class GunHolder : MonoBehaviour
         float range = Weapon == WeaponKind.Knife ? KnifeRange : RifleRange;
         Vector3 dirF = cam.transform.forward;
         if (Weapon == WeaponKind.Rifle) dirF = Spread(cam.transform, RifleSpreadDeg);
-        var hits = Physics.RaycastAll(cam.transform.position, dirF, range, ~0, QueryTriggerInteraction.Ignore);
-        var target = FirstTarget(hits);
+        int n = Physics.RaycastNonAlloc(cam.transform.position, dirF, hitBuf, range, ~0, QueryTriggerInteraction.Ignore);
+        var target = FirstTarget(n);
         if (target != null)
         {
             target.Hit(gameObject);
@@ -139,12 +139,17 @@ public class GunHolder : MonoBehaviour
         }
     }
 
-    // 광선에 처음 막힌 곳이 상대 팀이면 그 Health를 돌려준다 (자기 몸/아군은 통과 아님: 아군은 막고 피해 없음).
-    Health FirstTarget(RaycastHit[] hits)
+    // 광선 결과 버퍼: 매번 새로 만들지 않고 재사용한다 (발사마다 쓰레기가 쌓이지 않게).
+    static readonly RaycastHit[] hitBuf = new RaycastHit[32];
+    static readonly System.Comparison<RaycastHit> byDistance = (a, b) => a.distance.CompareTo(b.distance);
+
+    // 광선에 처음 막힌 곳이 상대 팀이면 그 Health를 돌려준다 (자기 몸은 통과, 아군/물체는 막고 피해 없음).
+    Health FirstTarget(int count)
     {
-        System.Array.Sort(hits, (a, b) => a.distance.CompareTo(b.distance));
-        foreach (var hit in hits)
+        System.Array.Sort(hitBuf, 0, count, System.Collections.Generic.Comparer<RaycastHit>.Create(byDistance));
+        for (int i = 0; i < count; i++)
         {
+            var hit = hitBuf[i];
             if (hit.collider.transform.IsChildOf(transform)) continue; // 자기 몸은 통과
             var target = hit.collider.GetComponentInParent<Health>();
             if (target != null && target != health && !target.IsDead && target.team != health.team) return target;
@@ -160,25 +165,29 @@ public class GunHolder : MonoBehaviour
     }
 
     // 샷건: 펠릿마다 광선을 쏜다. 한 발의 피해는 맞은 펠릿 비율 x 거리 감소(5m 풀, 12m에서 0).
+    static readonly List<Health> sgTargets = new List<Health>();
+    static readonly List<float> sgDamage = new List<float>();
+
     void FireShotgun(Camera cam)
     {
-        var dmg = new Dictionary<Health, float>();
+        sgTargets.Clear(); sgDamage.Clear();
         for (int i = 0; i < ShotgunPellets; i++)
         {
-            var hits = Physics.RaycastAll(cam.transform.position, Spread(cam.transform, ShotgunSpreadDeg), ShotgunZeroRange, ~0, QueryTriggerInteraction.Ignore);
-            var t = FirstTarget(hits);
+            int n = Physics.RaycastNonAlloc(cam.transform.position, Spread(cam.transform, ShotgunSpreadDeg), hitBuf, ShotgunZeroRange, ~0, QueryTriggerInteraction.Ignore);
+            var t = FirstTarget(n);
             if (t == null) continue;
             float d = Vector3.Distance(cam.transform.position, t.transform.position);
             float f = Mathf.Clamp01(1f - (d - ShotgunFullRange) / (ShotgunZeroRange - ShotgunFullRange));
             float add = CombatRules.HitDamage(t.team) * f / ShotgunPellets;
-            float cur; dmg.TryGetValue(t, out cur);
-            dmg[t] = cur + add;
+            int k = sgTargets.IndexOf(t);
+            if (k < 0) { sgTargets.Add(t); sgDamage.Add(add); } else sgDamage[k] += add;
         }
-        foreach (var kv in dmg)
-            if (kv.Value > 0f) { kv.Key.TakeDamage(kv.Value, gameObject); hitUntil = Time.unscaledTime + 0.25f; }
+        for (int k = 0; k < sgTargets.Count; k++)
+            if (sgDamage[k] > 0f) { sgTargets[k].TakeDamage(sgDamage[k], gameObject); hitUntil = Time.unscaledTime + 0.25f; }
     }
 
     string sayText; float sayUntil;
+    GUIStyle sayStyle;
     void Say(string t) { sayText = t; sayUntil = Time.unscaledTime + 2f; }
 
     // 테스트용 팀 전환 때 무기 상태를 새로 시작한다: 잡는 팀은 총 없음, 숨는 팀은 시작 무기를 다시 받는다.
@@ -193,7 +202,8 @@ public class GunHolder : MonoBehaviour
         if (GetComponent<FirstPersonController>() == null) return;
         if (Time.unscaledTime < sayUntil && !MainMenu.IsMenuOpen && Event.current.type == EventType.Repaint)
         {
-            var st = new GUIStyle(GUI.skin.label) { alignment = TextAnchor.MiddleCenter, fontStyle = FontStyle.Bold };
+            if (sayStyle == null) sayStyle = new GUIStyle(GUI.skin.label) { alignment = TextAnchor.MiddleCenter, fontStyle = FontStyle.Bold };
+            var st = sayStyle;
             st.fontSize = Mathf.RoundToInt(24f * Mathf.Clamp(Screen.height / 1080f, 0.75f, 1.5f));
             HudText.Label(new Rect(0f, Screen.height * 0.7f, Screen.width, 40f), sayText, st);
         }
