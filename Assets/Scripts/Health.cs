@@ -77,6 +77,16 @@ public class Health : MonoBehaviour
         if (Hp <= 0f) Die();
     }
 
+    // 테스트용(G 팀 전환): 죽은 상태를 풀고 체력을 채우고 다시 움직일 수 있게 한다.
+    // 혼자 테스트할 때 술래로 죽은 뒤 숨는 팀으로 돌아와 탈출해 보는 용도. 실제 판에는 부활이 없다.
+    public void ReviveForTest()
+    {
+        IsDead = false;
+        Hp = CombatRules.MaxHp;
+        var move = GetComponent<FirstPersonController>();
+        if (move != null) move.enabled = true;
+    }
+
     void Die()
     {
         IsDead = true;
