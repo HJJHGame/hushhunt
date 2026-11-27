@@ -2,19 +2,19 @@ using System.Collections.Generic;
 using UnityEngine;
 using UnityEngine.Rendering;
 
-// 숲의 모든 나무를 tevy 가문비 모델(young-spruce 20%, dead-spruce 80%)로 채운다.
+// 숲의 모든 나무를 tevy 모델 3종(dead-spruce, young-spruce, bald-cypress)으로 채운다.
 // 모델 위치: Assets/Models/<이름>/lod0.glb, lod1.glb, lod2.glb (glTFast 패키지 필요).
 // 에디터에서는 AssetDatabase로, 빌드에서는 Resources/Models/<이름>/lod0 (확장자 없이)로 찾는다.
 // 모델이 하나도 없으면 아무것도 하지 않고 기존 나무(TreeModels)가 그대로 나온다.
 // 나무마다 LODGroup: LOD0 가까이 / LOD1 중간 / LOD2 멀리(그림자 끔) / 그 밖은 안 그림.
-// 용지(TreePaper)는 dead-spruce에 붙는다 ("TreeModel Spruce Dead" 이름을 찾는다).
+// 용지(TreePaper)는 가장 무거운 잎 있는 모델(낙우송) 80그루 중 10그루에 붙는다 (PaperLabel).
 [DefaultExecutionOrder(-60)] // TreeModels(-50)보다 먼저: 성공하면 TreeModels는 건너뛴다
 public class SpruceForest : MonoBehaviour
 {
     public static bool Active;
 
     // 나무 총 수는 TreeLayout.Total(1800). 종류별 개수는 정확히 맞춘다:
-    // 죽은 나무 900, 잎 있는 모델 중 가장 무거운 것 80, 나머지 잎 있는 나무(820)는 남은 모델들이 똑같이 나눈다.
+    // 죽은 나무 900, 잎 있는 모델 중 가장 무거운 것(낙우송) 80, 나머지 820은 가문비(young).
     const int DeadCount = 900;
     const int HeavyCount = 80;
     // 종이를 붙일 나무의 모델 이름(가장 무거운 잎 있는 모델). TreePaper가 읽는다.
@@ -25,8 +25,8 @@ public class SpruceForest : MonoBehaviour
     const float Lod1Height = 0.22f; // 대략 39m 안
     const float CullHeight = 0.01f;
 
-    const string KitName = "japan-conifer-kit"; // CC0 Nature Tree Japan Conifer Kit. 파일: Assets/Models/japan-conifer-kit/lod0.glb (키트 GLB 하나)
-    const float KuromatsuHeightMul = 0.6f;      // 흑송(둥글고 넓은 나무)은 옆으로 너무 퍼지지 않게 키를 이만큼 줄인다
+    const string CypressName = "bald-cypress"; // tevy Bald Cypress (CC0). 파일: Assets/Models/bald-cypress/lod0.glb, lod1.glb, lod2.glb
+    const float CypressHeightMul = 1.2f;       // 높이 약 20m짜리 큰 나무라 가문비 기준 키의 1.2배로 줄여 쓴다(약 11m, 폭 약 10m)
     const string YoungName = "young-spruce";
     const string DeadName = "dead-spruce";
 
@@ -95,49 +95,6 @@ public class SpruceForest : MonoBehaviour
         return v;
     }
 
-    // 키트 GLB(나무 4종이 한 파일에 나란히 있음)에서 한 종(prefix: JHN 편백, JKR 흑송)만 뽑아 템플릿을 만든다.
-    // level 0: 가지+잎+줄기, 1/2: 가지 뺀 것(잎+줄기). 키트에는 LOD가 없어서 직접 줄인다.
-    GameObject MakeKitTemplate(GameObject kit, string prefix, int level)
-    {
-        var holder = new GameObject("KitTemplate " + prefix + level);
-        holder.transform.SetParent(transform, false);
-        holder.SetActive(false); // 템플릿은 화면에 안 나온다
-        var inst = Instantiate(kit, holder.transform);
-        var tpl = new GameObject("Tpl");
-        tpl.transform.SetParent(holder.transform, false);
-        var keep = new List<Transform>();
-        float cx = 0f, cz = 0f;
-        foreach (var t in inst.GetComponentsInChildren<Transform>(true))
-        {
-            if (!t.name.StartsWith(prefix)) continue;
-            if (level > 0 && t.name.EndsWith("_Branches")) continue;
-            keep.Add(t);
-            var mf = t.GetComponent<MeshFilter>();
-            if (t.name.EndsWith("_Trunk") && mf != null && mf.sharedMesh != null)
-            {
-                var c = t.TransformPoint(mf.sharedMesh.bounds.center);
-                cx = c.x; cz = c.z; // 줄기 위치를 원점으로 (키트 안에서 나무들이 옆으로 나란히 서 있다)
-            }
-        }
-        if (keep.Count == 0) { Destroy(holder); return null; }
-        foreach (var t in keep) t.SetParent(tpl.transform, true);
-        foreach (var t in keep) t.position -= new Vector3(cx, 0f, cz);
-        Destroy(inst);
-        return tpl;
-    }
-
-    Variant LoadKitVariant(GameObject kit, string prefix, string label, float heightMul)
-    {
-        if (kit == null) return null;
-        var v = new Variant { label = label, heightMul = heightMul };
-        for (int i = 0; i < 3; i++)
-        {
-            v.lods[i] = MakeKitTemplate(kit, prefix, i);
-            if (v.lods[i] == null) return null;
-        }
-        return v;
-    }
-
     void Start()
     {
         Active = false;
@@ -149,20 +106,18 @@ public class SpruceForest : MonoBehaviour
             Debug.LogWarning("[HushHunt] SpruceForest: 모델 파일을 못 찾음 -> 옛 숲 유지. 필요한 경로: Assets/Models/young-spruce/lod0.glb, Assets/Models/dead-spruce/lod0.glb (glTFast 임포트 확인)");
             return;
         }
-        var kit = LoadModel(KitName, 0);
-        var hinoki = LoadKitVariant(kit, "JHN", "Hinoki", 1f);
-        var kuromatsu = LoadKitVariant(kit, "JKR", "Kuromatsu", KuromatsuHeightMul);
-        if (kit == null) Debug.LogWarning("[HushHunt] SpruceForest: 키트 모델 없음(Assets/Models/" + KitName + "/lod0.glb) -> 편백/흑송 없이 진행");
+        var cypress = LoadVariant(CypressName, "Cypress");
+        if (cypress != null) cypress.heightMul = CypressHeightMul;
+        else Debug.LogWarning("[HushHunt] SpruceForest: 낙우송 모델 없음(Assets/Models/" + CypressName + "/lod0.glb) -> 가문비만으로 진행");
         // 잎 있는 모델 후보. lod0 삼각형 수가 많은 순으로 정렬해서 맨 앞이 "가장 무거운 모델"이 된다.
         var leafy = new List<Variant>();
         if (young != null) leafy.Add(young);
-        if (hinoki != null) leafy.Add(hinoki);
-        if (kuromatsu != null) leafy.Add(kuromatsu);
+        if (cypress != null) leafy.Add(cypress);
         var triLog = new System.Text.StringBuilder();
         foreach (var lv in leafy) { lv.tris = CountTris(lv.lods[0]); triLog.Append(lv.label).Append('=').Append(lv.tris).Append(' '); }
         leafy.Sort((x, y) => y.tris.CompareTo(x.tris));
         PaperLabel = leafy.Count > 0 ? leafy[0].label : (dead != null ? dead.label : null);
-        Debug.Log("[HushHunt] SpruceForest: 모델 로드 young=" + (young != null) + " dead=" + (dead != null) + " hinoki=" + (hinoki != null) + " kuromatsu=" + (kuromatsu != null)
+        Debug.Log("[HushHunt] SpruceForest: 모델 로드 young=" + (young != null) + " dead=" + (dead != null) + " cypress=" + (cypress != null)
             + " / lod0 삼각형 " + triLog + "-> 가장 무거운 모델 " + PaperLabel + " (종이는 여기에)");
 
         var pines = new List<Transform>();
