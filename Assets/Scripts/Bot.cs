@@ -24,7 +24,7 @@ public class Bot : MonoBehaviour
     Vector3 target;
     Vector3 lastPos;
     float retargetAt, nextStuckCheck, vy, seekFrom = -100f;
-    bool tipped;
+    bool tipped, hiddenNow;
 
     // 씬마다 한 번 만든다 (GameSystems가 부른다).
     public static void EnsureSpawned()
@@ -92,7 +92,7 @@ public class Bot : MonoBehaviour
             mat.color = col;
             mat.SetColor("_EmissionColor", col * 2.5f);
         }
-        if (glow != null) { glow.color = col; glow.enabled = true; }
+        if (glow != null) { glow.color = col; glow.enabled = !hiddenNow; }
         if (tipped && visual != null) { visual.localRotation = Quaternion.identity; visual.localPosition = Vector3.zero; }
         tipped = false;
     }
@@ -134,8 +134,17 @@ public class Bot : MonoBehaviour
 
     void Update()
     {
-        if (health == null || health.IsDead || MainMenu.IsMenuOpen) return;
+        if (health == null || MainMenu.IsMenuOpen) return;
         if (gm == null) gm = FindFirstObjectByType<GameManager>();
+        // 숨는 시간 동안 잡는 팀 봇은 보이면 안 된다 (맵 밖에 있는 것으로 친다).
+        bool hide = gm != null && gm.CurrentPhase == GameManager.Phase.Hiding && health.team == Team.Seeker;
+        if (hide != hiddenNow)
+        {
+            hiddenNow = hide;
+            if (visual != null) visual.gameObject.SetActive(!hide);
+            if (glow != null) glow.enabled = !hide && !health.IsDead;
+        }
+        if (health.IsDead) return;
         if (gm == null || gm.paused) return;
         var ph = gm.CurrentPhase;
         if (ph != GameManager.Phase.Hiding && ph != GameManager.Phase.Seeking) return;
