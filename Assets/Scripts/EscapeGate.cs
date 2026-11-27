@@ -74,6 +74,7 @@ public class EscapeGate : MonoBehaviour
             if (Time.unscaledTime - holdStart >= HoldSeconds)
             {
                 escaped.Add(me);
+                me.Escaped = true; // 탈출 뒤에는 피해를 받지 않는다
                 fpc.enabled = false;
                 holdStart = -1f;
             }
@@ -88,7 +89,7 @@ public class EscapeGate : MonoBehaviour
             alive++;
             if (escaped.Contains(h)) outCount++;
         }
-        if (alive > 0 && alive == outCount) gm.EndRound(GameManager.Outcome.HidersWin);
+        if (alive > 0 && alive == outCount) gm.EndRound(GameManager.Outcome.HidersEscaped);
     }
 
     void OnGUI()
