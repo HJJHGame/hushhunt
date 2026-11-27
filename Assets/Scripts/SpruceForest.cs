@@ -2,23 +2,23 @@ using System.Collections.Generic;
 using UnityEngine;
 using UnityEngine.Rendering;
 
-// 숲의 모든 나무를 tevy 모델 4종(dead-spruce, young-spruce, bald-cypress, ginkgo-tree)으로 채운다.
+// 숲의 모든 나무를 tevy 모델 4종(dead-spruce, young-spruce, spooky-tree, ginkgo-tree)으로 채운다.
 // 모델 위치: Assets/Models/<이름>/lod0.glb, lod1.glb, lod2.glb (glTFast 패키지 필요).
 // 에디터에서는 AssetDatabase로, 빌드에서는 Resources/Models/<이름>/lod0 (확장자 없이)로 찾는다.
 // 모델이 하나도 없으면 아무것도 하지 않고 기존 나무(TreeModels)가 그대로 나온다.
 // 나무마다 LODGroup: LOD0 가까이 / LOD1 중간 / LOD2 멀리(그림자 끔) / 그 밖은 안 그림.
-// 용지(TreePaper)는 노란 은행나무 80그루 중 10그루에 붙는다 (PaperLabel). 은행나무 모델이 없으면 낙우송에 붙는다.
+// 용지(TreePaper)는 노란 은행나무 80그루 중 10그루에 붙는다 (PaperLabel). 은행나무 모델이 없으면 어린 가문비에 붙는다.
 [DefaultExecutionOrder(-60)] // TreeModels(-50)보다 먼저: 성공하면 TreeModels는 건너뛴다
 public class SpruceForest : MonoBehaviour
 {
     public static bool Active;
 
     // 나무 총 수는 TreeLayout.Total(1800). 종류별 개수는 정확히 맞춘다:
-    // 죽은 나무 900, 낙우송 80, 은행나무 80, 나머지 740은 가문비(young). 없는 모델의 몫은 가문비가 채운다.
-    const int DeadCount = 900;
-    const int CypressCount = 80;
+    // 죽은 가문비 750, 으스스한 죽은 나무(spooky-tree) 150, 은행나무 정확히 80, 나머지 820은 가문비(young). 없는 모델의 몫은 가문비가 채운다.
+    const int DeadCount = 750;
+    const int SpookyCount = 150;
     const int GinkgoCount = 80;
-    // 종이를 붙일 나무의 모델 이름(은행나무, 없으면 낙우송). TreePaper가 읽는다.
+    // 종이를 붙일 나무의 모델 이름(은행나무, 없으면 가문비). TreePaper가 읽는다.
     public static string PaperLabel;
     const float HouseMargin = 1.5f;      // 추가 나무는 집 발자국 + 이 여유(m) 안에는 안 심는다
     const float SpawnClearance = 6f;     // 플레이어 스폰 주변 비움(m)
@@ -29,8 +29,7 @@ public class SpruceForest : MonoBehaviour
     const float Lod1Height = 0.165f; // 대략 39m 안
     const float CullHeight = 0.0075f;
 
-    const string CypressName = "bald-cypress"; // tevy Bald Cypress (CC0). 파일: Assets/Models/bald-cypress/lod0.glb, lod1.glb, lod2.glb
-    const float CypressHeightMul = 1.2f;       // 높이 약 20m짜리 큰 나무라 가문비 기준 키의 1.2배로 줄여 쓴다(약 11m, 폭 약 10m) // (지금은 안 씀: 키는 MinTreeHeight~MaxTreeHeight로 통일)
+    const string SpookyName = "spooky-tree"; // tevy Spooky Dead Tree (CC0). 원본 7m 높이, 폭 9.6m. Assets/Models/spooky-tree/lod0.glb, lod1.glb, lod2.glb
     const string GinkgoName = "ginkgo-tree";   // tevy Ginkgo Tree (CC0). 가로수 격자/흙은 뺀 파일. Assets/Models/ginkgo-tree/lod0.glb, lod1.glb, lod2.glb
     const float GinkgoHeightMul = 1.3f;        // 원본 13.6m. 노란 눈에 띄는 표지판 역할이라 가문비 기준 키의 1.3배(약 12m) // (지금은 안 씀)
     const string YoungName = "young-spruce";
@@ -112,14 +111,13 @@ public class SpruceForest : MonoBehaviour
             Debug.LogWarning("[HushHunt] SpruceForest: 모델 파일을 못 찾음 -> 옛 숲 유지. 필요한 경로: Assets/Models/young-spruce/lod0.glb, Assets/Models/dead-spruce/lod0.glb (glTFast 임포트 확인)");
             return;
         }
-        var cypress = LoadVariant(CypressName, "Cypress");
-        if (cypress != null) cypress.heightMul = CypressHeightMul;
-        else Debug.LogWarning("[HushHunt] SpruceForest: 낙우송 모델 없음(Assets/Models/" + CypressName + "/lod0.glb) -> 가문비만으로 진행");
+        var spooky = LoadVariant(SpookyName, "Spooky");
+        if (spooky == null) Debug.LogWarning("[HushHunt] SpruceForest: spooky-tree 모델 없음(Assets/Models/" + SpookyName + "/lod0.glb) -> 가문비로 채움");
         var ginkgo = LoadVariant(GinkgoName, "Ginkgo");
         if (ginkgo != null) ginkgo.heightMul = GinkgoHeightMul;
-        else Debug.LogWarning("[HushHunt] SpruceForest: 은행나무 모델 없음(Assets/Models/" + GinkgoName + "/lod0.glb) -> 용지는 낙우송에");
-        PaperLabel = ginkgo != null ? ginkgo.label : (cypress != null ? cypress.label : (young != null ? young.label : (dead != null ? dead.label : null)));
-        Debug.Log("[HushHunt] SpruceForest: 모델 로드 young=" + (young != null) + " dead=" + (dead != null) + " cypress=" + (cypress != null)
+        else Debug.LogWarning("[HushHunt] SpruceForest: 은행나무 모델 없음(Assets/Models/" + GinkgoName + "/lod0.glb) -> 용지는 어린 가문비에");
+        PaperLabel = ginkgo != null ? ginkgo.label : (young != null ? young.label : (dead != null ? dead.label : null));
+        Debug.Log("[HushHunt] SpruceForest: 모델 로드 young=" + (young != null) + " dead=" + (dead != null) + " spooky=" + (spooky != null)
             + " ginkgo=" + (ginkgo != null) + " / 종이는 " + PaperLabel + " 나무에");
 
         var pines = new List<Transform>();
@@ -167,9 +165,9 @@ public class SpruceForest : MonoBehaviour
         int rem = total;
         void AddCards(Variant vv, int q) { if (vv == null) return; for (int i = 0; i < q; i++) deck.Add(vv); rem -= q; }
         AddCards(dead, dead == null ? 0 : Mathf.Min(DeadCount, rem));
-        AddCards(cypress, cypress == null ? 0 : Mathf.Min(CypressCount, rem));
-        AddCards(ginkgo, ginkgo == null ? 0 : Mathf.Min(GinkgoCount, rem));
-        AddCards(young ?? dead ?? cypress ?? ginkgo, rem); // 나머지는 가문비(없으면 다른 모델)
+        AddCards(ginkgo, ginkgo == null ? 0 : Mathf.Min(GinkgoCount, rem)); // 은행나무는 항상 정확히 80
+        AddCards(spooky, spooky == null ? 0 : Mathf.Min(SpookyCount, rem));
+        AddCards(young ?? dead ?? spooky ?? ginkgo, rem); // 나머지는 가문비(없으면 다른 모델)
         for (int i = deck.Count - 1; i > 0; i--)
         {
             int j = rand.Next(i + 1);
@@ -251,7 +249,7 @@ public class SpruceForest : MonoBehaviour
         }
 
         float target = Mathf.Lerp(MinTreeHeight, MaxTreeHeight, (float)rand.NextDouble()); // 12~15m, 모델 종류와 무관
-        float girth = 0.92f + (float)rand.NextDouble() * 0.16f;
+        float girth = 1f; // 비율 그대로: 높이만 12~15m로 맞추고 가로는 같은 배율
         var rot = Quaternion.Euler((float)(rand.NextDouble() * 4.0 - 2.0), (float)rand.NextDouble() * 360f,
             (float)(rand.NextDouble() * 4.0 - 2.0));
 
