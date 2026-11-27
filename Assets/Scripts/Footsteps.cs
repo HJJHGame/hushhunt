@@ -8,6 +8,8 @@ public class Footsteps : MonoBehaviour
 {
     public float stepLength = 1.6f; // 발소리 한 번당 이동 거리(m)
     public float volume = 0.55f;
+    // 플레이어(FirstPersonController)가 없는 이동체(봇 등)의 발소리 범위(m). 플레이어는 NoiseRadius를 쓴다.
+    public float RemoteNoiseRadius = 12f;
 
     CharacterController controller;
     FirstPersonController fpc;
@@ -27,7 +29,11 @@ public class Footsteps : MonoBehaviour
         controller = GetComponent<CharacterController>();
         fpc = GetComponent<FirstPersonController>();
         source = gameObject.AddComponent<AudioSource>();
-        source.spatialBlend = 0f; // 2D: 자기 발소리라 공간감 없이
+        // 내 발소리는 2D(공간감 없이). 다른 이동체의 발소리는 3D: 방향이 있고 범위 끝에서 0이 된다.
+        bool remote = fpc == null;
+        source.spatialBlend = remote ? 1f : 0f;
+        source.rolloffMode = AudioRolloffMode.Linear;
+        source.minDistance = 1.5f;
         source.playOnAwake = false;
 
         // 같은 소리 반복이 티 나지 않게 변형 4개를 미리 만든다
@@ -71,7 +77,17 @@ public class Footsteps : MonoBehaviour
                 float state = fpc != null && fpc.IsCrouching ? 0f
                     : fpc != null && fpc.IsSprinting ? 1.6f : 1f;
                 float v = volume * state * (0.8f + (float)rng.NextDouble() * 0.4f);
-                source.PlayOneShot(steps[rng.Next(steps.Length)], v);
+                if (fpc == null)
+                {
+                    // 다른 이동체: 자기 소음 범위 안에서만 들린다 (선형으로 줄어 범위 끝에서 0).
+                    if (RemoteNoiseRadius > 0f)
+                    {
+                        source.maxDistance = RemoteNoiseRadius;
+                        source.PlayOneShot(steps[rng.Next(steps.Length)], v);
+                    }
+                }
+                else
+                    source.PlayOneShot(steps[rng.Next(steps.Length)], v);
             }
         }
         else if (!controller.isGrounded || distance >= 2f)
