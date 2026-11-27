@@ -35,6 +35,16 @@ public class Armory : MonoBehaviour
     }
 
     GameManager gm0;
+    string msg; float msgUntil;
+    GUIStyle msgStyle;
+
+    void OnGUI()
+    {
+        if (Time.unscaledTime >= msgUntil || MainMenu.IsMenuOpen || Event.current.type != EventType.Repaint) return;
+        if (msgStyle == null) msgStyle = new GUIStyle(GUI.skin.label) { alignment = TextAnchor.MiddleCenter, fontStyle = FontStyle.Bold };
+        msgStyle.fontSize = Mathf.RoundToInt(26f * Mathf.Clamp(Screen.height / 1080f, 0.75f, 1.5f));
+        HudText.Label(new Rect(0f, Screen.height * 0.25f, Screen.width, 44f), msg, msgStyle);
+    }
     static readonly WeaponKind[] kinds3 = { WeaponKind.Shotgun, WeaponKind.Rifle, WeaponKind.Knife }; // 자동 지급은 랜덤 무기
 
     void Update()
@@ -63,13 +73,16 @@ public class Armory : MonoBehaviour
         if (!MainMenu.IsMenuOpen && Input.GetKeyDown(KeyCode.G))
         {
             var gm = FindFirstObjectByType<GameManager>();
-            if (gm != null && gm.CurrentPhase == GameManager.Phase.Seeking)
+            if (gm != null && (gm.CurrentPhase == GameManager.Phase.Seeking || gm.CurrentPhase == GameManager.Phase.Hiding))
             {
                 foreach (var h in GunHolder.All)
                 {
                     if (h == null || h.GetComponent<FirstPersonController>() == null) continue;
                     var hp = h.GetComponent<Health>();
                     hp.team = hp.team == Team.Hider ? Team.Seeker : Team.Hider;
+                    h.ResetForTeamSwitch();
+                    msg = "테스트: 내 팀 = " + (hp.team == Team.Seeker ? "잡는 팀 (종이를 찾으세요)" : "숨는 팀 (무기 새로 받음)");
+                    msgUntil = Time.unscaledTime + 3f;
                     Debug.Log("[HushHunt] 테스트: 내 팀을 " + (hp.team == Team.Seeker ? "잡는 팀" : "숨는 팀") + "으로 바꿈");
                 }
             }
