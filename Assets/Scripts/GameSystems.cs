@@ -49,6 +49,7 @@ public static class GameSystems
         AddOnce<RockModels>(root);      // 바위 모델/절차적 메시
         AddOnce<PropModels>(root);      // 통나무/그루터기 모델 (폴더에 넣으면 교체)
         AddOnce<GroundCover>(root);     // 숲 바닥 덮개 (폴더에 넣으면 흩뿌림)
+        AddOnce<Zones>(root);           // 봉쇄 구역 5곳 (돌벽, 수색 시작 때 사라짐)
         AddOnce<RandomizeLayout>(root); // 매 판 집/나무/스폰 재배치
         AddOnce<Armory>(root);          // 종이 -> 총 지급 규칙
         AddOnce<EscapeGate>(root);      // 탈출구 (잡는 팀 전멸 시 열림)
