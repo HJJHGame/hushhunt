@@ -24,6 +24,8 @@ public class SpruceForest : MonoBehaviour
     const float Lod1Height = 0.22f; // 대략 39m 안
     const float CullHeight = 0.01f;
 
+    const string KitName = "japan-conifer-kit"; // CC0 Nature Tree Japan Conifer Kit. 파일: Assets/Models/japan-conifer-kit/lod0.glb (키트 GLB 하나)
+    const float KuromatsuHeightMul = 0.6f;      // 흑송(둥글고 넓은 나무)은 옆으로 너무 퍼지지 않게 키를 이만큼 줄인다
     const string YoungName = "young-spruce";
     const string DeadName = "dead-spruce";
 
@@ -77,6 +79,7 @@ public class SpruceForest : MonoBehaviour
     class Variant
     {
         public string label;
+        public float heightMul = 1f;
         public GameObject[] lods = new GameObject[3];
     }
 
@@ -87,6 +90,49 @@ public class SpruceForest : MonoBehaviour
         if (v.lods[0] == null) return null;
         v.lods[1] = LoadModel(name, 1);
         v.lods[2] = LoadModel(name, 2);
+        return v;
+    }
+
+    // 키트 GLB(나무 4종이 한 파일에 나란히 있음)에서 한 종(prefix: JHN 편백, JKR 흑송)만 뽑아 템플릿을 만든다.
+    // level 0: 가지+잎+줄기, 1/2: 가지 뺀 것(잎+줄기). 키트에는 LOD가 없어서 직접 줄인다.
+    GameObject MakeKitTemplate(GameObject kit, string prefix, int level)
+    {
+        var holder = new GameObject("KitTemplate " + prefix + level);
+        holder.transform.SetParent(transform, false);
+        holder.SetActive(false); // 템플릿은 화면에 안 나온다
+        var inst = Instantiate(kit, holder.transform);
+        var tpl = new GameObject("Tpl");
+        tpl.transform.SetParent(holder.transform, false);
+        var keep = new List<Transform>();
+        float cx = 0f, cz = 0f;
+        foreach (var t in inst.GetComponentsInChildren<Transform>(true))
+        {
+            if (!t.name.StartsWith(prefix)) continue;
+            if (level > 0 && t.name.EndsWith("_Branches")) continue;
+            keep.Add(t);
+            var mf = t.GetComponent<MeshFilter>();
+            if (t.name.EndsWith("_Trunk") && mf != null && mf.sharedMesh != null)
+            {
+                var c = t.TransformPoint(mf.sharedMesh.bounds.center);
+                cx = c.x; cz = c.z; // 줄기 위치를 원점으로 (키트 안에서 나무들이 옆으로 나란히 서 있다)
+            }
+        }
+        if (keep.Count == 0) { Destroy(holder); return null; }
+        foreach (var t in keep) t.SetParent(tpl.transform, true);
+        foreach (var t in keep) t.position -= new Vector3(cx, 0f, cz);
+        Destroy(inst);
+        return tpl;
+    }
+
+    Variant LoadKitVariant(GameObject kit, string prefix, string label, float heightMul)
+    {
+        if (kit == null) return null;
+        var v = new Variant { label = label, heightMul = heightMul };
+        for (int i = 0; i < 3; i++)
+        {
+            v.lods[i] = MakeKitTemplate(kit, prefix, i);
+            if (v.lods[i] == null) return null;
+        }
         return v;
     }
 
@@ -101,7 +147,23 @@ public class SpruceForest : MonoBehaviour
             Debug.LogWarning("[HushHunt] SpruceForest: 모델 파일을 못 찾음 -> 옛 숲 유지. 필요한 경로: Assets/Models/young-spruce/lod0.glb, Assets/Models/dead-spruce/lod0.glb (glTFast 임포트 확인)");
             return;
         }
-        Debug.Log("[HushHunt] SpruceForest: 모델 로드 young=" + (young != null) + " dead=" + (dead != null));
+        var kit = LoadModel(KitName, 0);
+        var hinoki = LoadKitVariant(kit, "JHN", "Hinoki", 1f);
+        var kuromatsu = LoadKitVariant(kit, "JKR", "Kuromatsu", KuromatsuHeightMul);
+        if (kit == null) Debug.LogWarning("[HushHunt] SpruceForest: 키트 모델 없음(Assets/Models/" + KitName + "/lod0.glb) -> 편백/흑송 없이 진행");
+        // 잎 있는 나무(20%)는 가문비(young)/편백/흑송이 똑같이 나눠 가진다.
+        var leafy = new List<Variant>();
+        if (young != null) leafy.Add(young);
+        if (hinoki != null) leafy.Add(hinoki);
+        if (kuromatsu != null) leafy.Add(kuromatsu);
+        var counts = new Dictionary<string, int>();
+        Variant Pick(System.Random r)
+        {
+            if (dead == null) return leafy[r.Next(leafy.Count)];
+            if (leafy.Count == 0 || r.NextDouble() < DeadChance) return dead;
+            return leafy[r.Next(leafy.Count)];
+        }
+        Debug.Log("[HushHunt] SpruceForest: 모델 로드 young=" + (young != null) + " dead=" + (dead != null) + " hinoki=" + (hinoki != null) + " kuromatsu=" + (kuromatsu != null));
 
         var pines = new List<Transform>();
         foreach (var cand in FindObjectsByType<Transform>(FindObjectsSortMode.None))
@@ -123,14 +185,12 @@ public class SpruceForest : MonoBehaviour
         int placed = 0, deadCount = 0;
         for (int i = 0; i < pines.Count; i++)
         {
-            Variant v;
-            if (young == null) v = dead;
-            else if (dead == null) v = young;
-            else v = (i == deadIndex || rand.NextDouble() < DeadChance) ? dead : young;
+            Variant v = (dead != null && i == deadIndex) ? dead : Pick(rand);
             if (BuildTree(pines[i], v, rand))
             {
                 placed++;
                 if (v == dead) deadCount++;
+                counts[v.label] = (counts.TryGetValue(v.label, out var n0) ? n0 : 0) + 1;
             }
         }
         int slotCount = placed;
@@ -187,7 +247,7 @@ public class SpruceForest : MonoBehaviour
                 var go = new GameObject("Spruce Extra");
                 go.transform.SetParent(extraRoot, false);
                 go.transform.position = bestPos;
-                Variant ev = (dead == null) ? young : (young == null ? dead : (rand.NextDouble() < DeadChance ? dead : young));
+                Variant ev = Pick(rand);
                 if (BuildTree(go.transform, ev, rand))
                 {
                     grid.Add(new Vector2(bestPos.x, bestPos.z));
@@ -198,6 +258,7 @@ public class SpruceForest : MonoBehaviour
                     cap.center = new Vector3(0f, cap.height * 0.5f, 0f);
                     extra++;
                     if (ev == dead) deadCount++;
+                    counts[ev.label] = (counts.TryGetValue(ev.label, out var n1) ? n1 : 0) + 1;
                 }
                 else Destroy(go);
             }
@@ -205,7 +266,11 @@ public class SpruceForest : MonoBehaviour
         placed += extra;
         Active = placed > 0;
         if (Active)
-            Debug.Log("[HushHunt] SpruceForest: 가문비 " + placed + "그루 배치 (young " + (placed - deadCount) + ", dead " + deadCount + ") / 기존 슬롯 " + slotCount + " + 추가 " + extra);
+        {
+            var sb = new System.Text.StringBuilder();
+            foreach (var kv in counts) sb.Append(kv.Key).Append(' ').Append(kv.Value).Append(", ");
+            Debug.Log("[HushHunt] SpruceForest: 나무 총 " + placed + "그루 배치 (" + sb + "잎 있는 나무 " + (placed - deadCount) + ") / 기존 슬롯 " + slotCount + " + 추가 " + extra);
+        }
         else
             Debug.LogWarning("[HushHunt] SpruceForest: 모델은 읽었지만 배치 0그루 (렌더러 없음/크기 0) -> 옛 숲 유지");
     }
@@ -227,7 +292,7 @@ public class SpruceForest : MonoBehaviour
             if (f != null) f.gameObject.SetActive(false);
         }
 
-        float target = WorldConfig.PineHeight * oldScale * (0.85f + (float)rand.NextDouble() * 0.3f);
+        float target = v.heightMul * WorldConfig.PineHeight * oldScale * (0.85f + (float)rand.NextDouble() * 0.3f);
         float girth = 0.92f + (float)rand.NextDouble() * 0.16f;
         var rot = Quaternion.Euler((float)(rand.NextDouble() * 4.0 - 2.0), (float)rand.NextDouble() * 360f,
             (float)(rand.NextDouble() * 4.0 - 2.0));
