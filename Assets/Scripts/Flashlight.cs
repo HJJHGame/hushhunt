@@ -9,7 +9,9 @@ public class Flashlight : MonoBehaviour
     public KeyCode toggleKey = KeyCode.T;
     public bool startOn = true;
     public float intensity = 5.0f; // 거의 검정인 맵에서 좁은 원뿔이 확실히 보이게
-    public float range = 26f;
+    public const float OnVision = 10f;  // 손전등 켰을 때 보이는 거리(m), 그 너머는 완전한 어둠
+    public const float OffVision = 5f;  // 껐을 때 보이는 거리(m)
+    public float range = 10f;
     public float spotAngle = 42f;
 
     Light lamp;
@@ -18,6 +20,14 @@ public class Flashlight : MonoBehaviour
     Material lensMat;
     bool lensLit;
     readonly List<Material> propMats = new List<Material>();
+
+    public static readonly List<Flashlight> All = new List<Flashlight>();
+    public Vector3 LampPosition { get { return lamp != null ? lamp.transform.position : transform.position; } }
+    Light nightVision;     // 손전등을 꺼도 5m 안은 어렴풋이 보이게 하는 약한 빛
+    float vision = OffVision;
+
+    void OnEnable() { if (!All.Contains(this)) All.Add(this); }
+    void OnDisable() { All.Remove(this); }
 
     public bool IsOn { get { return lamp != null && lamp.enabled; } }
 
@@ -43,6 +53,7 @@ public class Flashlight : MonoBehaviour
         go.transform.localPosition = new Vector3(0f, 0f, 0.13f);
         go.transform.localRotation = Quaternion.identity;
 
+        range = OnVision; // 씬에 저장된 값과 상관없이 확정 값
         lamp = go.AddComponent<Light>();
         lamp.type = LightType.Spot;
         lamp.range = range;
@@ -56,6 +67,16 @@ public class Flashlight : MonoBehaviour
         lamp.shadowBias = 0.05f;
         lamp.enabled = startOn;
 
+        // 꺼져 있어도 5m 안은 보인다: 그림자 없는 약한 점광원. 시야 끝은 검은 거리 제한이 정한다.
+        var nv = new GameObject("Night Vision");
+        nv.transform.SetParent(pivot, false);
+        nightVision = nv.AddComponent<Light>();
+        nightVision.type = LightType.Point;
+        nightVision.range = OffVision * 1.3f;
+        nightVision.intensity = 0.5f;
+        nightVision.color = new Color(0.6f, 0.65f, 0.8f);
+        nightVision.shadows = LightShadows.None;
+
         // 토글 클릭 소리 (사용자 요청으로 복원): 파일 없이 런타임에 만드는 짧은 스위치음.
         clickClip = MakeClick();
         clickSource = gameObject.AddComponent<AudioSource>();
@@ -67,6 +88,18 @@ public class Flashlight : MonoBehaviour
     {
         if (lamp == null) return;
 
+        // 로컬 플레이어의 시야 거리: 손전등 ON 10m, OFF 5m. 그 너머는 검정(안개가 아니라 어둠으로 시야를 자른다).
+        if (GetComponent<FirstPersonController>() != null)
+        {
+            float target = lamp.enabled ? OnVision : OffVision;
+            vision = Mathf.MoveTowards(vision, target, 40f * Time.deltaTime);
+            RenderSettings.fog = true;
+            RenderSettings.fogMode = FogMode.Linear;
+            RenderSettings.fogColor = Color.black;
+            RenderSettings.fogStartDistance = vision * 0.7f;
+            RenderSettings.fogEndDistance = vision;
+        }
+
         // 메뉴(타이틀/일시정지)가 열려 있으면 토글 입력만 무시한다. 밝기 떨림 연출은 유지.
         if (!MainMenu.IsMenuOpen && Input.GetKeyDown(KeyCode.T))
         {
@@ -77,8 +110,7 @@ public class Flashlight : MonoBehaviour
         if (!lamp.enabled) { SetLens(false); return; }
         SetLens(true);
 
-        // 미세한 밝기 떨림만 남긴다. 가끔 순간적으로 어두워지는 깜빡임은 화면 깜빡임처럼 느껴진다는 보고가 있어 제거.
-        lamp.intensity = intensity * (1f + 0.03f * Mathf.Sin(Time.time * 23f));
+        lamp.intensity = intensity; // 깜빡임/떨림 없음 (확정 규칙)
     }
 
     // 켜지면 렌즈가 발광하고 꺼지면 꺼진다. 상태가 바뀔 때만 머티리얼을 건드린다.
