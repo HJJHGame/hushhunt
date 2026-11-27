@@ -10,6 +10,8 @@ public class Footsteps : MonoBehaviour
     public float volume = 0.55f;
     // 플레이어(FirstPersonController)가 없는 이동체(봇 등)의 발소리 범위(m). 플레이어는 NoiseRadius를 쓴다.
     public float RemoteNoiseRadius = 12f;
+    // 내 발소리 크기 비율(다른 이동체 대비). 내 소리는 작게 깔고, 상대 소리가 더 잘 들리게 한다.
+    public float OwnVolumeRatio = 0.35f;
 
     CharacterController controller;
     FirstPersonController fpc;
@@ -87,7 +89,7 @@ public class Footsteps : MonoBehaviour
                     }
                 }
                 else
-                    source.PlayOneShot(steps[rng.Next(steps.Length)], v);
+                    source.PlayOneShot(steps[rng.Next(steps.Length)], v * OwnVolumeRatio);
             }
         }
         else if (!controller.isGrounded || distance >= 2f)
