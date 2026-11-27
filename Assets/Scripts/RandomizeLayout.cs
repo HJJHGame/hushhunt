@@ -31,7 +31,9 @@ public class RandomizeLayout : MonoBehaviour
         {
             var cc = fpc.GetComponent<CharacterController>();
             if (cc != null) cc.enabled = false;
-            fpc.transform.position = new Vector3(spawn.x, 1.1f, spawn.y);
+            var fh = fpc.GetComponent<Health>();
+            // 잡는 팀은 처음부터 봉쇄 구역 안에서 시작한다. 숨는 팀은 구역 밖 랜덤 스폰.
+            fpc.transform.position = (fh != null && fh.team == Team.Seeker) ? Zones.SeekerSpawnPoint(0) : new Vector3(spawn.x, 1.1f, spawn.y);
             if (cc != null) cc.enabled = true;
         }
 
