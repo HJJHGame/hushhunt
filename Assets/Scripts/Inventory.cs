@@ -1,7 +1,7 @@
 using UnityEngine;
 
 // 인벤토리: 항상 화면 아래 가운데에 보인다. 가진 것만 앞에서부터 차례로 칸이 생긴다 (미리 5칸을 그리지 않음).
-// 표시 순서는 고정: 손전등(항상, T로 켜고 끔), 종이, 칼, 권총, 소총(AR). 얻은 순서와 상관없다. 칸 번호는 가진 것 기준으로 1부터 센다.
+// 표시 순서는 고정: 종이, 칼, 권총, 소총(AR). 손전등은 항상 들고 있어서 칸에 없다(T로 켜고 끔). 얻은 순서와 상관없다. 칸 번호는 가진 것 기준으로 1부터 센다.
 // 지금은 가지고 있는 것을 보여 주는 표시 전용이다. 칸 선택/버리기는 나중.
 // 종이는 줍는 순간 총으로 바뀌므로, 종이로 총을 받은 사람 칸에 "받음"으로 표시한다.
 public class Inventory : MonoBehaviour
@@ -36,8 +36,8 @@ public class Inventory : MonoBehaviour
         return i == 4 ? "" : gun.Ammo + "/" + gun.MaxAmmo;
     }
 
-    // 표시 순서(항목 번호): 손전등 - 종이 - 칼 - 권총 - 소총
-    static readonly int[] DisplayOrder = { 0, 1, 4, 2, 3 };
+    // 표시 순서(항목 번호): 종이 - 칼 - 권총 - 소총
+    static readonly int[] DisplayOrder = { 1, 4, 2, 3 }; // 손전등(0)은 항상 들고 있으므로 칸에 넣지 않는다
     readonly System.Collections.Generic.List<int> owned = new System.Collections.Generic.List<int>();
 
     void OnGUI()
@@ -61,6 +61,7 @@ public class Inventory : MonoBehaviour
         owned.Clear();
         foreach (int i in DisplayOrder) if (Has(i)) owned.Add(i); // 얻은 순서와 상관없이 고정 순서
 
+        if (owned.Count == 0) return;
         float scale = Screen.height / 1080f;
         float box = 96f * scale, gap = 8f * scale;
         float total = owned.Count * box + (owned.Count - 1) * gap;
