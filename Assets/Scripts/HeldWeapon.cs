@@ -1,6 +1,8 @@
 using UnityEngine;
 
-// 1인칭 화면에 들고 있는 무기(소총/권총/칼)를 보여 준다. 단순 도형 조립이라 외부 모델이 필요 없다.
+// 1인칭 화면에 들고 있는 무기(소총/권총/칼)를 보여 준다. Poly Haven(CC0) 모델을 쓰고, 파일이 없으면 단순 도형 조립으로 대신한다.
+// 모델 파일: Assets/Models/weapons/pistol.glb, rifle.glb, machete.glb (glTFast 필요). 빌드에서는 Resources/Models/weapons/<이름>(확장자 없이).
+// 세 파일 모두 총구/칼끝이 +Z(앞), 위가 +Y, 손잡이 중심이 원점이 되게 맞춰 두었다.
 // 무기가 바뀌면 다시 만들고, 쏘면 살짝 뒤로 밀렸다 돌아온다. 충돌체와 그림자는 없다.
 [RequireComponent(typeof(GunHolder))]
 public class HeldWeapon : MonoBehaviour
@@ -9,8 +11,20 @@ public class HeldWeapon : MonoBehaviour
     public float kickBack = 0.09f;   // 쏠 때 뒤로 밀리는 거리(m)
     public float kickSeconds = 0.12f;
 
+    // 모델별 조절값: 카메라 기준 손 위치 보정, 회전(도), 크기 배율.
+    public Vector3 pistolOffset = new Vector3(0f, -0.04f, 0.1f);
+    public Vector3 rifleOffset = new Vector3(0f, 0f, 0.15f);
+    public Vector3 macheteOffset = new Vector3(0f, 0f, 0.05f);
+    public Vector3 pistolEuler = new Vector3(-2f, -4f, 0f);
+    public Vector3 rifleEuler = new Vector3(0f, -4f, 0f);
+    public Vector3 macheteEuler = new Vector3(-50f, -10f, 10f); // 칼날이 앞 위로 향하게
+    public float pistolScale = 1f;
+    public float rifleScale = 0.8f; // 실제 길이 1.2m라 화면을 가로지르지 않게 줄인다
+    public float macheteScale = 1f;
+
     GunHolder gun;
     GameObject view;
+    Vector3 viewBase; // 반동이 없을 때의 카메라 기준 위치
     WeaponKind shown = WeaponKind.None;
     Transform camT;
 
@@ -37,13 +51,59 @@ public class HeldWeapon : MonoBehaviour
 
         float since = Time.unscaledTime - gun.LastShotAt;
         float k = since < kickSeconds ? 1f - since / kickSeconds : 0f;
-        view.transform.localPosition = holdPos + new Vector3(0f, 0f, -kickBack * k);
+        view.transform.localPosition = viewBase + new Vector3(0f, 0f, -kickBack * k);
+    }
+
+    static GameObject LoadModel(string file)
+    {
+#if UNITY_EDITOR
+        string path = "Assets/Models/weapons/" + file + ".glb";
+        var asset = UnityEditor.AssetDatabase.LoadAssetAtPath<GameObject>(path);
+        if (asset != null) return asset;
+        foreach (var o in UnityEditor.AssetDatabase.LoadAllAssetsAtPath(path))
+        {
+            var go = o as GameObject;
+            if (go != null && go.transform.parent == null) return go;
+        }
+#endif
+        return Resources.Load<GameObject>("Models/weapons/" + file);
+    }
+
+    // 모델이 있으면 그걸 붙인 루트를 돌려준다. 없으면 null (옛 도형 조립으로 대신).
+    GameObject BuildModel(WeaponKind kind)
+    {
+        string file = kind == WeaponKind.Rifle ? "rifle" : kind == WeaponKind.Pistol ? "pistol" : "machete";
+        var prefab = LoadModel(file);
+        if (prefab == null) return null;
+        Vector3 off = kind == WeaponKind.Rifle ? rifleOffset : kind == WeaponKind.Pistol ? pistolOffset : macheteOffset;
+        Vector3 eul = kind == WeaponKind.Rifle ? rifleEuler : kind == WeaponKind.Pistol ? pistolEuler : macheteEuler;
+        float sc = kind == WeaponKind.Rifle ? rifleScale : kind == WeaponKind.Pistol ? pistolScale : macheteScale;
+        var root = new GameObject("Held " + kind);
+        root.transform.SetParent(camT, false);
+        viewBase = holdPos + off;
+        root.transform.localPosition = viewBase;
+        root.transform.localRotation = Quaternion.Euler(eul);
+        var m = Instantiate(prefab, root.transform);
+        m.name = "Model";
+        m.transform.localPosition = Vector3.zero;
+        m.transform.localRotation = Quaternion.identity;
+        m.transform.localScale = Vector3.one * sc;
+        foreach (var c in m.GetComponentsInChildren<Collider>()) Destroy(c);
+        foreach (var r in m.GetComponentsInChildren<Renderer>())
+        {
+            r.shadowCastingMode = UnityEngine.Rendering.ShadowCastingMode.Off;
+            r.receiveShadows = false;
+        }
+        return root;
     }
 
     GameObject Build(WeaponKind kind)
     {
+        var modelRoot = BuildModel(kind);
+        if (modelRoot != null) return modelRoot;
         var root = new GameObject("Held " + kind);
         root.transform.SetParent(camT, false);
+        viewBase = holdPos;
         root.transform.localPosition = holdPos;
         root.transform.localRotation = Quaternion.Euler(0f, -4f, 0f);
 
