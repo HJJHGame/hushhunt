@@ -14,14 +14,16 @@ public class RandomizeLayout : MonoBehaviour
         var rand = new System.Random(); // 시드 고정 없음: 매번 다른 배치
 
         float corner = WorldConfig.Half - 15f;
-        var spawnChoices = new[]
+        // 숨는 팀 시작 위치: 봉쇄 구역 밖 아무 곳. 구역(5곳)은 나무/소품도 비운다.
+        Zones.Init();
+        var spawn = Vector2.zero;
+        for (int tries = 0; tries < 200; tries++)
         {
-            new Vector2(0f, 0f),
-            new Vector2(corner, corner), new Vector2(corner, -corner),
-            new Vector2(-corner, corner), new Vector2(-corner, -corner),
-        };
-        var spawn = spawnChoices[rand.Next(spawnChoices.Length)];
-        bool NearSpawn(float x, float z, float r) => new Vector2(x - spawn.x, z - spawn.y).magnitude < r;
+            float lim0 = WorldConfig.Half - 20f;
+            spawn = new Vector2((float)(rand.NextDouble() * 2 - 1) * lim0, (float)(rand.NextDouble() * 2 - 1) * lim0);
+            if (!Zones.Contains(spawn.x, spawn.y, 10f)) break;
+        }
+        bool NearSpawn(float x, float z, float r) => new Vector2(x - spawn.x, z - spawn.y).magnitude < r || Zones.Contains(x, z, 1f);
 
         // 플레이어를 스폰으로 옮긴다 (CharacterController를 잠시 꺼야 충돌 상태가 꼬이지 않는다).
         var fpc = FindFirstObjectByType<FirstPersonController>();
