@@ -18,9 +18,9 @@ public static class CombatRules
     }
 }
 
-// 체력과 피격 처리. 플레이어(로컬), 나중에 다른 플레이어/봇 모두 이 컴포넌트를 붙인다.
+// 체력과 피격 처리. 플레이어(로컬)와 테스트용 봇(Bot), 나중에 다른 플레이어도 이 컴포넌트를 붙인다.
 // - 피해는 TakeDamage(수치) 또는 Hit()(규칙대로 한 발)로 받는다.
-// - 죽으면 이동을 멈추고, 부활은 없다. 한 팀이 전멸하면 알린다.
+// - 죽으면 이동을 멈추고, 부활은 없다 (테스트용 G 팀 전환만 예외). 한 팀이 전멸하면 알린다.
 // - 숨는 팀이 전멸하면 잡는 팀 승리(GameManager.EndRound). 잡는 팀 전멸은 TeamWiped 이벤트만 쏜다
 //   (탈출구가 열리는 조각이 이어서 처리한다).
 public class Health : MonoBehaviour
@@ -69,6 +69,9 @@ public class Health : MonoBehaviour
     public void TakeDamage(float amount, GameObject source)
     {
         if (IsDead || amount <= 0f) return;
+        // 탈출에 성공한 사람은 이후 피해를 받지 않는다.
+        var gh = GetComponent<GunHolder>();
+        if (gh != null && gh.Escaped) return;
         // 수색 시간에만 피해를 받는다. 숨는 시간(60초)엔 아무 피해도 없다 (테스트용 H 키 포함).
         if (gm != null && gm.CurrentPhase != GameManager.Phase.Seeking) return;
 
