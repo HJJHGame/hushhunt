@@ -164,7 +164,7 @@ public class SpruceForest : MonoBehaviour
                     float dist = ExtraMinDist + (float)rand.NextDouble() * (ExtraMaxDist - ExtraMinDist);
                     var pos = slot.position + new Vector3(Mathf.Cos(ang) * dist, 0f, Mathf.Sin(ang) * dist);
                     if (Mathf.Abs(pos.x) > lim || Mathf.Abs(pos.z) > lim) continue;
-                    bool blocked = new Vector2(pos.x - spawnPos.x, pos.z - spawnPos.z).magnitude < SpawnClearance;
+                    bool blocked = new Vector2(pos.x - spawnPos.x, pos.z - spawnPos.z).magnitude < SpawnClearance || Zones.Contains(pos.x, pos.z, 1f);
                     if (!blocked)
                         foreach (var h in houses)
                         {
