@@ -46,7 +46,7 @@ public class Minimap : MonoBehaviour
 
     GameManager gm;
 
-    // 숨는 시간 동안 술래는 지도를 볼 수 없다 (작은 지도도, M 큰 지도도).
+    // 숨는 시간 동안 술래는 지도를 볼 수 있지만 자기 위치 표시는 뜨지 않는다.
     bool MapBlocked()
     {
         if (gm == null) gm = FindFirstObjectByType<GameManager>();
@@ -56,14 +56,13 @@ public class Minimap : MonoBehaviour
     void Update()
     {
         if (MainMenu.IsMenuOpen) return;
-        if (MapBlocked()) { bigMap = false; return; }
         if (Input.GetKeyDown(KeyCode.M))
             bigMap = !bigMap;
     }
 
     void OnGUI()
     {
-        if (MainMenu.IsMenuOpen || MapBlocked()) return;
+        if (MainMenu.IsMenuOpen) return;
         if (Event.current.type != EventType.Repaint) return;
 
         int size = bigMap ? Mathf.RoundToInt(Screen.height * bigSizeRatio) : smallSize;
@@ -78,7 +77,7 @@ public class Minimap : MonoBehaviour
         if (mapTex != null) GUI.DrawTexture(map, mapTex);
 
         // 플레이어 위치 + 바라보는 방향
-        if (target != null)
+        if (target != null && !MapBlocked())
         {
             Vector2 p = WorldToMap(target.position, map);
             var prev = GUI.matrix;
