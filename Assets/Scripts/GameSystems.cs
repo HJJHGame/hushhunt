@@ -71,6 +71,8 @@ public static class GameSystems
         if (fpc.GetComponent<Health>() == null) fpc.gameObject.AddComponent<Health>(); // 체력 100 (숨는 팀)
         if (fpc.GetComponent<GunHolder>() == null) fpc.gameObject.AddComponent<GunHolder>(); // 총/탄
         if (fpc.GetComponent<HeldWeapon>() == null) fpc.gameObject.AddComponent<HeldWeapon>(); // 들고 있는 무기 표시
+
+        Bot.EnsureSpawned(); // 혼자 테스트용 봇 (플레이어의 상대 팀)
     }
 
     static void AddOnce<T>(GameObject root) where T : Component
