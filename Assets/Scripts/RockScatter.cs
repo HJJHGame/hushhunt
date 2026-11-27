@@ -26,6 +26,8 @@ public class RockScatter : MonoBehaviour
         new Kind { name = "log-pile", minSize = 4.6f, maxSize = 5.6f, count = 25, pad = 2.2f, lod0 = 0.18f, lod1 = 0.08f, cull = 0.04f },
         // 이끼 낀 돌무더기: 돌 3개가 한 덩이(원본 1.1 x 0.7 x 0.34m). 원본이 작아 2.4~3.6m로 키움. LOD0 약 18m, LOD1 약 43m, 약 90m 밖은 안 그림.
         new Kind { name = "mossy-rocks", minSize = 2.4f, maxSize = 3.6f, count = 50, pad = 0.8f, lod0 = 0.14f, lod1 = 0.06f, cull = 0.03f },
+        // 부서진 소나무 보급 상자: 조각 15개가 맞물린 상태 그대로 놓는다(원본 0.64m). 0.9~1.3m로 키움. LOD는 돌과 같은 기본값.
+        new Kind { name = "pine-supply-crate-broken", minSize = 0.9f, maxSize = 1.3f, count = 40, pad = 0.3f },
         new Kind { name = "granite-pond-edge-stone-1",   minSize = 1.4f, maxSize = 2.6f, count = 80 },
         new Kind { name = "granite-pond-edge-stone-4",   minSize = 1.4f, maxSize = 2.6f, count = 80 },
         new Kind { name = "granite-river-stone-veined",  minSize = 0.8f, maxSize = 1.6f, count = 80 },
