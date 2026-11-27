@@ -61,6 +61,10 @@ public class RandomizeLayout : MonoBehaviour
             }
         }
 
+        // 나무가 아닌 소품(돌, 통나무 더미, 상자, 묘비, 목책 등): 고정 시드 배치. 집/구역/시작 위치와 겹치지 않게 정하고, 나무는 이걸 피해서 심는다.
+        PropLayout.Generate(placed, spawn);
+        const float TreePropClear = 1.2f; // 나무 줄기 + 여유 반경(m): 소품 직사각형에서 이만큼 떨어져 심는다
+
         // 나무: 총 TreeLayout.Total그루 위치를 한 번에 만든다 (봉쇄 구역 5곳/스폰/집을 피하고, 너무 가깝거나 멀지 않게).
         // 씬의 기존 나무 자리(슬롯)가 앞쪽 위치를 가져가 움직이고, 남은 위치는 SpruceForest가 추가 나무로 심는다.
         var pineSlots = new List<Transform>();
@@ -69,6 +73,7 @@ public class RandomizeLayout : MonoBehaviour
         bool TreeBlocked(float x, float z)
         {
             if (NearSpawn(x, z, 6f)) return true;
+            if (PropLayout.BlocksCircle(x, z, TreePropClear)) return true;
             foreach (var r in placed)
                 if (Mathf.Abs(x - r.x) < r.z + 1.5f && Mathf.Abs(z - r.y) < r.w + 1.5f) return true;
             return false;
@@ -86,41 +91,24 @@ public class RandomizeLayout : MonoBehaviour
             ? treePositions.GetRange(pineSlots.Count, treePositions.Count - pineSlots.Count)
             : new List<Vector2>();
 
-        // 소품(바위/통나무/그루터기/울타리): 스폰/집/나무/다른 소품을 피해 매 판 새 위치로 옮긴다.
-        int movedProps = 0;
-        var placedProps = new List<Vector3>(); // x, z, 대략 반경
+        // 옛 소품(씬의 Rock, Fallen Log, Stump, Old Fence)은 쓰지 않는다: 허용된 tevy 모델(PropLayout)이 대신한다.
+        int hiddenProps = 0;
         foreach (var t in FindObjectsByType<Transform>(FindObjectsSortMode.None))
         {
             if (t.parent != null) continue;
             string n = t.name;
-            float r = n == WorldConfig.Names.Rock ? 2f
-                : n == WorldConfig.Names.FallenLog ? 3.5f
-                : n == WorldConfig.Names.Stump ? 1.5f
-                : n == WorldConfig.Names.OldFence ? 4f
-                : 0f;
-            if (r <= 0f) continue;
-            for (int tries = 0; tries < 60; tries++)
+            if (n == WorldConfig.Names.Rock || n == WorldConfig.Names.FallenLog || n == WorldConfig.Names.Stump || n == WorldConfig.Names.OldFence)
             {
-                float x = (float)(rand.NextDouble() * 2.0) * spread - spread;
-                float z = (float)(rand.NextDouble() * 2.0) * spread - spread;
-                if (NearSpawn(x, z, 6f + r)) continue;
-                bool bad = false;
-                foreach (var h in placed)
-                    if (Mathf.Abs(x - h.x) < h.z + r && Mathf.Abs(z - h.y) < h.w + r) { bad = true; break; }
-                if (bad) continue;
-                foreach (var tp in treePos)
-                    if (Vector2.Distance(new Vector2(x, z), tp) < r + 1.5f) { bad = true; break; }
-                if (bad) continue;
-                foreach (var pp in placedProps)
-                    if (Vector2.Distance(new Vector2(x, z), new Vector2(pp.x, pp.y)) < r + pp.z + 0.5f) { bad = true; break; }
-                if (bad) continue;
-                t.position = new Vector3(x, t.position.y, z);
-                placedProps.Add(new Vector3(x, z, r));
-                movedProps++;
-                break;
+                t.gameObject.SetActive(false);
+                hiddenProps++;
             }
         }
+        // 겹침 검사: 나무와 소품, 나무와 집이 겹친 수 (0이어야 한다)
+        int treeHitProps = PropLayout.CountTreeHits(treePos, TreePropClear - 0.01f), treeHitHouses = 0;
+        foreach (var tp in treePos)
+            foreach (var r in placed)
+                if (Mathf.Abs(tp.x - r.x) < r.z && Mathf.Abs(tp.y - r.y) < r.w) treeHitHouses++;
         Debug.Log("[HushHunt] 랜덤 배치 완료: 스폰 (" + spawn.x.ToString("0") + ", " + spawn.y.ToString("0")
-            + "), 집 " + placed.Count + "/" + houses.Length + "채, 나무 " + movedTrees + "그루, 소품 " + movedProps + "개 재배치");
+            + "), 집 " + placed.Count + "/" + houses.Length + "채, 나무 " + movedTrees + "그루, 소품 " + PropLayout.Items.Count + "개, 옛 소품 " + hiddenProps + "개 숨김 / 나무-소품 겹침 " + treeHitProps + "건, 나무-집 겹침 " + treeHitHouses + "건");
     }
 }
