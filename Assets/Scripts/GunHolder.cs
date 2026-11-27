@@ -103,9 +103,12 @@ public class GunHolder : MonoBehaviour
     {
         // 조작은 로컬 플레이어만.
         if (GetComponent<FirstPersonController>() == null) return;
-        if (MainMenu.IsMenuOpen || !IsAlive || !HasGun) return;
-        if (gm == null || gm.CurrentPhase != GameManager.Phase.Seeking) return;
+        if (MainMenu.IsMenuOpen || !IsAlive) return;
         if (!Input.GetMouseButtonDown(0)) return;
+        // 쏠 수 없는 이유를 화면에 알려 준다 (아무 반응이 없어 고장 난 것처럼 보이지 않게).
+        if (gm == null || gm.CurrentPhase != GameManager.Phase.Seeking) { Say("수색이 시작된 뒤에 쏠 수 있다"); return; }
+        if (!HasGun) { Say(IsSeeker ? "총이 없다: 종이를 찾아야 한다" : "무기가 없다"); return; }
+        if (Weapon != WeaponKind.Knife && Ammo <= 0) { Say("탄이 없다"); return; }
         if (Weapon == WeaponKind.Knife)
         {
             if (Time.unscaledTime < nextKnifeAt) return;
@@ -175,9 +178,25 @@ public class GunHolder : MonoBehaviour
             if (kv.Value > 0f) { kv.Key.TakeDamage(kv.Value, gameObject); hitUntil = Time.unscaledTime + 0.25f; }
     }
 
+    string sayText; float sayUntil;
+    void Say(string t) { sayText = t; sayUntil = Time.unscaledTime + 2f; }
+
+    // 테스트용 팀 전환 때 무기 상태를 새로 시작한다: 잡는 팀은 총 없음, 숨는 팀은 시작 무기를 다시 받는다.
+    public void ResetForTeamSwitch()
+    {
+        HasGun = false; Ammo = 0; Weapon = WeaponKind.None;
+        GotGunFromPaper = false; GotStartWeapon = false;
+    }
+
     void OnGUI()
     {
         if (GetComponent<FirstPersonController>() == null) return;
+        if (Time.unscaledTime < sayUntil && !MainMenu.IsMenuOpen && Event.current.type == EventType.Repaint)
+        {
+            var st = new GUIStyle(GUI.skin.label) { alignment = TextAnchor.MiddleCenter, fontStyle = FontStyle.Bold };
+            st.fontSize = Mathf.RoundToInt(24f * Mathf.Clamp(Screen.height / 1080f, 0.75f, 1.5f));
+            HudText.Label(new Rect(0f, Screen.height * 0.7f, Screen.width, 40f), sayText, st);
+        }
         if (Time.unscaledTime < flashUntil)
         {
             var old = GUI.color;
