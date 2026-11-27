@@ -9,7 +9,9 @@ public enum WeaponKind { None, Shotgun, Rifle, Knife }
 [RequireComponent(typeof(Health))]
 public class GunHolder : MonoBehaviour
 {
-    public const int MagazineRounds = 4; // 모든 총은 4발
+    public const int HiderRounds = 4;  // 숨는 팀 탄약 (재장전 없음)
+    public const int SeekerRounds = 6; // 잡는 팀 탄약
+    public int MaxAmmo { get { return IsSeeker ? SeekerRounds : HiderRounds; } }
 
     public bool HasGun { get; private set; }
     public int Ammo { get; private set; }
@@ -20,10 +22,14 @@ public class GunHolder : MonoBehaviour
 
     public static readonly List<GunHolder> All = new List<GunHolder>();
 
-    public const float RifleRange = 150f;   // AR 사거리(m)
-    public const float ShotgunRange = 40f;  // 샷건 사거리(m)
-    public const float KnifeRange = 2.5f;   // 칼 닿는 거리(m)
-    public const float KnifeCooldown = 0.8f; // 칼 휘두르는 간격(초)
+    public const float RifleRange = 1000f;  // 소총: 사거리 제한 없음
+    public const float RifleSpreadDeg = 0.5f; // 소총 탄 퍼짐(도, 약간)
+    public const int ShotgunPellets = 8;    // 샷건 펠릿 수
+    public const float ShotgunSpreadDeg = 4f;
+    public const float ShotgunFullRange = 5f;  // 이 안은 풀데미지
+    public const float ShotgunZeroRange = 12f; // 여기서 데미지 0 (사이는 직선으로 감소)
+    public const float KnifeRange = 2f;     // 칼 닿는 거리(m)
+    public const float KnifeCooldown = 1f;  // 칼 휘두르는 간격(초)
 
     public WeaponKind Weapon { get; private set; }
     public bool GotStartWeapon { get; set; } // 숨는 팀 시작 무기를 받았는지
@@ -71,20 +77,56 @@ public class GunHolder : MonoBehaviour
         flashUntil = Time.unscaledTime + 0.06f;
         var cam = Camera.main;
         if (cam == null) return;
-        float range = Weapon == WeaponKind.Knife ? KnifeRange : (Weapon == WeaponKind.Shotgun ? ShotgunRange : RifleRange);
-        var hits = Physics.RaycastAll(cam.transform.position, cam.transform.forward, range, ~0, QueryTriggerInteraction.Ignore);
+        if (Weapon == WeaponKind.Shotgun) { FireShotgun(cam); return; }
+        float range = Weapon == WeaponKind.Knife ? KnifeRange : RifleRange;
+        Vector3 dirF = cam.transform.forward;
+        if (Weapon == WeaponKind.Rifle) dirF = Spread(cam.transform, RifleSpreadDeg);
+        var hits = Physics.RaycastAll(cam.transform.position, dirF, range, ~0, QueryTriggerInteraction.Ignore);
+        var target = FirstTarget(hits);
+        if (target != null)
+        {
+            target.Hit(gameObject);
+            hitUntil = Time.unscaledTime + 0.25f;
+        }
+    }
+
+    // 광선에 처음 막힌 곳이 상대 팀이면 그 Health를 돌려준다 (자기 몸/아군은 통과 아님: 아군은 막고 피해 없음).
+    Health FirstTarget(RaycastHit[] hits)
+    {
         System.Array.Sort(hits, (a, b) => a.distance.CompareTo(b.distance));
         foreach (var hit in hits)
         {
             if (hit.collider.transform.IsChildOf(transform)) continue; // 자기 몸은 통과
             var target = hit.collider.GetComponentInParent<Health>();
-            if (target != null && target != health && !target.IsDead && target.team != health.team)
-            {
-                target.Hit(gameObject);
-                hitUntil = Time.unscaledTime + 0.25f;
-            }
-            break; // 처음 막힌 곳에서 끝
+            if (target != null && target != health && !target.IsDead && target.team != health.team) return target;
+            return null; // 처음 막힌 곳에서 끝
         }
+        return null;
+    }
+
+    static Vector3 Spread(Transform cam, float deg)
+    {
+        var q = Quaternion.AngleAxis(Random.Range(0f, 360f), cam.forward) * Quaternion.AngleAxis(Random.Range(0f, deg), cam.right);
+        return q * cam.forward;
+    }
+
+    // 샷건: 펠릿마다 광선을 쏜다. 한 발의 피해는 맞은 펠릿 비율 x 거리 감소(5m 풀, 12m에서 0).
+    void FireShotgun(Camera cam)
+    {
+        var dmg = new Dictionary<Health, float>();
+        for (int i = 0; i < ShotgunPellets; i++)
+        {
+            var hits = Physics.RaycastAll(cam.transform.position, Spread(cam.transform, ShotgunSpreadDeg), ShotgunZeroRange, ~0, QueryTriggerInteraction.Ignore);
+            var t = FirstTarget(hits);
+            if (t == null) continue;
+            float d = Vector3.Distance(cam.transform.position, t.transform.position);
+            float f = Mathf.Clamp01(1f - (d - ShotgunFullRange) / (ShotgunZeroRange - ShotgunFullRange));
+            float add = CombatRules.HitDamage(t.team) * f / ShotgunPellets;
+            float cur; dmg.TryGetValue(t, out cur);
+            dmg[t] = cur + add;
+        }
+        foreach (var kv in dmg)
+            if (kv.Value > 0f) { kv.Key.TakeDamage(kv.Value, gameObject); hitUntil = Time.unscaledTime + 0.25f; }
     }
 
     void OnGUI()
@@ -114,7 +156,7 @@ public class GunHolder : MonoBehaviour
         if (HasGun) return;
         HasGun = true;
         Weapon = kind;
-        Ammo = kind == WeaponKind.Knife ? 0 : MagazineRounds; // 칼은 탄이 없다
+        Ammo = kind == WeaponKind.Knife ? 0 : MaxAmmo; // 칼은 탄이 없다
         if (fromPaper) GotGunFromPaper = true;
         GrantedAt = Time.unscaledTime;
         if (Granted != null) Granted(this);
