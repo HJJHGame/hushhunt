@@ -74,13 +74,7 @@ public class Inventory : MonoBehaviour
         {
             int i = owned[k];
             var r = new Rect(x0 + k * (box + gap), y, box, box);
-            GUI.color = new Color(0.15f, 0.15f, 0.15f, 0.85f);
-            GUI.DrawTexture(r, Texture2D.whiteTexture);
-            GUI.color = new Color(0.9f, 0.9f, 0.9f, 0.9f);
-            GUI.DrawTexture(new Rect(r.x, r.y, r.width, 2f), Texture2D.whiteTexture);
-            GUI.DrawTexture(new Rect(r.x, r.yMax - 2f, r.width, 2f), Texture2D.whiteTexture);
-            GUI.DrawTexture(new Rect(r.x, r.y, 2f, r.height), Texture2D.whiteTexture);
-            GUI.DrawTexture(new Rect(r.xMax - 2f, r.y, 2f, r.height), Texture2D.whiteTexture);
+            UiTheme.Panel(r, 0.62f, 0.5f);
             GUI.color = prev;
 
             HudText.Label(new Rect(r.x + 6f * scale, r.y + 4f * scale, 30f * scale, 24f * scale), (k + 1).ToString(), numStyle);
