@@ -16,7 +16,14 @@ public static class GunSound
     public static void Play(Vector3 pos, WeaponKind kind)
     {
         if (kind != WeaponKind.Rifle && kind != WeaponKind.Pistol) return;
-        if (rifle == null) { rifle = Make(0.35f, 14f, 1f); pistol = Make(0.28f, 18f, 0.9f); }
+        if (rifle == null)
+        {
+            // 외부 녹음(Resources/Audio)이 있으면 쓰고, 없으면 코드로 만든 소리로 대신한다
+            rifle = Resources.Load<AudioClip>("Audio/gunshot_rifle");
+            pistol = Resources.Load<AudioClip>("Audio/gunshot_pistol");
+            if (rifle == null) rifle = Make(0.35f, 14f, 1f);
+            if (pistol == null) pistol = Make(0.28f, 18f, 0.9f);
+        }
         if (rolloff == null) rolloff = new AnimationCurve(new Keyframe(0f, 1f), new Keyframe(MapWide, 0.08f));
         var go = new GameObject("Gunshot");
         go.transform.position = pos;
