@@ -218,7 +218,7 @@ public class MainMenu : MonoBehaviour
 
         var fpsButton = MakeButton(box, "", -60f, true, () =>
         {
-            GameSettings.SetMaxFps(GameSettings.MaxFps == 0 ? 60 : 0);
+            GameSettings.SetMaxFps(GameSettings.NextMaxFps(GameSettings.MaxFps));
             RefreshSettings();
         });
         fpsLabel = fpsButton.GetComponentInChildren<Text>();
@@ -230,7 +230,7 @@ public class MainMenu : MonoBehaviour
     {
         if (sensValue != null) sensValue.text = GameSettings.Sensitivity.ToString("0.0");
         if (volValue != null) volValue.text = Mathf.RoundToInt(GameSettings.Volume * 100f) + "%";
-        if (fpsLabel != null) fpsLabel.text = "최대 FPS: " + (GameSettings.MaxFps == 0 ? "무제한" : "60");
+        if (fpsLabel != null) fpsLabel.text = "최대 FPS: " + (GameSettings.MaxFps == 0 ? "무제한" : GameSettings.MaxFps.ToString());
     }
 
     // ---- 조각 helpers ----
