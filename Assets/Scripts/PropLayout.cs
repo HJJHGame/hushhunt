@@ -46,7 +46,7 @@ public static class PropLayout
     public static readonly Spec River = S("granite-river-stone-veined", 0.40f, 0.41f, 0.23f, 8f, 20f, 60f, false);
     public static readonly Spec Mossy = S("mossy-rocks", 1.14f, 0.73f, 0.34f, 10f, 25f, 70f, true);
     public static readonly Spec LogPile = S("log-pile", 7.76f, 3.21f, 1.76f, 30f, 65f, 120f, true); // 원본 5.17 x 2.14 x 1.17m의 1.5배
-    public static readonly Spec Crate = S("pine-supply-crate-broken", 0.64f, 0.64f, 0.60f, 10f, 25f, 70f, true);
+    public static readonly Spec Crate = S("pine-supply-crate-broken", 0.96f, 0.96f, 0.90f, 12f, 30f, 80f, true); // 원본 0.64 x 0.64 x 0.60m의 1.5배
     public static readonly Spec Drum = S("steel-drum-yellow", 0.59f, 0.59f, 0.88f, 10f, 25f, 70f, true);
     public static readonly Spec Totem = S("stone-face-totem", 1.17f, 1.14f, 3.64f, 25f, 55f, 140f, true);
     public static readonly Spec Basin = S("stone-water-basin-bamboo-spout", 0.80f, 1.56f, 0.76f, 12f, 30f, 80f, true);
@@ -60,7 +60,7 @@ public static class PropLayout
     // 모델 모양 콜라이더를 쓰는 종류 (나머지 콜라이더 종류는 상자 하나)
     static PropLayout()
     {
-        LogPile.scale = 1.5f;
+        LogPile.scale = 1.5f; Crate.scale = 1.5f;
         LogPile.meshCol = true; Crate.meshCol = true; Drum.meshCol = true; Totem.meshCol = true; Basin.meshCol = true;
         GraveCross.meshCol = true; GravePointed.meshCol = true; Walkway.meshCol = true; Palisade.meshCol = true;
     }
