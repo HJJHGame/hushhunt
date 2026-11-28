@@ -184,8 +184,8 @@ public class GameManager : MonoBehaviour
     static void DrawTimer(string text, Color color)
     {
         UiTheme.Apply(timerStyle);
-        float tw = timerStyle.CalcSize(new GUIContent(text)).x + 36f;
-        UiTheme.Panel(new Rect((Screen.width - tw) * 0.5f, 8f, tw, 48f), 0.5f, 0.4f); // 숫자 뒤 어두운 패널
+        float tw = timerStyle.CalcSize(new GUIContent(text)).x + 56f;
+        UiTheme.Frame(new Rect((Screen.width - tw) * 0.5f, 8f, tw, 48f), 0.62f, 1f, 7f); // 숫자 뒤 틀(모서리 장식)
         DrawShadowed(new Rect(0f, 12f, Screen.width, 40f), text, timerStyle, color);
     }
 
@@ -195,12 +195,13 @@ public class GameManager : MonoBehaviour
         float w = 260f;
         float x = (Screen.width - w) * 0.5f;
         float y = 56f;
-        UiTheme.Bar(new Rect(x, y + 4f, w, 4f), fraction, urgent ? new Color(0.9f, 0.2f, 0.15f) : new Color(0.85f, 0.85f, 0.8f));
+        UiTheme.SegBar(new Rect(x, y + 8f, w, 4f), fraction, urgent ? new Color(0.9f, 0.2f, 0.15f) : new Color(0.85f, 0.85f, 0.8f), 12);
     }
 
     // 화면 위쪽 1/4 지점의 큰 안내 (제목 + 부제). 정중앙 크로스헤어와 겹치지 않게 위로 올렸다.
     static void DrawCenter(string title, string subtitle, Color titleColor)
     {
+        UiTheme.Banner(new Rect(0f, Screen.height * 0.25f - 72f, Screen.width, 104f));
         DrawShadowed(new Rect(0f, Screen.height * 0.25f - 60f, Screen.width, 50f), title, titleStyle, titleColor);
         DrawShadowed(new Rect(0f, Screen.height * 0.25f - 10f, Screen.width, 30f), subtitle, subStyle, Color.white);
     }
