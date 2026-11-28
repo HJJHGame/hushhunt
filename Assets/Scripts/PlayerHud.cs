@@ -70,15 +70,10 @@ public class PlayerHud : MonoBehaviour
                 float x = 16f * scale;
                 float y = Screen.height - 36f * scale;
 
-                GUI.color = new Color(0f, 0f, 0f, 0.55f * visibility);
-                GUI.DrawTexture(new Rect(x - 3f, y - 3f, w + 6f, h + 6f), Texture2D.whiteTexture);
-
                 Color fill = fpc.IsExhausted
                     ? new Color(0.85f, 0.2f, 0.15f)
                     : Color.Lerp(new Color(0.9f, 0.6f, 0.2f), new Color(0.6f, 0.9f, 0.4f), fpc.Stamina01);
-                fill.a = 0.9f * visibility;
-                GUI.color = fill;
-                GUI.DrawTexture(new Rect(x, y, w * fpc.Stamina01, h), Texture2D.whiteTexture);
+                UiTheme.Bar(new Rect(x, y, w, h), fpc.Stamina01, fill, visibility);
             }
         }
 
@@ -132,6 +127,10 @@ public class PlayerHud : MonoBehaviour
             if (left > 0f) text += " (자동 지급 " + Mathf.CeilToInt(left) + "초)";
         }
         var r = new Rect(Screen.width - 420f * scale - 16f, Screen.height - 80f * scale, 420f * scale, 32f * scale);
+        // 글씨 뒤에 어두운 패널: 글씨 길이에 맞춰 오른쪽 정렬
+        UiTheme.Apply(gunStyle);
+        float tw = Mathf.Min(r.width, gunStyle.CalcSize(new GUIContent(text)).x + 20f * scale);
+        UiTheme.Panel(new Rect(r.xMax - tw - 6f * scale, r.y - 1f, tw + 12f * scale, r.height + 2f), 0.5f, 0.4f);
         HudText.Label(r, text, gunStyle);
     }
 
@@ -153,10 +152,7 @@ public class PlayerHud : MonoBehaviour
         float w = 220f * scale, h = 12f * scale;
         float x = 16f * scale, y = Screen.height - 62f * scale; // 스태미나 막대가 바로 아래(Screen.height - 36)에 온다
         HudText.Label(new Rect(x, y - 34f * scale, w, 30f * scale), "체력 " + Mathf.CeilToInt(health.Hp), hpStyle);
-        GUI.color = new Color(0f, 0f, 0f, 0.55f);
-        GUI.DrawTexture(new Rect(x - 3f, y - 3f, w + 6f, h + 6f), Texture2D.whiteTexture);
-        GUI.color = Color.Lerp(new Color(0.85f, 0.15f, 0.1f), new Color(0.75f, 0.85f, 0.7f), health.Hp01);
-        GUI.DrawTexture(new Rect(x, y, w * health.Hp01, h), Texture2D.whiteTexture);
+        UiTheme.Bar(new Rect(x, y, w, h), health.Hp01, Color.Lerp(new Color(0.85f, 0.15f, 0.1f), new Color(0.75f, 0.85f, 0.7f), health.Hp01));
 
         if (health.IsDead)
         {
