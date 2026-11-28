@@ -8,6 +8,7 @@ public class AmbientSound : MonoBehaviour
     public float rainVolume = 0.07f; // 빗소리는 아주 작게 깔기만 한다 (발소리/총소리를 가리지 않게)
 
     AudioClip wind, rain;
+    bool rainFromFile;
 
     void Start()
     {
@@ -21,7 +22,9 @@ public class AmbientSound : MonoBehaviour
         windSource.playOnAwake = false;
         windSource.Play();
 
-        rain = MakeRain();
+        rain = Resources.Load<AudioClip>("Audio/rain_loop"); // 외부 녹음이 있으면 쓰고, 없으면 코드로 만든다
+        rainFromFile = rain != null;
+        if (!rainFromFile) rain = MakeRain();
         var rainSource = gameObject.AddComponent<AudioSource>();
         rainSource.clip = rain;
         rainSource.loop = true;
@@ -34,7 +37,7 @@ public class AmbientSound : MonoBehaviour
     void OnDestroy()
     {
         if (wind != null) Destroy(wind);
-        if (rain != null) Destroy(rain);
+        if (rain != null && !rainFromFile) Destroy(rain);
     }
 
     // 8초짜리 빗소리 루프: 고음 위주의 백색 소음 + 아주 느린 세기 변화 + 가끔 톡 떨어지는 소리. 앞뒤를 크로스페이드해서 끊기지 않는다.
