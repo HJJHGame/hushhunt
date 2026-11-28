@@ -65,15 +65,16 @@ public class Minimap : MonoBehaviour
         if (MainMenu.IsMenuOpen) return;
         if (Event.current.type != EventType.Repaint) return;
 
-        int size = bigMap ? Mathf.RoundToInt(Screen.height * bigSizeRatio) : smallSize;
-        float x = bigMap ? (Screen.width - size) * 0.5f : Screen.width - size - 16f;
-        float y = bigMap ? (Screen.height - size) * 0.5f : 16f;
+        float sc = Mathf.Clamp(Screen.height / 1080f, 0.75f, 1.5f); // 해상도 배율 (높이 1080 기준)
+        int size = bigMap ? Mathf.RoundToInt(Screen.height * bigSizeRatio) : Mathf.RoundToInt(smallSize * sc);
+        float x = bigMap ? (Screen.width - size) * 0.5f : Screen.width - size - 16f * sc;
+        float y = bigMap ? (Screen.height - size) * 0.5f : 16f * sc;
         var map = new Rect(x, y, size, size);
 
         // 테두리 + 지도 이미지. 지도의 사각 가장자리가 곧 실제 맵 경계(±WorldConfig.Half)다.
         // 어두운 틀(모서리 장식) + 지도 + 지도 가장자리 가는 흰 선
         GUI.color = Color.white;
-        UiTheme.Frame(new Rect(map.x - 6f, map.y - 6f, map.width + 12f, map.height + 12f), bigMap ? 0.9f : 0.7f, 1f, bigMap ? 16f : 10f);
+        UiTheme.Frame(new Rect(map.x - 6f * sc, map.y - 6f * sc, map.width + 12f * sc, map.height + 12f * sc), bigMap ? 0.9f : 0.7f, 1f, (bigMap ? 16f : 10f) * sc);
         GUI.color = Color.white;
         if (mapTex != null) GUI.DrawTexture(map, mapTex);
         UiTheme.Outline(map, 0.55f);
@@ -85,7 +86,7 @@ public class Minimap : MonoBehaviour
             Vector2 p = WorldToMap(target.position, map);
             var prev = GUI.matrix;
             GUIUtility.RotateAroundPivot(target.eulerAngles.y, p);
-            float s = bigMap ? 34f : 24f;
+            float s = (bigMap ? 34f : 24f) * sc;
             GUI.DrawTexture(new Rect(p.x - s * 0.5f, p.y - s * 0.5f, s, s), arrowTex);
             GUI.matrix = prev;
         }
@@ -99,8 +100,8 @@ public class Minimap : MonoBehaviour
                 fontStyle = FontStyle.Bold
             };
         }
-        northStyle.fontSize = bigMap ? 22 : 16;
-        HudText.Label(new Rect(map.x, map.y + 1f, map.width, 26f), "N", northStyle);
+        northStyle.fontSize = Mathf.RoundToInt((bigMap ? 22f : 16f) * sc);
+        HudText.Label(new Rect(map.x, map.y + 1f * sc, map.width, 26f * sc), "N", northStyle);
 
         if (bigMap)
         {
@@ -110,11 +111,11 @@ public class Minimap : MonoBehaviour
                 hintStyle = new GUIStyle(GUI.skin.label)
                 {
                     alignment = TextAnchor.MiddleCenter,
-                    fontSize = 18,
                     fontStyle = FontStyle.Bold
                 };
             }
-            HudText.Label(new Rect(map.x, map.yMax + 6f, map.width, 26f), "M 키로 닫기", hintStyle);
+            hintStyle.fontSize = Mathf.RoundToInt(18f * sc);
+            HudText.Label(new Rect(map.x, map.yMax + 6f * sc, map.width, 26f * sc), "M 키로 닫기", hintStyle);
         }
     }
 
