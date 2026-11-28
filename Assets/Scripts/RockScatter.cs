@@ -64,6 +64,26 @@ public class RockScatter : MonoBehaviour
         Debug.Log("[HushHunt] RockScatter: 소품 " + made + "/" + items.Count + "개 배치 (모델 " + models.Count + "/" + PropLayout.All.Length + "종)");
     }
 
+    // 가장 단순한 LOD의 메시로 모델 모양 콜라이더를 단다. 메시를 읽을 수 없으면(빌드 설정) false: 상자로 대신한다.
+    static bool AddMeshColliders(List<Renderer> rends)
+    {
+        var filters = new List<MeshFilter>();
+        foreach (var r in rends)
+        {
+            var mf = r.GetComponent<MeshFilter>();
+            if (mf == null || mf.sharedMesh == null) continue;
+            if (!mf.sharedMesh.isReadable) return false;
+            if (!filters.Contains(mf)) filters.Add(mf);
+        }
+        if (filters.Count == 0) return false;
+        foreach (var mf in filters)
+        {
+            var mc = mf.gameObject.AddComponent<MeshCollider>();
+            mc.sharedMesh = mf.sharedMesh;
+        }
+        return true;
+    }
+
     static bool Build(PropLayout.Item it, Loaded m, Transform parent)
     {
         var spec = it.spec;
@@ -96,7 +116,7 @@ public class RockScatter : MonoBehaviour
         if (!hasLod2) groups[2].AddRange(groups[1]);
         if (hasLod2) foreach (var r in groups[2]) r.shadowCastingMode = ShadowCastingMode.Off; // 먼 LOD는 그림자 없음
 
-        if (spec.collider)
+        if (spec.collider && !(spec.meshCol && AddMeshColliders(groups[2])))
         {
             var box = root.gameObject.AddComponent<BoxCollider>();
             var sz = new Vector3(spec.w, spec.h, spec.d) * ColliderShrink;
