@@ -32,10 +32,10 @@ public class MainMenu : MonoBehaviour
 
     static readonly Color BgTitle = new Color(0.015f, 0.02f, 0.035f, 1f);
     static readonly Color BgPause = new Color(0f, 0f, 0f, 0.55f);
-    static readonly Color PanelBox = new Color(0.05f, 0.06f, 0.08f, 0.95f);
-    static readonly Color ButtonNormal = new Color(0.16f, 0.20f, 0.26f, 1f);
-    static readonly Color ButtonHover = new Color(0.26f, 0.36f, 0.44f, 1f);
-    static readonly Color ButtonPressed = new Color(0.32f, 0.45f, 0.52f, 1f);
+    static readonly Color PanelBox = new Color(0.03f, 0.03f, 0.04f, 0.95f);
+    static readonly Color ButtonNormal = new Color(0.07f, 0.07f, 0.08f, 0.94f);
+    static readonly Color ButtonHover = new Color(0.30f, 0.07f, 0.06f, 1f);
+    static readonly Color ButtonPressed = new Color(0.48f, 0.10f, 0.08f, 1f);
     static readonly Color ButtonDisabled = new Color(0.10f, 0.11f, 0.13f, 0.7f);
     static readonly Color TextMain = new Color(0.92f, 0.95f, 1f);
     static readonly Color TextSub = new Color(0.85f, 0.88f, 0.92f); // 어두운 화면+압축에서도 읽히게 밝게
@@ -60,7 +60,8 @@ public class MainMenu : MonoBehaviour
     {
         gm = FindFirstObjectByType<GameManager>();
         fpc = FindFirstObjectByType<FirstPersonController>();
-        font = Resources.GetBuiltinResource<Font>("LegacyRuntime.ttf");
+        font = UiTheme.Font; // 깔린 깔끔한 글꼴이 있으면 사용, 없으면 유니티 기본 글꼴
+        if (font == null) font = Resources.GetBuiltinResource<Font>("LegacyRuntime.ttf");
         if (font == null) font = Resources.GetBuiltinResource<Font>("Arial.ttf");
         Build();
         GameSettings.Apply();
@@ -175,11 +176,17 @@ public class MainMenu : MonoBehaviour
     void BuildTitle()
     {
         titlePanel = FullScreenPanel("Title Panel", BgTitle);
+        AddVignette(titlePanel, new Color(0.45f, 0.02f, 0.02f, 0.75f));
 
         var title = MakeText(titlePanel, "HUSH HUNT", 120, TextAnchor.MiddleCenter, TextMain, FontStyle.Bold);
         Place(title.rectTransform, 0f, 300f, 1200f, 160f);
         var sub = MakeText(titlePanel, "숨거나, 사냥하거나.", 30, TextAnchor.MiddleCenter, TextSub);
         Place(sub.rectTransform, 0f, 190f, 800f, 50f);
+        var line = new GameObject("Title Line", typeof(RectTransform), typeof(Image));
+        line.transform.SetParent(titlePanel, false);
+        line.GetComponent<Image>().color = new Color(0.7f, 0.1f, 0.08f, 0.85f);
+        line.GetComponent<Image>().raycastTarget = false;
+        Place((RectTransform)line.transform, 0f, 224f, 420f, 2f);
 
         MakeButton(titlePanel, "연습 시작", 20f, true, StartPractice);
         MakeButton(titlePanel, "온라인 (준비 중)", -80f, false, null);
@@ -192,6 +199,7 @@ public class MainMenu : MonoBehaviour
     void BuildPause()
     {
         pausePanel = FullScreenPanel("Pause Panel", BgPause);
+        AddVignette(pausePanel, new Color(0.45f, 0.02f, 0.02f, 0.5f));
 
         var box = MakeBox(pausePanel, 0f, 0f, 520f, 560f);
         var title = MakeText(box, "일시정지", 44, TextAnchor.MiddleCenter, TextMain, FontStyle.Bold);
@@ -254,8 +262,31 @@ public class MainMenu : MonoBehaviour
         var rt = (RectTransform)go.transform;
         rt.SetParent(parent, false);
         go.GetComponent<Image>().color = PanelBox;
+        AddOutline(go, 0.4f);
         Place(rt, x, y, w, h);
         return rt;
+    }
+
+    // 가는 흰 테두리 (uGUI Outline)
+    static void AddOutline(GameObject go, float alpha)
+    {
+        var o = go.AddComponent<Outline>();
+        o.effectColor = new Color(0.92f, 0.92f, 0.9f, alpha);
+        o.effectDistance = new Vector2(1f, -1f);
+    }
+
+    // 화면 가장자리를 물들이는 비네트 (UiTheme이 런타임에 만든 텍스처, 파일 없음)
+    static void AddVignette(RectTransform panel, Color color)
+    {
+        var go = new GameObject("Vignette", typeof(RectTransform), typeof(RawImage));
+        var rt = (RectTransform)go.transform;
+        rt.SetParent(panel, false);
+        rt.anchorMin = Vector2.zero; rt.anchorMax = Vector2.one;
+        rt.offsetMin = Vector2.zero; rt.offsetMax = Vector2.zero;
+        var ri = go.GetComponent<RawImage>();
+        ri.texture = UiTheme.Vignette;
+        ri.color = color;
+        ri.raycastTarget = false;
     }
 
     static void Place(RectTransform rt, float x, float y, float w, float h)
@@ -281,6 +312,9 @@ public class MainMenu : MonoBehaviour
         t.fontStyle = style;
         t.horizontalOverflow = HorizontalWrapMode.Overflow;
         t.verticalOverflow = VerticalWrapMode.Overflow;
+        var sh = go.AddComponent<Shadow>(); // 글씨 그림자
+        sh.effectColor = new Color(0f, 0f, 0f, 0.75f);
+        sh.effectDistance = new Vector2(2f, -2f);
         rt.sizeDelta = new Vector2(600f, size * 1.6f);
         return t;
     }
@@ -294,6 +328,7 @@ public class MainMenu : MonoBehaviour
 
         var img = go.GetComponent<Image>();
         img.color = Color.white; // 실제 색은 Button의 ColorTint가 관리한다
+        AddOutline(go, interactable ? 0.45f : 0.15f); // 가는 흰 테두리
 
         var b = go.GetComponent<Button>();
         b.targetGraphic = img;
