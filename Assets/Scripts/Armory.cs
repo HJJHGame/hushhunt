@@ -43,8 +43,10 @@ public class Armory : MonoBehaviour
     {
         if (Time.unscaledTime >= msgUntil || MainMenu.IsMenuOpen || Event.current.type != EventType.Repaint) return;
         if (msgStyle == null) msgStyle = new GUIStyle(GUI.skin.label) { alignment = TextAnchor.MiddleCenter, fontStyle = FontStyle.Bold };
-        msgStyle.fontSize = Mathf.RoundToInt(26f * Mathf.Clamp(Screen.height / 1080f, 0.75f, 1.5f));
-        HudText.Label(new Rect(0f, Screen.height * 0.25f, Screen.width, 44f), msg, msgStyle);
+        float sc = Mathf.Clamp(Screen.height / 1080f, 0.75f, 1.5f);
+        msgStyle.fontSize = Mathf.RoundToInt(26f * sc);
+        // 안내 띠(화면 높이 25% 기준 위 72 ~ 아래 32)와 겹치지 않게 띠 바로 아래에 둔다.
+        HudText.Label(new Rect(0f, Screen.height * 0.25f + 40f * sc, Screen.width, 44f * sc), msg, msgStyle);
     }
     static readonly WeaponKind[] kinds3 = { WeaponKind.Pistol, WeaponKind.Rifle, WeaponKind.Knife }; // 자동 지급은 랜덤 무기
 
