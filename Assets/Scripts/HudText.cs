@@ -316,14 +316,32 @@ public static class UiTheme
         HudText.Label(area, text, style, color);
     }
 
-    // 큰 안내 띠: 화면 가로 전체에 어두운 띠 + 위아래 가는 선(양 끝으로 갈수록 흐려짐). 글씨는 따로 그린다.
+    static Texture2D gradHTex;
+
+    // 왼쪽이 불투명하고 오른쪽으로 갈수록 투명한 가로 그라데이션 (흰색).
+    public static Texture2D GradientH
+    {
+        get
+        {
+            if (gradHTex != null) return gradHTex;
+            gradHTex = new Texture2D(32, 1, TextureFormat.RGBA32, false) { wrapMode = TextureWrapMode.Clamp, filterMode = FilterMode.Bilinear, hideFlags = HideFlags.HideAndDontSave };
+            for (int x = 0; x < 32; x++) gradHTex.SetPixel(x, 0, new Color(1f, 1f, 1f, 1f - x / 31f));
+            gradHTex.Apply();
+            return gradHTex;
+        }
+    }
+
+    // 큰 안내 띠: r 안에 어두운 띠 + 위아래 가는 선. 오른쪽 끝 15%는 서서히 사라진다. 글씨는 따로 그린다.
     public static void Banner(Rect r, float alpha = 1f)
     {
         var prev = GUI.color;
+        float fadeW = r.width * 0.15f;
+        var solid = new Rect(r.x, r.y, r.width - fadeW, r.height);
         GUI.color = new Color(0f, 0f, 0f, 0.55f * alpha);
-        GUI.DrawTexture(r, Texture2D.whiteTexture);
+        GUI.DrawTexture(solid, Texture2D.whiteTexture);
+        GUI.DrawTexture(new Rect(solid.xMax, r.y, fadeW, r.height), GradientH);
         GUI.color = new Color(0.6f, 0.08f, 0.06f, 0.25f * alpha);
-        GUI.DrawTexture(new Rect(r.x, r.y, r.width, r.height * 0.5f), Gradient);
+        GUI.DrawTexture(new Rect(solid.x, solid.y, solid.width, r.height * 0.5f), Gradient);
         float lw = r.width * 0.5f, lx = r.center.x - lw * 0.5f;
         GUI.color = new Color(0.95f, 0.93f, 0.88f, 0.7f * alpha);
         GUI.DrawTexture(new Rect(lx, r.y, lw, 1f), Texture2D.whiteTexture);
