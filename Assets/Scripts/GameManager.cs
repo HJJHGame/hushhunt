@@ -183,6 +183,9 @@ public class GameManager : MonoBehaviour
     // 수색 중 화면 위쪽 중앙의 남은 시간
     static void DrawTimer(string text, Color color)
     {
+        UiTheme.Apply(timerStyle);
+        float tw = timerStyle.CalcSize(new GUIContent(text)).x + 36f;
+        UiTheme.Panel(new Rect((Screen.width - tw) * 0.5f, 8f, tw, 48f), 0.5f, 0.4f); // 숫자 뒤 어두운 패널
         DrawShadowed(new Rect(0f, 12f, Screen.width, 40f), text, timerStyle, color);
     }
 
@@ -192,12 +195,7 @@ public class GameManager : MonoBehaviour
         float w = 260f;
         float x = (Screen.width - w) * 0.5f;
         float y = 56f;
-        Color prev = GUI.color;
-        GUI.color = new Color(0f, 0f, 0f, 0.5f);
-        GUI.DrawTexture(new Rect(x - 2f, y - 2f, w + 4f, 8f), Texture2D.whiteTexture);
-        GUI.color = urgent ? new Color(0.9f, 0.2f, 0.15f, 0.95f) : new Color(0.85f, 0.85f, 0.8f, 0.8f);
-        GUI.DrawTexture(new Rect(x, y, w * Mathf.Clamp01(fraction), 4f), Texture2D.whiteTexture);
-        GUI.color = prev;
+        UiTheme.Bar(new Rect(x, y + 4f, w, 4f), fraction, urgent ? new Color(0.9f, 0.2f, 0.15f) : new Color(0.85f, 0.85f, 0.8f));
     }
 
     // 화면 위쪽 1/4 지점의 큰 안내 (제목 + 부제). 정중앙 크로스헤어와 겹치지 않게 위로 올렸다.
