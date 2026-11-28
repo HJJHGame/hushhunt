@@ -294,4 +294,40 @@ public static class UiTheme
         }
         GUI.color = prev;
     }
+
+    // 켜질 때 fadeIn초, 꺼지기 전 fadeOut초 동안 부드럽게 나타났다 사라지는 투명도(0~1).
+    public static float Fade(float untilTime, float totalSeconds, float fadeIn = 0.2f, float fadeOut = 0.5f)
+    {
+        float left = untilTime - Time.unscaledTime;
+        float passed = totalSeconds - left;
+        return Mathf.Clamp01(Mathf.Min(passed / Mathf.Max(0.01f, fadeIn), left / Mathf.Max(0.01f, fadeOut)));
+    }
+
+    // 짧은 알림: 글씨 길이에 맞춘 틀 안에 글씨. area 가운데에 놓고 alpha로 페이드한다.
+    public static void Toast(Rect area, string text, GUIStyle style, float alpha, Color color)
+    {
+        if (alpha <= 0.01f) return;
+        Apply(style);
+        var size = style.CalcSize(new GUIContent(text));
+        float padX = style.fontSize * 1.2f, padY = style.fontSize * 0.45f;
+        var box = new Rect(area.center.x - size.x * 0.5f - padX, area.center.y - size.y * 0.5f - padY, size.x + padX * 2f, size.y + padY * 2f);
+        Frame(box, 0.6f, alpha, 6f);
+        color.a *= alpha;
+        HudText.Label(area, text, style, color);
+    }
+
+    // 큰 안내 띠: 화면 가로 전체에 어두운 띠 + 위아래 가는 선(양 끝으로 갈수록 흐려짐). 글씨는 따로 그린다.
+    public static void Banner(Rect r, float alpha = 1f)
+    {
+        var prev = GUI.color;
+        GUI.color = new Color(0f, 0f, 0f, 0.55f * alpha);
+        GUI.DrawTexture(r, Texture2D.whiteTexture);
+        GUI.color = new Color(0.6f, 0.08f, 0.06f, 0.25f * alpha);
+        GUI.DrawTexture(new Rect(r.x, r.y, r.width, r.height * 0.5f), Gradient);
+        float lw = r.width * 0.5f, lx = r.center.x - lw * 0.5f;
+        GUI.color = new Color(0.95f, 0.93f, 0.88f, 0.7f * alpha);
+        GUI.DrawTexture(new Rect(lx, r.y, lw, 1f), Texture2D.whiteTexture);
+        GUI.DrawTexture(new Rect(lx, r.yMax - 1f, lw, 1f), Texture2D.whiteTexture);
+        GUI.color = prev;
+    }
 }
