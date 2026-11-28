@@ -12,13 +12,13 @@ public class HeldWeapon : MonoBehaviour
     public float kickSeconds = 0.12f;
 
     // 모델별 조절값: 카메라 기준 손 위치 보정, 회전(도), 크기 배율.
-    public Vector3 pistolOffset = new Vector3(0.06f, -0.04f, 0.1f);
+    public Vector3 pistolOffset = new Vector3(0.1f, -0.04f, 0.1f);
     public Vector3 rifleOffset = new Vector3(0.06f, 0.06f, 0.15f); // 오른쪽 아래, 개머리판이 화면 아래에 안 잘리게
-    public Vector3 macheteOffset = new Vector3(0.17f, 0.04f, 0.05f); // 오른쪽 아래, 칼날 전체가 화면에 들어오게
+    public Vector3 macheteOffset = new Vector3(0.17f, -0.01f, 0.05f); // 오른쪽 아래, 칼날 전체가 화면에 들어오게
     public Vector3 pistolEuler = new Vector3(-2f, -4f, 0f);
     public Vector3 rifleEuler = new Vector3(-8f, -8f, 0f); // 총구가 앞으로 살짝 위
     public Vector3 macheteEuler = new Vector3(-25f, -8f, 15f); // 칼날이 앞으로 살짝 위를 향하게 (x가 음수일수록 칼끝이 위로)
-    public float pistolScale = 1f;
+    public float pistolScale = 1.3f;
     public float rifleScale = 0.75f; // 실제 길이 1.2m라 화면을 가로지르지 않게 줄인다
     public float macheteScale = 0.7f; // 원본 길이 약 0.75m라 화면을 덮지 않게 줄인다
 
