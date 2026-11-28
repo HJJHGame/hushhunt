@@ -25,6 +25,12 @@ public class HeldWeapon : MonoBehaviour
     GunHolder gun;
     GameObject view;
     Vector3 viewBase; // 반동이 없을 때의 카메라 기준 위치
+    Quaternion viewRot = Quaternion.identity; // 쉬는 자세 회전 (칼 휘두르기가 끝나면 여기로 돌아온다)
+    // 칼 휘두르기: 쿨다운(2초) 동안 앞으로 휘두르고 제자리로 돌아온다. 맞는 판정은 클릭 순간에 이미 들어간다.
+    public float swingForwardSeconds = 0.3f;                      // 앞으로 휘두르는 시간 (나머지는 돌아오는 시간)
+    public Vector3 swingMove = new Vector3(-0.04f, -0.06f, 0.28f); // 휘두른 정점에서 쉬는 위치 기준 이동 (앞으로, 살짝 아래)
+    public float swingPitch = 65f;                                 // 정점에서 칼끝이 앞쪽 아래로 숙는 각도
+    public float swingRoll = -20f;                                 // 정점에서 옆으로 비트는 각도 (사선으로 베는 느낌)
     WeaponKind shown = WeaponKind.None;
     Transform camT;
 
@@ -42,6 +48,7 @@ public class HeldWeapon : MonoBehaviour
         {
             if (view != null) Destroy(view);
             view = want == WeaponKind.None ? null : Build(want);
+            if (view != null) viewRot = view.transform.localRotation;
             shown = want;
         }
         if (view == null) return;
@@ -50,6 +57,17 @@ public class HeldWeapon : MonoBehaviour
         view.SetActive(!MainMenu.IsMenuOpen);
 
         float since = Time.unscaledTime - gun.LastShotAt;
+        if (shown == WeaponKind.Knife)
+        {
+            float total = GunHolder.KnifeCooldown;
+            float fwd = Mathf.Max(0.05f, swingForwardSeconds);
+            float s = 0f; // 0 = 쉬는 자세, 1 = 휘두른 정점
+            if (since < fwd) { float u = since / fwd; s = 1f - (1f - u) * (1f - u); }                        // 앞으로: 빠르게 시작해서 끝에서 느려짐 (ease out)
+            else if (since < total) { float u = (since - fwd) / Mathf.Max(0.05f, total - fwd); s = 1f - u * u * (3f - 2f * u); } // 돌아옴: 부드럽게 (ease in-out)
+            view.transform.localPosition = viewBase + swingMove * s;
+            view.transform.localRotation = Quaternion.Euler(swingPitch * s, 0f, swingRoll * s) * viewRot;
+            return;
+        }
         float k = since < kickSeconds ? 1f - since / kickSeconds : 0f;
         view.transform.localPosition = viewBase + new Vector3(0f, 0f, -kickBack * k);
     }
