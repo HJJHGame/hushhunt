@@ -213,9 +213,11 @@ public class GameManager : MonoBehaviour
     static void DrawCenter(string title, string subtitle, Color titleColor)
     {
         float s = Sc;
-        UiTheme.Banner(new Rect(0f, Screen.height * 0.25f - 72f * s, Screen.width, 104f * s));
-        DrawShadowed(new Rect(0f, Screen.height * 0.25f - 60f * s, Screen.width, 50f * s), title, titleStyle, titleColor);
-        DrawShadowed(new Rect(0f, Screen.height * 0.25f - 10f * s, Screen.width, 30f * s), subtitle, subStyle, Color.white);
+        // 미니맵 왼쪽에서 띠를 끊는다(겹침 방지, 여백 14*배율). 글씨는 남은 영역의 가운데에 둔다. 큰 지도가 열려도 같다.
+        float bw = Mathf.Clamp(Minimap.OccupiedLeft - 14f * s, Screen.width * 0.25f, Screen.width);
+        UiTheme.Banner(new Rect(0f, Screen.height * 0.25f - 72f * s, bw, 104f * s));
+        DrawShadowed(new Rect(0f, Screen.height * 0.25f - 60f * s, bw, 50f * s), title, titleStyle, titleColor);
+        DrawShadowed(new Rect(0f, Screen.height * 0.25f - 10f * s, bw, 30f * s), subtitle, subStyle, Color.white);
     }
 
     // 종료 후 화면을 어둡게
