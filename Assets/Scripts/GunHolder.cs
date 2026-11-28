@@ -74,8 +74,8 @@ public class GunHolder : MonoBehaviour
     public const float RifleDamage = 34f;      // 소총: 한 발 34 (3발)
     public const float PistolDamage = 20f;    // 권총: 한 발 20 (5발)
     public const float KnifeDamage = 33f;     // 칼: 한 번 33 (4번)
-    public const float RifleCooldown = 1.5f;  // 소총 발사 간격(초): 볼트를 당겨 다시 장전하는 시간
-    public const float PistolCooldown = 0.35f; // 권총 발사 간격(초): 반자동
+    public const float RifleCooldown = 1.7f;  // 소총 발사 간격(초): 볼트를 당겨 다시 장전하는 시간
+    public const float PistolCooldown = 0.45f; // 권총 발사 간격(초): 반자동
     public const float KnifeCooldown = 1.5f;  // 칼 휘두르는 간격(초)
     public int MaxAmmo { get { return Weapon == WeaponKind.Rifle ? RifleRounds : (Weapon == WeaponKind.Pistol ? PistolRounds : 0); } }
 
