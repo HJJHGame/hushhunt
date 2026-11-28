@@ -114,7 +114,8 @@ public class Zones : MonoBehaviour
         src = gameObject.AddComponent<AudioSource>();
         src.spatialBlend = 0f; // 2D: 방향 없음, 전원 같은 소리
         src.playOnAwake = false;
-        src.clip = MakeGrindClip();
+        src.clip = Resources.Load<AudioClip>("Audio/stone_grind"); // 외부 녹음이 있으면 쓰고, 없으면 코드로 만든다
+        if (src.clip == null) src.clip = MakeGrindClip();
         src.volume = 1f;
         src.loop = false;
     }
@@ -122,7 +123,7 @@ public class Zones : MonoBehaviour
     void OnDestroy()
     {
         if (gm != null) gm.PhaseChanged -= OnPhase;
-        if (src != null && src.clip != null) Destroy(src.clip); // 런타임에 만든 클립 해제
+        if (src != null && src.clip != null && src.clip.name == "Stone Grind") Destroy(src.clip); // 코드로 만든 클립만 해제 (파일 클립은 에셋)
     }
 
     void OnPhase(GameManager.Phase p)
