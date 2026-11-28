@@ -65,9 +65,10 @@ public class PlayerHud : MonoBehaviour
             visibility = Mathf.MoveTowards(visibility, target, Time.unscaledDeltaTime * 2f);
             if (visibility > 0.01f)
             {
+                // 왼쪽 아래, 체력 막대 바로 아래에 같은 너비/같은 x로 세로로 쌓는다.
                 float w = 220f * scale, h = 8f * scale;
-                float x = (Screen.width - w) * 0.5f;
-                float y = Screen.height - 60f * scale;
+                float x = 16f * scale;
+                float y = Screen.height - 36f * scale;
 
                 GUI.color = new Color(0f, 0f, 0f, 0.55f * visibility);
                 GUI.DrawTexture(new Rect(x - 3f, y - 3f, w + 6f, h + 6f), Texture2D.whiteTexture);
@@ -150,7 +151,7 @@ public class PlayerHud : MonoBehaviour
         }
 
         float w = 220f * scale, h = 12f * scale;
-        float x = 16f * scale, y = Screen.height - 36f * scale;
+        float x = 16f * scale, y = Screen.height - 62f * scale; // 스태미나 막대가 바로 아래(Screen.height - 36)에 온다
         HudText.Label(new Rect(x, y - 34f * scale, w, 30f * scale), "체력 " + Mathf.CeilToInt(health.Hp), hpStyle);
         GUI.color = new Color(0f, 0f, 0f, 0.55f);
         GUI.DrawTexture(new Rect(x - 3f, y - 3f, w + 6f, h + 6f), Texture2D.whiteTexture);
