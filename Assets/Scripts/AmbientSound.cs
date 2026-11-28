@@ -4,8 +4,8 @@ using UnityEngine;
 // 런타임에 코드로 만들기 때문에 오디오 파일이 필요 없다.
 public class AmbientSound : MonoBehaviour
 {
-    public float windVolume = 0.20f; // 총소리가 더 크게 들리도록 낮춤
-    public float rainVolume = 0.07f; // 빗소리는 아주 작게 깔기만 한다 (발소리/총소리를 가리지 않게)
+    public float windVolume = 0.14f; // 총소리가 더 크게 들리도록 낮춤
+    public float rainVolume = 0.05f; // 빗소리는 아주 작게 깔기만 한다 (발소리/총소리를 가리지 않게)
 
     AudioClip wind, rain;
     bool rainFromFile;
