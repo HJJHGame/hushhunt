@@ -331,15 +331,17 @@ public static class UiTheme
         }
     }
 
-    // 큰 안내 띠: r 안에 어두운 띠 + 위아래 가는 선. 오른쪽 끝 15%는 서서히 사라진다. 글씨는 따로 그린다.
+    // 큰 안내 띠: r 안에 어두운 띠 + 위아래 가는 선. 양쪽 끝 15%씩 서서히 사라진다. 글씨는 따로 그린다.
     public static void Banner(Rect r, float alpha = 1f)
     {
         var prev = GUI.color;
         float fadeW = r.width * 0.15f;
-        var solid = new Rect(r.x, r.y, r.width - fadeW, r.height);
+        var solid = new Rect(r.x + fadeW, r.y, r.width - fadeW * 2f, r.height);
         GUI.color = new Color(0f, 0f, 0f, 0.55f * alpha);
         GUI.DrawTexture(solid, Texture2D.whiteTexture);
         GUI.DrawTexture(new Rect(solid.xMax, r.y, fadeW, r.height), GradientH);
+        // 왼쪽 끝은 좌우를 뒤집어 그려 같은 모양으로 흐려지게 한다.
+        GUI.DrawTextureWithTexCoords(new Rect(r.x, r.y, fadeW, r.height), GradientH, new Rect(1f, 0f, -1f, 1f));
         GUI.color = new Color(0.6f, 0.08f, 0.06f, 0.25f * alpha);
         GUI.DrawTexture(new Rect(solid.x, solid.y, solid.width, r.height * 0.5f), Gradient);
         float lw = r.width * 0.5f, lx = r.center.x - lw * 0.5f;
