@@ -158,35 +158,45 @@ public class Zones : MonoBehaviour
         }
     }
 
-    // 돌 갈리는 소리: 낮은 울림 + 거친 마찰음, 4초 동안 크기가 출렁인다.
-    // 예전 소리는 48Hz 안팎의 초저음이 대부분이라 노트북/이어폰에서 거의 안 들렸고 크기도 일정하지 않았다.
-    // 이제 100~300Hz 울림과 중음 마찰음을 섞고, 맨 끝에서 최대 크기가 0.8이 되게 맞춘다 (끊김/클리핑 없음).
+    // 맷돌 갈리는 소리: 무거운 돌이 돌 위를 천천히 도는 소리. 한 바퀴(약 0.8초)마다 긁히는 소리가 커졌다 줄고,
+    // 바퀴마다 둔한 "쿵"이 한 번, 낮은 울림이 계속 깔린다. 울림은 100Hz 안팎 + 배음이라 작은 스피커에서도 들린다.
+    // 모두 코드로 만든다 (파일 없음). 최대 크기 0.8로 맞춰 클리핑 없음.
     static AudioClip MakeGrindClip()
     {
         int rate = 22050, n = (int)(rate * GrindSeconds);
         var data = new float[n];
         var rng = new System.Random(7);
-        float lp = 0f, lp2 = 0f, hp = 0f;
+        const float Turn = 0.8f;      // 맷돌 한 바퀴(초)
+        float lp = 0f, lp2 = 0f, hp = 0f, thump = 0f;
+        float lastPhase = 0f;
         for (int i = 0; i < n; i++)
         {
             float t = (float)i / rate;
+            float phase = (t / Turn) % 1f;
+            if (phase < lastPhase) thump = 1f; // 한 바퀴 돌 때마다 둔한 쿵
+            lastPhase = phase;
             float noise = (float)(rng.NextDouble() * 2.0 - 1.0);
-            lp += (noise - lp) * 0.10f;   // 거친 마찰음 (저중음)
-            lp2 += (lp - lp2) * 0.30f;
-            hp += (noise - hp) * 0.55f;   // 모래 긁는 중고음
-            float f = 90f + 12f * Mathf.Sin(t * 3f);
+            lp += (noise - lp) * 0.07f;      // 무거운 마찰음 (저중음)
+            lp2 += (lp - lp2) * 0.25f;
+            hp += (noise - hp) * 0.45f;      // 모래알 긁는 소리 (중고음)
+            // 긁힘 세기: 한 바퀴 동안 한 번 커졌다 줄어든다
+            float scrape = 0.45f + 0.55f * Mathf.Pow(Mathf.Sin(Mathf.PI * phase), 2f);
+            // 가끔 돌 알갱이가 튀는 소리
+            float grit = rng.NextDouble() < 0.004 * scrape ? ((float)rng.NextDouble() * 2f - 1f) * 1.2f : 0f;
+            float f = 95f + 8f * Mathf.Sin(2f * Mathf.PI * t / Turn);
             float rumble = Mathf.Sin(2f * Mathf.PI * f * t) * 0.5f
-                         + Mathf.Sin(2f * Mathf.PI * f * 2f * t) * 0.25f
-                         + Mathf.Sin(2f * Mathf.PI * f * 3f * t) * 0.12f;
-            float wob = 0.7f + 0.3f * Mathf.Sin(t * 9f);
-            data[i] = (lp * 2.2f + lp2 * 1.2f + (noise - hp) * 0.35f + rumble) * wob;
+                         + Mathf.Sin(2f * Mathf.PI * f * 1.5f * t) * 0.22f
+                         + Mathf.Sin(2f * Mathf.PI * f * 2f * t) * 0.18f;
+            float thumpSound = Mathf.Sin(2f * Mathf.PI * 60f * t) * thump * 0.9f;
+            thump *= 0.9985f;
+            data[i] = (lp * 2.6f + lp2 * 1.4f + (noise - hp) * 0.30f * scrape + grit + rumble * 0.8f) * scrape + thumpSound;
         }
         float max = 0.001f;
         for (int i = 0; i < n; i++) max = Mathf.Max(max, Mathf.Abs(data[i]));
         for (int i = 0; i < n; i++)
         {
             float t = (float)i / rate;
-            float env = Mathf.Clamp01(t / 0.3f) * Mathf.Clamp01((GrindSeconds - t) / 0.5f);
+            float env = Mathf.Clamp01(t / 0.25f) * Mathf.Clamp01((GrindSeconds - t) / 0.6f);
             data[i] = data[i] / max * 0.8f * env;
         }
         var clip = AudioClip.Create("Stone Grind", n, 1, rate, false);
