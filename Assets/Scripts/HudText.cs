@@ -239,4 +239,59 @@ public static class UiTheme
         }
         GUI.color = prev;
     }
+
+    static void Box(float x, float y, float w, float h)
+    {
+        GUI.DrawTexture(new Rect(x, y, w, h), Texture2D.whiteTexture);
+    }
+
+    // 무기 실루엣 아이콘(사각형 조합). kind: 1 권총, 2 소총, 3 칼. r 안에 가로로 그린다.
+    public static void IconWeapon(Rect r, int kind, Color c)
+    {
+        var prev = GUI.color;
+        var m = GUI.matrix;
+        GUI.color = c;
+        float u = r.height / 10f, x = r.x, y = r.y;
+        if (kind == 1) // 권총: 총신(슬라이드) + 손잡이
+        {
+            Box(x + r.width * 0.2f, y + 2f * u, r.width * 0.6f, 3f * u);
+            Box(x + r.width * 0.2f, y + 5f * u, r.width * 0.2f, 1.2f * u);
+            Box(x + r.width * 0.22f, y + 5f * u, 2.6f * u, 5f * u);
+        }
+        else if (kind == 2) // 소총: 긴 총신 + 몸통 + 개머리판 + 탄창
+        {
+            Box(x, y + 3.5f * u, r.width * 0.28f, 1.2f * u);
+            Box(x + r.width * 0.22f, y + 3f * u, r.width * 0.5f, 3f * u);
+            Box(x + r.width * 0.7f, y + 3f * u, r.width * 0.3f, 4f * u);
+            Box(x + r.width * 0.45f, y + 6f * u, 1.8f * u, 3.5f * u);
+        }
+        else // 칼(마체테): 기울어진 넓은 칼날 + 손잡이
+        {
+            GUIUtility.RotateAroundPivot(-30f, r.center);
+            Box(x + r.width * 0.3f, y + 3.5f * u, r.width * 0.62f, 3f * u);
+            GUI.color = new Color(c.r * 0.6f, c.g * 0.6f, c.b * 0.6f, c.a);
+            Box(x + r.width * 0.1f, y + 4f * u, r.width * 0.2f, 2f * u);
+            GUI.matrix = m;
+        }
+        GUI.matrix = m;
+        GUI.color = prev;
+    }
+
+    // 탄 표시: 총알 모양 작은 막대 max개, 앞쪽 have개만 밝게.
+    public static void AmmoPips(Rect r, int have, int max, Color on)
+    {
+        var prev = GUI.color;
+        if (max <= 0) return;
+        float gap = Mathf.Max(2f, r.width * 0.02f);
+        float pw = Mathf.Min(r.height * 0.55f, (r.width - gap * (max - 1)) / max);
+        for (int i = 0; i < max; i++)
+        {
+            float px = r.x + i * (pw + gap);
+            bool lit = i < have;
+            GUI.color = lit ? on : new Color(1f, 1f, 1f, 0.12f);
+            Box(px, r.y + r.height * 0.2f, pw, r.height * 0.8f);
+            if (lit) { GUI.color = new Color(1f, 1f, 1f, 0.5f); Box(px, r.y, pw, r.height * 0.25f); } // 탄두 끝 반짝임
+        }
+        GUI.color = prev;
+    }
 }
