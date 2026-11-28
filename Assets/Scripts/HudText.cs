@@ -288,7 +288,7 @@ public static class UiTheme
         {
             float px = r.x + i * (pw + gap);
             bool lit = i < have;
-            GUI.color = lit ? on : new Color(1f, 1f, 1f, 0.12f);
+            GUI.color = lit ? on : new Color(1f, 1f, 1f, 0.25f);
             Box(px, r.y + r.height * 0.2f, pw, r.height * 0.8f);
             if (lit) { GUI.color = new Color(1f, 1f, 1f, 0.5f); Box(px, r.y, pw, r.height * 0.25f); } // 탄두 끝 반짝임
         }
