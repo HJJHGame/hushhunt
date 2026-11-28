@@ -103,7 +103,7 @@ public class RockScatter : MonoBehaviour
             if (rs.Length == 0) { Destroy(go); continue; }
             go.transform.localPosition = Vector3.zero;
             go.transform.localRotation = Quaternion.identity;
-            go.transform.localScale = Vector3.one; // 원본 크기
+            go.transform.localScale = Vector3.one * spec.scale; // 기본은 원본 크기 (통나무 더미는 1.5배)
             var b = rs[0].bounds;
             for (int i = 1; i < rs.Length; i++) b.Encapsulate(rs[i].bounds);
             // 바닥 중앙을 놓은 자리에 맞춘다: 치수 검사에 쓴 직사각형과 모델이 같은 곳에 오게 한다.
