@@ -66,7 +66,7 @@ public class PlayerHud : MonoBehaviour
             if (visibility > 0.01f)
             {
                 // 왼쪽 아래, 체력 막대 바로 아래에 같은 너비/같은 x로 세로로 쌓는다.
-                float w = 220f * scale, h = 8f * scale;
+                float w = 260f * scale, h = 12f * scale;
                 float x = 16f * scale;
                 float y = Screen.height - 36f * scale;
 
@@ -90,10 +90,16 @@ public class PlayerHud : MonoBehaviour
             if (coordStyle == null)
                 coordStyle = new GUIStyle(GUI.skin.label) { alignment = TextAnchor.UpperLeft };
             coordStyle.fontStyle = FontStyle.Bold;
-            coordStyle.fontSize = Mathf.RoundToInt(19f * scale);
+            coordStyle.fontSize = Mathf.RoundToInt(34f * scale);
+            coordStyle.alignment = TextAnchor.MiddleCenter;
+            UiTheme.Apply(coordStyle);
             var p = fpc.transform.position;
             string text = p.x.ToString("0.0") + ", " + p.z.ToString("0.0"); // 좌표 숫자만
-            HudText.Label(new Rect(16f * scale, 12f * scale, 300f * scale, 32f * scale), text, coordStyle);
+            // 어두운 틀 + 큰 글씨 + 밝은 색: 복잡한 배경에서도 읽히게
+            float cw = coordStyle.CalcSize(new GUIContent(text)).x + 44f * scale;
+            var cr = new Rect(16f * scale, 12f * scale, Mathf.Max(cw, 180f * scale), 58f * scale);
+            UiTheme.Frame(cr, 0.9f, 1f, 8f * scale);
+            HudText.Label(cr, text, coordStyle, new Color(1f, 0.97f, 0.8f));
         }
 
         DrawHealth(scale);
@@ -151,32 +157,33 @@ public class PlayerHud : MonoBehaviour
             gunCntStyle = new GUIStyle(gunStyle) { alignment = TextAnchor.UpperRight };
             gunMidStyle = new GUIStyle(gunStyle) { alignment = TextAnchor.MiddleCenter };
         }
+        gunStyle.fontSize = Mathf.RoundToInt(27f * scale);
         gunNameStyle.fontSize = gunCntStyle.fontSize = gunMidStyle.fontSize = gunStyle.fontSize;
         UiTheme.Apply(gunStyle); UiTheme.Apply(gunNameStyle); UiTheme.Apply(gunCntStyle); UiTheme.Apply(gunMidStyle);
-        float pw = 250f * scale, ph = 56f * scale;
-        var panel = new Rect(Screen.width - pw - 16f * scale, Screen.height - 112f * scale, pw, ph);
+        float pw = 310f * scale, ph = 74f * scale;
+        var panel = new Rect(Screen.width - pw - 16f * scale, Screen.height - 50f * scale - ph, pw, ph);
         if (!gun.HasGun)
         {
             string text = "총 없음: 종이를 찾으세요";
             float left = armory != null ? armory.AutoGrantLeft : -1f;
             if (left > 0f) text += " (자동 지급 " + Mathf.CeilToInt(left) + "초)";
-            float tw = gunStyle.CalcSize(new GUIContent(text)).x + 28f * scale;
-            var pr = new Rect(Screen.width - tw - 16f * scale, panel.y + 12f * scale, tw, 38f * scale);
-            UiTheme.Frame(pr, 0.6f, 1f, 6f * scale);
+            float tw = gunStyle.CalcSize(new GUIContent(text)).x + 36f * scale;
+            var pr = new Rect(Screen.width - tw - 16f * scale, panel.y + 12f * scale, tw, 50f * scale);
+            UiTheme.Frame(pr, 0.9f, 1f, 7f * scale);
             HudText.Label(pr, text, gunMidStyle);
             return;
         }
-        UiTheme.Frame(panel, 0.62f, 1f, 7f * scale);
+        UiTheme.Frame(panel, 0.9f, 1f, 8f * scale);
         bool knife = gun.Weapon == WeaponKind.Knife;
         int kind = gun.Weapon == WeaponKind.Pistol ? 1 : gun.Weapon == WeaponKind.Rifle ? 2 : 3;
         bool empty = !knife && gun.Ammo <= 0;
-        Color tint = empty ? new Color(0.9f, 0.25f, 0.2f, 0.95f) : new Color(0.93f, 0.91f, 0.85f, 0.95f);
-        UiTheme.IconWeapon(new Rect(panel.x + 12f * scale, panel.y + 10f * scale, 62f * scale, 36f * scale), kind, tint);
-        float tx = panel.x + 84f * scale;
-        HudText.Label(new Rect(tx, panel.y + 4f * scale, 100f * scale, 26f * scale), GunHolder.WeaponName(gun.Weapon), gunNameStyle, tint);
+        Color tint = empty ? new Color(0.9f, 0.25f, 0.2f, 0.95f) : new Color(1f, 0.98f, 0.92f, 1f);
+        UiTheme.IconWeapon(new Rect(panel.x + 12f * scale, panel.y + 12f * scale, 74f * scale, 44f * scale), kind, tint);
+        float tx = panel.x + 100f * scale;
+        HudText.Label(new Rect(tx, panel.y + 4f * scale, 110f * scale, 36f * scale), GunHolder.WeaponName(gun.Weapon), gunNameStyle, tint);
         if (knife) return;
-        HudText.Label(new Rect(panel.xMax - 80f * scale, panel.y + 4f * scale, 68f * scale, 26f * scale), gun.Ammo + "/" + gun.MaxAmmo, gunCntStyle, tint);
-        UiTheme.AmmoPips(new Rect(tx, panel.y + 32f * scale, panel.xMax - tx - 12f * scale, 16f * scale), gun.Ammo, gun.MaxAmmo,
+        HudText.Label(new Rect(panel.xMax - 100f * scale, panel.y + 4f * scale, 88f * scale, 36f * scale), gun.Ammo + "/" + gun.MaxAmmo, gunCntStyle, tint);
+        UiTheme.AmmoPips(new Rect(tx, panel.y + 44f * scale, panel.xMax - tx - 12f * scale, 22f * scale), gun.Ammo, gun.MaxAmmo,
             empty ? new Color(0.9f, 0.25f, 0.2f, 0.95f) : new Color(0.95f, 0.8f, 0.45f, 0.95f));
     }
 
@@ -186,7 +193,8 @@ public class PlayerHud : MonoBehaviour
         if (health == null) return;
         if (hpStyle == null)
             hpStyle = new GUIStyle(GUI.skin.label) { alignment = TextAnchor.LowerLeft, fontStyle = FontStyle.Bold };
-        hpStyle.fontSize = Mathf.RoundToInt(19f * scale);
+        hpStyle.fontSize = Mathf.RoundToInt(30f * scale);
+        UiTheme.Apply(hpStyle);
 
         // 피격: 가장자리가 붉게 번졌다 사라지는 비네트. 체력이 30% 아래면 심장 뛰듯 약하게 계속 깜빡인다.
         float vig = 0f;
@@ -195,9 +203,11 @@ public class PlayerHud : MonoBehaviour
             vig = Mathf.Max(vig, (0.3f - health.Hp01) / 0.3f * (0.25f + 0.2f * Mathf.Sin(Time.unscaledTime * 5f)) + 0.15f);
         if (vig > 0.01f) UiTheme.DrawVignette(new Color(0.75f, 0.02f, 0.02f, Mathf.Clamp01(vig)));
 
-        float w = 220f * scale, h = 12f * scale;
+        float w = 260f * scale, h = 18f * scale;
         float x = 16f * scale, y = Screen.height - 62f * scale; // 스태미나 막대가 바로 아래(Screen.height - 36)에 온다
-        HudText.Label(new Rect(x, y - 34f * scale, w, 30f * scale), "체력 " + Mathf.CeilToInt(health.Hp), hpStyle);
+        // 체력/스태미나 전체 뒤에 어두운 판: 배경이 복잡해도 막대와 글씨가 또렷하게 보인다. 위치는 그대로.
+        UiTheme.Frame(new Rect(x - 12f * scale, y - 56f * scale, w + 24f * scale, 102f * scale), 0.9f, 1f, 8f * scale);
+        HudText.Label(new Rect(x, y - 50f * scale, w, 40f * scale), "체력 " + Mathf.CeilToInt(health.Hp), hpStyle, new Color(1f, 0.97f, 0.9f));
         Color hc = Color.Lerp(new Color(0.85f, 0.15f, 0.1f), new Color(0.75f, 0.85f, 0.7f), health.Hp01);
         float ic = 18f * scale;
         UiTheme.IconCross(new Rect(x, y + h * 0.5f - ic * 0.5f, ic, ic), hc);
