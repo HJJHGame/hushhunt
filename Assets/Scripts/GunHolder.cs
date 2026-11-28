@@ -1,7 +1,7 @@
 using System.Collections.Generic;
 using UnityEngine;
 
-// 총을 가질 수 있는 플레이어(주로 잡는 팀). 탄은 무기마다 고정(소총 5, 권총 10), 재장전 없음.
+// 총을 가질 수 있는 플레이어(주로 잡는 팀). 탄은 무기마다 고정(소총 5, 권총 7), 재장전 없음.
 // 총은 종이를 찾거나(Armory), 첫 종이가 발견된 뒤 1분이 지나면 자동으로 지급된다.
 // 로컬 플레이어는 좌클릭으로 쏜다(히트스캔). 수색 시간에만, 탄이 있을 때만.
 public enum WeaponKind { None, Pistol, Rifle, Knife }
@@ -57,13 +57,13 @@ public class GunHolder : MonoBehaviour
 {
     // 무기별 수치 (실제 특성에 맞춤). 팀과 상관없이 같은 무기는 같은 값.
     public const int RifleRounds = 5;         // 볼트액션 소총 탄약 (재장전 없음)
-    public const int PistolRounds = 10;       // 권총 탄약
-    public const float RifleDamage = 100f;    // 소총: 한 발 100 (체력 100이라 한 방에 죽음)
-    public const float PistolDamage = 40f;    // 권총: 한 발 40 (세 발)
-    public const float KnifeDamage = 50f;     // 칼: 한 번 50 (두 번)
+    public const int PistolRounds = 7;        // 권총 탄약
+    public const float RifleDamage = 34f;      // 소총: 한 발 34 (3발)
+    public const float PistolDamage = 20f;    // 권총: 한 발 20 (5발)
+    public const float KnifeDamage = 33f;     // 칼: 한 번 33 (4번)
     public const float RifleCooldown = 1.5f;  // 소총 발사 간격(초): 볼트를 당겨 다시 장전하는 시간
     public const float PistolCooldown = 0.35f; // 권총 발사 간격(초): 반자동
-    public const float KnifeCooldown = 1.2f;  // 칼 휘두르는 간격(초)
+    public const float KnifeCooldown = 1.5f;  // 칼 휘두르는 간격(초)
     public int MaxAmmo { get { return Weapon == WeaponKind.Rifle ? RifleRounds : (Weapon == WeaponKind.Pistol ? PistolRounds : 0); } }
 
     public static float DamageOf(WeaponKind k)
@@ -136,7 +136,7 @@ public class GunHolder : MonoBehaviour
     {
         GunSound.Play(transform.position + Vector3.up, Weapon);
         LastShotAt = Time.unscaledTime;
-        flashUntil = Time.unscaledTime + 0.06f;
+        if (Weapon != WeaponKind.Knife) flashUntil = Time.unscaledTime + 0.06f; // 총구 화면 번쩍임은 총만 (칼은 없음)
         var cam = Camera.main;
         if (cam == null) return;
         float range = Weapon == WeaponKind.Knife ? KnifeRange : (Weapon == WeaponKind.Pistol ? PistolRange : RifleRange);
