@@ -13,13 +13,13 @@ public class HeldWeapon : MonoBehaviour
 
     // 모델별 조절값: 카메라 기준 손 위치 보정, 회전(도), 크기 배율.
     public Vector3 pistolOffset = new Vector3(0f, -0.04f, 0.1f);
-    public Vector3 rifleOffset = new Vector3(0f, 0f, 0.15f);
+    public Vector3 rifleOffset = new Vector3(-0.04f, 0.06f, 0.25f); // 오른쪽 아래, 개머리판이 화면 아래에 안 잘리게
     public Vector3 macheteOffset = new Vector3(-0.04f, 0.04f, 0.05f); // 오른쪽 아래, 칼날 전체가 화면에 들어오게
     public Vector3 pistolEuler = new Vector3(-2f, -4f, 0f);
-    public Vector3 rifleEuler = new Vector3(0f, -4f, 0f);
+    public Vector3 rifleEuler = new Vector3(-6f, -4f, 0f); // 총구가 앞으로 살짝 위
     public Vector3 macheteEuler = new Vector3(-25f, -8f, 15f); // 칼날이 앞으로 살짝 위를 향하게 (x가 음수일수록 칼끝이 위로)
     public float pistolScale = 1f;
-    public float rifleScale = 0.8f; // 실제 길이 1.2m라 화면을 가로지르지 않게 줄인다
+    public float rifleScale = 0.6f; // 실제 길이 1.2m라 화면을 가로지르지 않게 줄인다
     public float macheteScale = 0.7f; // 원본 길이 약 0.75m라 화면을 덮지 않게 줄인다
 
     GunHolder gun;
@@ -82,7 +82,7 @@ public class HeldWeapon : MonoBehaviour
         root.transform.SetParent(camT, false);
         viewBase = holdPos + off;
         root.transform.localPosition = viewBase;
-        root.transform.localRotation = Quaternion.Euler(eul);
+        root.transform.localRotation = Quaternion.identity;
         var m = Instantiate(prefab, root.transform);
         m.name = "Model";
         m.transform.localPosition = Vector3.zero;
@@ -94,7 +94,30 @@ public class HeldWeapon : MonoBehaviour
             r.shadowCastingMode = UnityEngine.Rendering.ShadowCastingMode.Off;
             r.receiveShadows = false;
         }
+        // 임포트 방향이 어긋나 모델이 옆(X)으로 길게 누워 있으면 총구/칼끝이 앞(+Z)을 보게 90도 돌린다 (화면에서 총이 가로로 누워 보이던 문제).
+        var ext = LocalExtent(root.transform);
+        if (ext.x > ext.z * 1.2f) m.transform.localRotation = Quaternion.Euler(0f, 90f, 0f);
+        root.transform.localRotation = Quaternion.Euler(eul);
         return root;
+    }
+
+    // root 기준 좌표에서 모델 렌더러 전체의 크기(폭 x, 높이 y, 길이 z).
+    static Vector3 LocalExtent(Transform root)
+    {
+        bool any = false;
+        Bounds b = new Bounds(Vector3.zero, Vector3.zero);
+        foreach (var rd in root.GetComponentsInChildren<Renderer>())
+        {
+            Bounds wb = rd.bounds;
+            for (int i = 0; i < 8; i++)
+            {
+                Vector3 corner = wb.center + Vector3.Scale(wb.extents, new Vector3((i & 1) == 0 ? -1f : 1f, (i & 2) == 0 ? -1f : 1f, (i & 4) == 0 ? -1f : 1f));
+                Vector3 lp = root.InverseTransformPoint(corner);
+                if (!any) { b = new Bounds(lp, Vector3.zero); any = true; }
+                else b.Encapsulate(lp);
+            }
+        }
+        return b.size;
     }
 
     GameObject Build(WeaponKind kind)
