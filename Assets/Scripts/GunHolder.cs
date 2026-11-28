@@ -236,11 +236,21 @@ public class GunHolder : MonoBehaviour
         }
         if (Time.unscaledTime < hitUntil)
         {
+            // 적중 표시: 가운데를 비운 X자 네 획. 시간이 지나며 서서히 사라진다.
             var old = GUI.color;
-            GUI.color = Color.red;
-            float c = 7f;
-            GUI.DrawTexture(new Rect(Screen.width / 2f - c, Screen.height / 2f - 1f, 2f * c, 2f), Texture2D.whiteTexture);
-            GUI.DrawTexture(new Rect(Screen.width / 2f - 1f, Screen.height / 2f - c, 2f, 2f * c), Texture2D.whiteTexture);
+            var oldM = GUI.matrix;
+            float t = Mathf.Clamp01((hitUntil - Time.unscaledTime) / 0.25f);
+            float sc = Mathf.Clamp(Screen.height / 1080f, 0.75f, 1.5f);
+            var ctr = new Vector2(Screen.width / 2f, Screen.height / 2f);
+            GUI.color = new Color(1f, 0.15f, 0.1f, 0.35f + 0.65f * t);
+            float gap = (6f + 4f * (1f - t)) * sc, len = 9f * sc, th = 2f * sc;
+            for (int k = 0; k < 4; k++)
+            {
+                GUI.matrix = oldM;
+                GUIUtility.RotateAroundPivot(45f + 90f * k, ctr);
+                GUI.DrawTexture(new Rect(ctr.x + gap, ctr.y - th * 0.5f, len, th), Texture2D.whiteTexture);
+            }
+            GUI.matrix = oldM;
             GUI.color = old;
         }
     }
