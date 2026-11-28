@@ -1,7 +1,7 @@
 using System.Collections.Generic;
 using UnityEngine;
 
-// 총을 가질 수 있는 플레이어(주로 잡는 팀). 탄은 무기마다 고정(소총 5, 권총 7), 재장전 없음.
+// 총을 가질 수 있는 플레이어(주로 잡는 팀). 탄은 무기마다 고정(소총 6, 권총 7), 재장전 없음.
 // 총은 종이를 찾거나(Armory), 첫 종이가 발견된 뒤 1분이 지나면 자동으로 지급된다.
 // 로컬 플레이어는 좌클릭으로 쏜다(히트스캔). 수색 시간에만, 탄이 있을 때만.
 public enum WeaponKind { None, Pistol, Rifle, Knife }
@@ -69,7 +69,7 @@ public static class GunSound
 public class GunHolder : MonoBehaviour
 {
     // 무기별 수치 (실제 특성에 맞춤). 팀과 상관없이 같은 무기는 같은 값.
-    public const int RifleRounds = 5;         // 볼트액션 소총 탄약 (재장전 없음)
+    public const int RifleRounds = 6;         // 볼트액션 소총 탄약 (재장전 없음). 6발 = 3발씩 2명
     public const int PistolRounds = 7;        // 권총 탄약
     public const float RifleDamage = 34f;      // 소총: 한 발 34 (3발)
     public const float PistolDamage = 20f;    // 권총: 한 발 20 (5발)
