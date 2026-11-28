@@ -13,6 +13,7 @@ public static class PropLayout
         public float w, d, h;          // 원본 치수(m): 폭(x), 깊이(z), 높이(y)
         public float near, mid, far;   // LOD0/LOD1/안 그림 거리(m)
         public bool collider;          // 걷는 데 걸리는 물건인가 (납작한 것은 콜라이더 없음)
+        public bool meshCol;           // true면 상자 대신 모델 모양(단순한 먼 LOD 메시)으로 막는다: 통로가 있는 목책, 둥근 드럼통 등
     }
 
     public class Item
@@ -42,18 +43,25 @@ public static class PropLayout
     }
     public static readonly Spec Pond1 = S("granite-pond-edge-stone-1", 0.84f, 0.66f, 0.28f, 10f, 25f, 70f, false);
     public static readonly Spec River = S("granite-river-stone-veined", 0.40f, 0.41f, 0.23f, 8f, 20f, 60f, false);
-    public static readonly Spec Mossy = S("mossy-rocks", 1.14f, 0.73f, 0.34f, 10f, 25f, 70f, false);
+    public static readonly Spec Mossy = S("mossy-rocks", 1.14f, 0.73f, 0.34f, 10f, 25f, 70f, true);
     public static readonly Spec LogPile = S("log-pile", 5.17f, 2.14f, 1.17f, 25f, 55f, 100f, true);
     public static readonly Spec Crate = S("pine-supply-crate-broken", 0.64f, 0.64f, 0.60f, 10f, 25f, 70f, true);
     public static readonly Spec Drum = S("steel-drum-yellow", 0.59f, 0.59f, 0.88f, 10f, 25f, 70f, true);
     public static readonly Spec Totem = S("stone-face-totem", 1.17f, 1.14f, 3.64f, 25f, 55f, 140f, true);
     public static readonly Spec Basin = S("stone-water-basin-bamboo-spout", 0.80f, 1.56f, 0.76f, 12f, 30f, 80f, true);
-    public static readonly Spec Roots = S("swamp-root-tangle", 3.03f, 3.07f, 0.37f, 15f, 35f, 80f, false);
-    public static readonly Spec GraveLedger = S("weathered-ledger-gravestone", 0.93f, 1.96f, 0.37f, 12f, 30f, 80f, false);
+    public static readonly Spec Roots = S("swamp-root-tangle", 3.03f, 3.07f, 0.37f, 15f, 35f, 80f, true);
+    public static readonly Spec GraveLedger = S("weathered-ledger-gravestone", 0.93f, 1.96f, 0.37f, 12f, 30f, 80f, true);
     public static readonly Spec GraveCross = S("weathered-stone-cross-gravestone", 0.56f, 0.38f, 1.26f, 12f, 30f, 80f, true);
     public static readonly Spec GravePointed = S("weathered-pointed-top-gravestone", 0.62f, 0.16f, 1.31f, 12f, 30f, 80f, true);
-    public static readonly Spec Walkway = S("wooden-palisade-walkway", 3.99f, 2.01f, 2.81f, 20f, 45f, 100f, false);
+    public static readonly Spec Walkway = S("wooden-palisade-walkway", 3.99f, 2.01f, 2.81f, 20f, 45f, 100f, true);
     public static readonly Spec Palisade = S("wooden-palisade-straight", 4.20f, 1.60f, 3.98f, 20f, 45f, 100f, true);
+
+    // 모델 모양 콜라이더를 쓰는 종류 (나머지 콜라이더 종류는 상자 하나)
+    static PropLayout()
+    {
+        LogPile.meshCol = true; Crate.meshCol = true; Drum.meshCol = true; Totem.meshCol = true; Basin.meshCol = true;
+        GraveCross.meshCol = true; GravePointed.meshCol = true; Walkway.meshCol = true; Palisade.meshCol = true;
+    }
 
     public static readonly Spec[] All =
     {
