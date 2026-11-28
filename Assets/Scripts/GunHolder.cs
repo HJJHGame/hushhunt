@@ -1,7 +1,7 @@
 using System.Collections.Generic;
 using UnityEngine;
 
-// 총을 가질 수 있는 플레이어(주로 잡는 팀). 탄은 4발 고정, 재장전 없음.
+// 총을 가질 수 있는 플레이어(주로 잡는 팀). 탄은 무기마다 고정(소총 5, 권총 10), 재장전 없음.
 // 총은 종이를 찾거나(Armory), 첫 종이가 발견된 뒤 1분이 지나면 자동으로 지급된다.
 // 로컬 플레이어는 좌클릭으로 쏜다(히트스캔). 수색 시간에만, 탄이 있을 때만.
 public enum WeaponKind { None, Pistol, Rifle, Knife }
@@ -43,7 +43,8 @@ public static class GunSound
             float t = (float)i / rate;
             float noise = (float)(rng.NextDouble() * 2.0 - 1.0);
             lp += (noise - lp) * 0.5f;
-            d[i] = Mathf.Clamp((lp + Mathf.Sin(2f * Mathf.PI * 90f * t) * 0.6f) * Mathf.Exp(-t * decay) * gain, -1f, 1f);
+            float x = (lp + Mathf.Sin(2f * Mathf.PI * 90f * t) * 0.6f) * Mathf.Exp(-t * decay) * gain * 2.5f;
+            d[i] = Mathf.Clamp(x / (1f + Mathf.Abs(x)) * 1.6f, -1f, 1f); // 부드럽게 눌러서(포화) 같은 최대 크기에서 훨씬 크게 들리게
         }
         var c = AudioClip.Create("Gunshot", n, 1, rate, false);
         c.SetData(d, 0);
@@ -54,9 +55,26 @@ public static class GunSound
 [RequireComponent(typeof(Health))]
 public class GunHolder : MonoBehaviour
 {
-    public const int HiderRounds = 4;  // 숨는 팀 탄약 (재장전 없음)
-    public const int SeekerRounds = 6; // 잡는 팀 탄약
-    public int MaxAmmo { get { return IsSeeker ? SeekerRounds : HiderRounds; } }
+    // 무기별 수치 (실제 특성에 맞춤). 팀과 상관없이 같은 무기는 같은 값.
+    public const int RifleRounds = 5;         // 볼트액션 소총 탄약 (재장전 없음)
+    public const int PistolRounds = 10;       // 권총 탄약
+    public const float RifleDamage = 100f;    // 소총: 한 발 100 (체력 100이라 한 방에 죽음)
+    public const float PistolDamage = 40f;    // 권총: 한 발 40 (세 발)
+    public const float KnifeDamage = 50f;     // 칼: 한 번 50 (두 번)
+    public const float RifleCooldown = 1.5f;  // 소총 발사 간격(초): 볼트를 당겨 다시 장전하는 시간
+    public const float PistolCooldown = 0.35f; // 권총 발사 간격(초): 반자동
+    public const float KnifeCooldown = 1.2f;  // 칼 휘두르는 간격(초)
+    public int MaxAmmo { get { return Weapon == WeaponKind.Rifle ? RifleRounds : (Weapon == WeaponKind.Pistol ? PistolRounds : 0); } }
+
+    public static float DamageOf(WeaponKind k)
+    {
+        return k == WeaponKind.Rifle ? RifleDamage : (k == WeaponKind.Pistol ? PistolDamage : KnifeDamage);
+    }
+
+    public static float CooldownOf(WeaponKind k)
+    {
+        return k == WeaponKind.Rifle ? RifleCooldown : (k == WeaponKind.Pistol ? PistolCooldown : KnifeCooldown);
+    }
 
     public bool HasGun { get; private set; }
     public int Ammo { get; private set; }
@@ -72,12 +90,11 @@ public class GunHolder : MonoBehaviour
     public const float PistolRange = 60f;      // 권총: 사거리(m). 이 안에서는 거리와 상관없이 같은 피해
     public const float PistolSpreadDeg = 1f;   // 권총 탄 퍼짐(도, 아주 약간)
     public const float KnifeRange = 2f;     // 칼 닿는 거리(m)
-    public const float KnifeCooldown = 1f;  // 칼 휘두르는 간격(초)
 
     public WeaponKind Weapon { get; private set; }
     public bool Escaped { get; set; } // 탈출에 성공한 사람: 이후 피해를 받지 않는다
     public bool GotStartWeapon { get; set; } // 숨는 팀 시작 무기를 받았는지
-    float nextKnifeAt;
+    float nextFireAt; // 다음에 쏠 수 있는 시각 (연타 방지)
     public float LastShotAt { get; private set; } = -100f; // 마지막으로 쏜/휘두른 시각 (들고 있는 무기 연출용)
 
     public static string WeaponName(WeaponKind k)
@@ -108,12 +125,9 @@ public class GunHolder : MonoBehaviour
         if (gm == null || gm.CurrentPhase != GameManager.Phase.Seeking) { Say("수색이 시작된 뒤에 쏠 수 있다"); return; }
         if (!HasGun) { Say(IsSeeker ? "총이 없다: 종이를 찾아야 한다" : "무기가 없다"); return; }
         if (Weapon != WeaponKind.Knife && Ammo <= 0) { Say("탄이 없다"); return; }
-        if (Weapon == WeaponKind.Knife)
-        {
-            if (Time.unscaledTime < nextKnifeAt) return;
-            nextKnifeAt = Time.unscaledTime + KnifeCooldown;
-        }
-        else if (!TryUseAmmo()) return;
+        if (Time.unscaledTime < nextFireAt) return; // 무기마다 정해진 간격이 지나야 다시 쏜다 (광클 방지)
+        if (Weapon != WeaponKind.Knife && !TryUseAmmo()) return;
+        nextFireAt = Time.unscaledTime + CooldownOf(Weapon);
         Fire();
     }
 
@@ -133,7 +147,7 @@ public class GunHolder : MonoBehaviour
         var target = FirstTarget(n);
         if (target != null)
         {
-            target.Hit(gameObject);
+            target.TakeDamage(DamageOf(Weapon), gameObject);
             hitUntil = Time.unscaledTime + 0.25f;
         }
     }
@@ -172,6 +186,7 @@ public class GunHolder : MonoBehaviour
     {
         HasGun = false; Ammo = 0; Weapon = WeaponKind.None;
         GotGunFromPaper = false; GotStartWeapon = false; Escaped = false;
+        nextFireAt = 0f;
     }
 
     void OnGUI()
@@ -209,6 +224,7 @@ public class GunHolder : MonoBehaviour
         HasGun = true;
         Weapon = kind;
         Ammo = kind == WeaponKind.Knife ? 0 : MaxAmmo; // 칼은 탄이 없다
+        nextFireAt = 0f;
         if (fromPaper) GotGunFromPaper = true;
         GrantedAt = Time.unscaledTime;
         if (Granted != null) Granted(this);
