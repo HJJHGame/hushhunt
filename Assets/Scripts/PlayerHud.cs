@@ -91,7 +91,8 @@ public class PlayerHud : MonoBehaviour
             }
             hintStyle.fontSize = Mathf.RoundToInt(19f * scale);
             string text = "[T] 손전등 " + (flash.IsOn ? "켜짐" : "꺼짐");
-            HudText.Label(new Rect(Screen.width - 300f * scale - 16f, Screen.height - 44f * scale, 300f * scale, 32f * scale), text, hintStyle);
+            // 키 안내: 오른쪽 가장자리 세로 가운데 (오른쪽 정렬, 배율 적용)
+            HudText.Label(new Rect(Screen.width - 300f * scale - 16f * scale, Screen.height * 0.5f - 16f * scale, 300f * scale, 32f * scale), text, hintStyle);
         }
 
         // X: 현재 좌표와 가장자리까지 거리. 맵 크기(WorldConfig.Half)를 직접 확인할 수 있다.
@@ -102,10 +103,8 @@ public class PlayerHud : MonoBehaviour
             coordStyle.fontStyle = FontStyle.Bold;
             coordStyle.fontSize = Mathf.RoundToInt(19f * scale);
             var p = fpc.transform.position;
-            float edge = WorldConfig.Half - Mathf.Max(Mathf.Abs(p.x), Mathf.Abs(p.z));
-            string text = "위치 (" + p.x.ToString("0.0") + ", " + p.z.ToString("0.0")
-                + ")  |  가장자리(±" + WorldConfig.Half + "m)까지 " + edge.ToString("0") + "m  |  맵 " + (WorldConfig.Half * 2f) + "m 정사각  [X] 끄기";
-            HudText.Label(new Rect(16f, 12f, 700f * scale, 32f * scale), text, coordStyle);
+            string text = p.x.ToString("0.0") + ", " + p.z.ToString("0.0"); // 좌표 숫자만
+            HudText.Label(new Rect(16f * scale, 12f * scale, 300f * scale, 32f * scale), text, coordStyle);
         }
 
         DrawHealth(scale);
