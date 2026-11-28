@@ -60,8 +60,12 @@ public class Minimap : MonoBehaviour
             bigMap = !bigMap;
     }
 
+    // 지도(틀 포함)가 차지하는 가장 왼쪽 x. 큰 안내 띠가 여기서 끊어 겹치지 않게 한다. 지도가 없으면 화면 너비.
+    public static float OccupiedLeft = float.MaxValue;
+
     void OnGUI()
     {
+        if (Event.current.type == EventType.Repaint) OccupiedLeft = float.MaxValue;
         if (MainMenu.IsMenuOpen) return;
         if (Event.current.type != EventType.Repaint) return;
 
@@ -70,6 +74,7 @@ public class Minimap : MonoBehaviour
         float x = bigMap ? (Screen.width - size) * 0.5f : Screen.width - size - 16f * sc;
         float y = bigMap ? (Screen.height - size) * 0.5f : 16f * sc;
         var map = new Rect(x, y, size, size);
+        OccupiedLeft = map.x - 6f * sc; // 틀 바깥 가장자리
 
         // 테두리 + 지도 이미지. 지도의 사각 가장자리가 곧 실제 맵 경계(±WorldConfig.Half)다.
         // 어두운 틀(모서리 장식) + 지도 + 지도 가장자리 가는 흰 선
