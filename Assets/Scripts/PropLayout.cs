@@ -13,6 +13,7 @@ public static class PropLayout
         public float w, d, h;          // 원본 치수(m): 폭(x), 깊이(z), 높이(y)
         public float near, mid, far;   // LOD0/LOD1/안 그림 거리(m)
         public bool collider;          // 걷는 데 걸리는 물건인가 (납작한 것은 콜라이더 없음)
+        public float scale = 1f;       // 모델 크기 배율 (w/d/h는 이미 배율을 곱한 값)
         public bool meshCol;           // true면 상자 대신 모델 모양(단순한 먼 LOD 메시)으로 막는다: 통로가 있는 목책, 둥근 드럼통 등
     }
 
@@ -44,7 +45,7 @@ public static class PropLayout
     public static readonly Spec Pond1 = S("granite-pond-edge-stone-1", 0.84f, 0.66f, 0.28f, 10f, 25f, 70f, false);
     public static readonly Spec River = S("granite-river-stone-veined", 0.40f, 0.41f, 0.23f, 8f, 20f, 60f, false);
     public static readonly Spec Mossy = S("mossy-rocks", 1.14f, 0.73f, 0.34f, 10f, 25f, 70f, true);
-    public static readonly Spec LogPile = S("log-pile", 5.17f, 2.14f, 1.17f, 25f, 55f, 100f, true);
+    public static readonly Spec LogPile = S("log-pile", 7.76f, 3.21f, 1.76f, 30f, 65f, 120f, true); // 원본 5.17 x 2.14 x 1.17m의 1.5배
     public static readonly Spec Crate = S("pine-supply-crate-broken", 0.64f, 0.64f, 0.60f, 10f, 25f, 70f, true);
     public static readonly Spec Drum = S("steel-drum-yellow", 0.59f, 0.59f, 0.88f, 10f, 25f, 70f, true);
     public static readonly Spec Totem = S("stone-face-totem", 1.17f, 1.14f, 3.64f, 25f, 55f, 140f, true);
@@ -59,6 +60,7 @@ public static class PropLayout
     // 모델 모양 콜라이더를 쓰는 종류 (나머지 콜라이더 종류는 상자 하나)
     static PropLayout()
     {
+        LogPile.scale = 1.5f;
         LogPile.meshCol = true; Crate.meshCol = true; Drum.meshCol = true; Totem.meshCol = true; Basin.meshCol = true;
         GraveCross.meshCol = true; GravePointed.meshCol = true; Walkway.meshCol = true; Palisade.meshCol = true;
     }
