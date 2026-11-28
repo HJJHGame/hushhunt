@@ -71,10 +71,13 @@ public class Minimap : MonoBehaviour
         var map = new Rect(x, y, size, size);
 
         // 테두리 + 지도 이미지. 지도의 사각 가장자리가 곧 실제 맵 경계(±WorldConfig.Half)다.
-        GUI.color = new Color(0f, 0f, 0f, bigMap ? 0.85f : 0.6f);
-        GUI.DrawTexture(new Rect(map.x - 4f, map.y - 4f, map.width + 8f, map.height + 8f), Texture2D.whiteTexture);
+        // 어두운 틀(모서리 장식) + 지도 + 지도 가장자리 가는 흰 선
+        GUI.color = Color.white;
+        UiTheme.Frame(new Rect(map.x - 6f, map.y - 6f, map.width + 12f, map.height + 12f), bigMap ? 0.9f : 0.7f, 1f, bigMap ? 16f : 10f);
         GUI.color = Color.white;
         if (mapTex != null) GUI.DrawTexture(map, mapTex);
+        UiTheme.Outline(map, 0.55f);
+        GUI.color = Color.white;
 
         // 플레이어 위치 + 바라보는 방향
         if (target != null && !MapBlocked())
