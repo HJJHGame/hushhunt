@@ -13,7 +13,7 @@ public class PlayerHud : MonoBehaviour
     GunHolder gun;
     Armory armory;
     GUIStyle hpStyle;
-    GUIStyle gunStyle;
+    GUIStyle gunStyle, gunNameStyle, gunCntStyle, gunMidStyle; // 매 프레임 새로 만들지 않게 캐시
     float flashUntil = -1f; // 피격 시 화면 붉은 번쩍임이 끝나는 시각
     const float FlashSeconds = 0.4f;
 
@@ -122,21 +122,39 @@ public class PlayerHud : MonoBehaviour
             hpStyle = new GUIStyle(GUI.skin.label) { alignment = TextAnchor.LowerLeft, fontStyle = FontStyle.Bold };
         if (gunStyle == null) gunStyle = new GUIStyle(hpStyle) { alignment = TextAnchor.LowerRight };
         gunStyle.fontSize = Mathf.RoundToInt(19f * scale);
-        string text;
-        if (gun.HasGun && gun.Weapon == WeaponKind.Knife) text = "칼";
-        else if (gun.HasGun) text = GunHolder.WeaponName(gun.Weapon) + " " + gun.Ammo + "/" + gun.MaxAmmo;
-        else
+        if (gunNameStyle == null)
         {
-            text = "총 없음: 종이를 찾으세요";
+            gunNameStyle = new GUIStyle(gunStyle) { alignment = TextAnchor.UpperLeft };
+            gunCntStyle = new GUIStyle(gunStyle) { alignment = TextAnchor.UpperRight };
+            gunMidStyle = new GUIStyle(gunStyle) { alignment = TextAnchor.MiddleCenter };
+        }
+        gunNameStyle.fontSize = gunCntStyle.fontSize = gunMidStyle.fontSize = gunStyle.fontSize;
+        UiTheme.Apply(gunStyle); UiTheme.Apply(gunNameStyle); UiTheme.Apply(gunCntStyle); UiTheme.Apply(gunMidStyle);
+        float pw = 250f * scale, ph = 56f * scale;
+        var panel = new Rect(Screen.width - pw - 16f * scale, Screen.height - 112f * scale, pw, ph);
+        if (!gun.HasGun)
+        {
+            string text = "총 없음: 종이를 찾으세요";
             float left = armory != null ? armory.AutoGrantLeft : -1f;
             if (left > 0f) text += " (자동 지급 " + Mathf.CeilToInt(left) + "초)";
+            float tw = gunStyle.CalcSize(new GUIContent(text)).x + 28f * scale;
+            var pr = new Rect(Screen.width - tw - 16f * scale, panel.y + 12f * scale, tw, 38f * scale);
+            UiTheme.Frame(pr, 0.6f, 1f, 6f * scale);
+            HudText.Label(pr, text, gunMidStyle);
+            return;
         }
-        var r = new Rect(Screen.width - 420f * scale - 16f, Screen.height - 80f * scale, 420f * scale, 32f * scale);
-        // 글씨 뒤에 어두운 패널: 글씨 길이에 맞춰 오른쪽 정렬
-        UiTheme.Apply(gunStyle);
-        float tw = Mathf.Min(r.width, gunStyle.CalcSize(new GUIContent(text)).x + 20f * scale);
-        UiTheme.Panel(new Rect(r.xMax - tw - 6f * scale, r.y - 1f, tw + 12f * scale, r.height + 2f), 0.5f, 0.4f);
-        HudText.Label(r, text, gunStyle);
+        UiTheme.Frame(panel, 0.62f, 1f, 7f * scale);
+        bool knife = gun.Weapon == WeaponKind.Knife;
+        int kind = gun.Weapon == WeaponKind.Pistol ? 1 : gun.Weapon == WeaponKind.Rifle ? 2 : 3;
+        bool empty = !knife && gun.Ammo <= 0;
+        Color tint = empty ? new Color(0.9f, 0.25f, 0.2f, 0.95f) : new Color(0.93f, 0.91f, 0.85f, 0.95f);
+        UiTheme.IconWeapon(new Rect(panel.x + 12f * scale, panel.y + 10f * scale, 62f * scale, 36f * scale), kind, tint);
+        float tx = panel.x + 84f * scale;
+        HudText.Label(new Rect(tx, panel.y + 4f * scale, 100f * scale, 26f * scale), GunHolder.WeaponName(gun.Weapon), gunNameStyle, tint);
+        if (knife) return;
+        HudText.Label(new Rect(panel.xMax - 80f * scale, panel.y + 4f * scale, 68f * scale, 26f * scale), gun.Ammo + "/" + gun.MaxAmmo, gunCntStyle, tint);
+        UiTheme.AmmoPips(new Rect(tx, panel.y + 32f * scale, panel.xMax - tx - 12f * scale, 16f * scale), gun.Ammo, gun.MaxAmmo,
+            empty ? new Color(0.9f, 0.25f, 0.2f, 0.95f) : new Color(0.95f, 0.8f, 0.45f, 0.95f));
     }
 
     // 왼쪽 아래 체력 막대 + 피격 시 붉은 번쩍임 + 사망 안내
