@@ -82,18 +82,7 @@ public class PlayerHud : MonoBehaviour
             }
         }
 
-        if (flash != null)
-        {
-            if (hintStyle == null)
-            {
-                hintStyle = new GUIStyle(GUI.skin.label) { alignment = TextAnchor.LowerRight };
-                hintStyle.fontStyle = FontStyle.Bold;
-            }
-            hintStyle.fontSize = Mathf.RoundToInt(19f * scale);
-            string text = "[T] 손전등 " + (flash.IsOn ? "켜짐" : "꺼짐");
-            // 키 안내: 오른쪽 가장자리 세로 가운데 (오른쪽 정렬, 배율 적용)
-            HudText.Label(new Rect(Screen.width - 300f * scale - 16f * scale, Screen.height * 0.5f - 16f * scale, 300f * scale, 32f * scale), text, hintStyle);
-        }
+        DrawKeyGuide(scale);
 
         // X: 현재 좌표와 가장자리까지 거리. 맵 크기(WorldConfig.Half)를 직접 확인할 수 있다.
         if (showCoords && fpc != null && !SeekerHiding())
@@ -111,6 +100,41 @@ public class PlayerHud : MonoBehaviour
         DrawGun(scale);
 
         GUI.color = prev;
+    }
+
+    GUIStyle keyStyle;
+    readonly System.Collections.Generic.List<string> keyLines = new System.Collections.Generic.List<string>();
+
+    // 키 안내: 오른쪽 가장자리 세로 가운데에 틀 + 한 줄씩. 코드에서 실제로 쓰는 키만 넣는다(테스트용 G/O/H는 제외).
+    // 위치와 크기는 모두 화면 높이 배율. 줄 목록은 매 프레임 같은 리스트를 재사용한다.
+    void DrawKeyGuide(float scale)
+    {
+        keyLines.Clear();
+        keyLines.Add("[WASD] 이동");
+        keyLines.Add("[Shift] 달리기");
+        keyLines.Add("[Ctrl] 천천히 걷기");
+        keyLines.Add("[C] 웅크리기 (멈춘 상태)");
+        keyLines.Add("[Space] 점프");
+        if (flash != null) keyLines.Add("[T] 손전등 " + (flash.IsOn ? "켜짐" : "꺼짐"));
+        keyLines.Add("[F] 길게: 종이 줍기 / 탈출");
+        keyLines.Add("[M] 지도");
+        keyLines.Add("[X] 좌표 " + (showCoords ? "끄기" : "켜기"));
+        if (gun != null && gun.HasGun) keyLines.Add("[클릭] 공격");
+        keyLines.Add("[Esc] 메뉴");
+
+        if (keyStyle == null)
+        {
+            keyStyle = new GUIStyle(GUI.skin.label) { alignment = TextAnchor.MiddleLeft, fontStyle = FontStyle.Bold };
+        }
+        keyStyle.fontSize = Mathf.RoundToInt(17f * scale);
+        UiTheme.Apply(keyStyle);
+
+        float lineH = 26f * scale, pad = 10f * scale;
+        float w = 250f * scale, h = keyLines.Count * lineH + pad * 2f;
+        var panel = new Rect(Screen.width - w - 16f * scale, Screen.height * 0.5f - h * 0.5f, w, h);
+        UiTheme.Frame(panel, 0.5f, 0.9f, 7f * scale);
+        for (int i = 0; i < keyLines.Count; i++)
+            HudText.Label(new Rect(panel.x + pad + 4f * scale, panel.y + pad + i * lineH, w - pad * 2f, lineH), keyLines[i], keyStyle);
     }
 
     // 오른쪽 아래(손전등 안내 위): 잡는 팀의 총/탄 또는 총 없음 안내. 첫 종이 발견 후엔 자동 지급 카운트다운.
