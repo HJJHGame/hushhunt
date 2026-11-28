@@ -205,6 +205,21 @@ public class GunHolder : MonoBehaviour
     void OnGUI()
     {
         if (GetComponent<FirstPersonController>() == null) return;
+        // 발사/휘두르기 대기 시간: 크로스헤어 아래에 작은 흰 바. 대기 시간 동안 줄어들고, 쏠 수 있으면 사라진다.
+        if (HasGun && IsAlive && !MainMenu.IsMenuOpen && Event.current.type == EventType.Repaint && Time.unscaledTime < nextFireAt)
+        {
+            float total = Mathf.Max(0.05f, CooldownOf(Weapon));
+            float left = Mathf.Clamp01((nextFireAt - Time.unscaledTime) / total);
+            float sc = Mathf.Clamp(Screen.height / 1080f, 0.75f, 1.5f);
+            float w = 64f * sc, h = 3f * sc;
+            float x = Screen.width / 2f - w / 2f, y = Screen.height / 2f + 22f * sc;
+            var old = GUI.color;
+            GUI.color = new Color(1f, 1f, 1f, 0.25f);
+            GUI.DrawTexture(new Rect(x, y, w, h), Texture2D.whiteTexture);        // 바탕
+            GUI.color = new Color(1f, 1f, 1f, 0.9f);
+            GUI.DrawTexture(new Rect(x, y, w * left, h), Texture2D.whiteTexture); // 남은 대기 시간
+            GUI.color = old;
+        }
         if (Time.unscaledTime < sayUntil && !MainMenu.IsMenuOpen && Event.current.type == EventType.Repaint)
         {
             if (sayStyle == null) sayStyle = new GUIStyle(GUI.skin.label) { alignment = TextAnchor.MiddleCenter, fontStyle = FontStyle.Bold };
