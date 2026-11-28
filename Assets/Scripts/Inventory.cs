@@ -62,7 +62,7 @@ public class Inventory : MonoBehaviour
         foreach (int i in DisplayOrder) if (Has(i)) owned.Add(i); // 얻은 순서와 상관없이 고정 순서
 
         if (owned.Count == 0) return;
-        float scale = Screen.height / 1080f;
+        float scale = Mathf.Clamp(Screen.height / 1080f, 0.75f, 1.5f); // PlayerHud와 같은 배율
         float box = 96f * scale, gap = 8f * scale;
         float total = owned.Count * box + (owned.Count - 1) * gap;
         float x0 = (Screen.width - total) / 2f, y = Screen.height - box - 24f * scale;
