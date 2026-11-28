@@ -225,7 +225,7 @@ public class GunHolder : MonoBehaviour
             if (sayStyle == null) sayStyle = new GUIStyle(GUI.skin.label) { alignment = TextAnchor.MiddleCenter, fontStyle = FontStyle.Bold };
             var st = sayStyle;
             st.fontSize = Mathf.RoundToInt(24f * Mathf.Clamp(Screen.height / 1080f, 0.75f, 1.5f));
-            HudText.Label(new Rect(0f, Screen.height * 0.7f, Screen.width, 40f), sayText, st);
+            UiTheme.Toast(new Rect(0f, Screen.height * 0.7f, Screen.width, 40f), sayText, st, UiTheme.Fade(sayUntil, 2f), Color.white); // 부드럽게 나타났다 사라짐
         }
         if (Time.unscaledTime < flashUntil)
         {
