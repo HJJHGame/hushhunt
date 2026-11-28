@@ -101,18 +101,22 @@ public class HeldWeapon : MonoBehaviour
         return root;
     }
 
-    // root 기준 좌표에서 모델 렌더러 전체의 크기(폭 x, 높이 y, 길이 z).
+    // root 기준 좌표에서 모델 전체의 크기(폭 x, 높이 y, 길이 z).
+    // 렌더러의 월드 AABB(renderer.bounds)는 카메라가 돌 때마다 값이 달라져서 쓰지 않는다:
+    // 메시 자체의 로컬 경계 상자 모서리를 root 기준으로 옮겨서 잰다 (어느 방향을 보고 있어도 같은 값).
     static Vector3 LocalExtent(Transform root)
     {
         bool any = false;
         Bounds b = new Bounds(Vector3.zero, Vector3.zero);
-        foreach (var rd in root.GetComponentsInChildren<Renderer>())
+        foreach (var mf in root.GetComponentsInChildren<MeshFilter>())
         {
-            Bounds wb = rd.bounds;
+            if (mf.sharedMesh == null) continue;
+            Bounds mb = mf.sharedMesh.bounds;
+            Matrix4x4 toRoot = root.worldToLocalMatrix * mf.transform.localToWorldMatrix;
             for (int i = 0; i < 8; i++)
             {
-                Vector3 corner = wb.center + Vector3.Scale(wb.extents, new Vector3((i & 1) == 0 ? -1f : 1f, (i & 2) == 0 ? -1f : 1f, (i & 4) == 0 ? -1f : 1f));
-                Vector3 lp = root.InverseTransformPoint(corner);
+                Vector3 corner = mb.center + Vector3.Scale(mb.extents, new Vector3((i & 1) == 0 ? -1f : 1f, (i & 2) == 0 ? -1f : 1f, (i & 4) == 0 ? -1f : 1f));
+                Vector3 lp = toRoot.MultiplyPoint3x4(corner);
                 if (!any) { b = new Bounds(lp, Vector3.zero); any = true; }
                 else b.Encapsulate(lp);
             }
