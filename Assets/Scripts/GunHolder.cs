@@ -10,6 +10,8 @@ public enum WeaponKind { None, Pistol, Rifle, Knife }
 public static class GunSound
 {
     public const float MapWide = 450f; // 이 거리 밖에서도 작게 들린다
+    public static float GunshotVolume = 1f; // 총소리 볼륨 (0~1, 1이 최대. 더 키우려면 아래 Layers를 늘린다)
+    public static int Layers = 2;           // 같은 소리를 겹쳐 재생하는 수 (2겹이면 약 6dB 커짐)
     static AudioClip rifle, pistol;
     static AnimationCurve rolloff;
 
@@ -24,19 +26,23 @@ public static class GunSound
             if (rifle == null) rifle = Make(0.35f, 14f, 1f);
             if (pistol == null) pistol = Make(0.28f, 18f, 0.9f);
         }
-        if (rolloff == null) rolloff = new AnimationCurve(new Keyframe(0f, 1f), new Keyframe(MapWide, 0.08f));
+        if (rolloff == null) rolloff = new AnimationCurve(new Keyframe(0f, 1f), new Keyframe(MapWide * 0.2f, 0.55f), new Keyframe(MapWide, 0.2f));
         var go = new GameObject("Gunshot");
         go.transform.position = pos;
-        var a = go.AddComponent<AudioSource>();
-        a.clip = kind == WeaponKind.Rifle ? rifle : pistol;
-        a.spatialBlend = 1f; // 방향 있음
-        a.rolloffMode = AudioRolloffMode.Custom;
-        a.SetCustomCurve(AudioSourceCurveType.CustomRolloff, rolloff);
-        a.minDistance = 2f;
-        a.maxDistance = MapWide;
-        a.volume = 1f;
-        a.Play();
-        Object.Destroy(go, a.clip.length + 0.2f);
+        var clip = kind == WeaponKind.Rifle ? rifle : pistol;
+        for (int i = 0; i < Mathf.Max(1, Layers); i++) // 같은 소리를 겹쳐서 더 크게
+        {
+            var a = go.AddComponent<AudioSource>();
+            a.clip = clip;
+            a.spatialBlend = 1f; // 방향 있음
+            a.rolloffMode = AudioRolloffMode.Custom;
+            a.SetCustomCurve(AudioSourceCurveType.CustomRolloff, rolloff);
+            a.minDistance = 6f;
+            a.maxDistance = MapWide;
+            a.volume = Mathf.Clamp01(GunshotVolume);
+            a.Play();
+        }
+        Object.Destroy(go, clip.length + 0.2f);
     }
 
     static AudioClip Make(float len, float decay, float gain)
