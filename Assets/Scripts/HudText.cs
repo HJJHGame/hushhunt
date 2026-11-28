@@ -113,4 +113,130 @@ public static class UiTheme
         GUI.DrawTexture(new Rect(r.x, r.y, r.width * Mathf.Clamp01(fraction), r.height), Texture2D.whiteTexture);
         GUI.color = prev;
     }
+
+    // ---- 절차적 그림(파일 없음) ----
+    static Texture2D gradTex, vignetteTex;
+
+    // 위가 불투명하고 아래로 갈수록 투명한 세로 그라데이션 (흰색, GUI.color로 색을 입힌다).
+    public static Texture2D Gradient
+    {
+        get
+        {
+            if (gradTex != null) return gradTex;
+            gradTex = new Texture2D(1, 32, TextureFormat.RGBA32, false) { wrapMode = TextureWrapMode.Clamp, filterMode = FilterMode.Bilinear, hideFlags = HideFlags.HideAndDontSave };
+            for (int y = 0; y < 32; y++) gradTex.SetPixel(0, y, new Color(1f, 1f, 1f, y / 31f));
+            gradTex.Apply();
+            return gradTex;
+        }
+    }
+
+    // 가장자리만 어두운/붉은 둥근 비네트 (흰색, GUI.color로 색을 입힌다).
+    public static Texture2D Vignette
+    {
+        get
+        {
+            if (vignetteTex != null) return vignetteTex;
+            const int n = 96;
+            vignetteTex = new Texture2D(n, n, TextureFormat.RGBA32, false) { wrapMode = TextureWrapMode.Clamp, filterMode = FilterMode.Bilinear, hideFlags = HideFlags.HideAndDontSave };
+            for (int y = 0; y < n; y++)
+                for (int x = 0; x < n; x++)
+                {
+                    float dx = (x + 0.5f) / n * 2f - 1f, dy = (y + 0.5f) / n * 2f - 1f;
+                    float d = Mathf.Sqrt(dx * dx + dy * dy);
+                    float a = Mathf.Clamp01((d - 0.55f) / 0.85f);
+                    vignetteTex.SetPixel(x, y, new Color(1f, 1f, 1f, a * a));
+                }
+            vignetteTex.Apply();
+            return vignetteTex;
+        }
+    }
+
+    // 화면 전체 가장자리를 color(알파=세기)로 물들인다.
+    public static void DrawVignette(Color color)
+    {
+        var prev = GUI.color;
+        GUI.color = color;
+        GUI.DrawTexture(new Rect(0f, 0f, Screen.width, Screen.height), Vignette);
+        GUI.color = prev;
+    }
+
+    // 모서리 장식(ㄱ자 네 개): 가는 테두리 위에 살짝 굵고 밝게 덧그린다.
+    public static void Corners(Rect r, float len, float alpha = 0.9f, float t = 2f)
+    {
+        var prev = GUI.color;
+        GUI.color = new Color(0.95f, 0.93f, 0.88f, alpha);
+        var w = Texture2D.whiteTexture;
+        GUI.DrawTexture(new Rect(r.x, r.y, len, t), w); GUI.DrawTexture(new Rect(r.x, r.y, t, len), w);
+        GUI.DrawTexture(new Rect(r.xMax - len, r.y, len, t), w); GUI.DrawTexture(new Rect(r.xMax - t, r.y, t, len), w);
+        GUI.DrawTexture(new Rect(r.x, r.yMax - t, len, t), w); GUI.DrawTexture(new Rect(r.x, r.yMax - len, t, len), w);
+        GUI.DrawTexture(new Rect(r.xMax - len, r.yMax - t, len, t), w); GUI.DrawTexture(new Rect(r.xMax - t, r.yMax - len, t, len), w);
+        GUI.color = prev;
+    }
+
+    // 고급 패널: 어두운 바탕 + 위쪽 은은한 그라데이션 + 가는 테두리 + 모서리 장식.
+    public static void Frame(Rect r, float fillAlpha = 0.6f, float alpha = 1f, float corner = 6f)
+    {
+        var prev = GUI.color;
+        GUI.color = new Color(0.02f, 0.02f, 0.03f, fillAlpha * alpha);
+        GUI.DrawTexture(r, Texture2D.whiteTexture);
+        GUI.color = new Color(0.55f, 0.1f, 0.08f, 0.22f * alpha);
+        GUI.DrawTexture(new Rect(r.x, r.y, r.width, r.height * 0.6f), Gradient);
+        Outline(r, 0.3f * alpha);
+        Corners(r, corner, 0.85f * alpha);
+        GUI.color = prev;
+    }
+
+    // 칸 나눔 눈금이 있는 막대. segs칸, 채움 끝에 밝은 선. 위쪽 절반에 빛 번짐.
+    public static void SegBar(Rect r, float fraction, Color fill, int segs, float alpha = 1f)
+    {
+        var prev = GUI.color;
+        fraction = Mathf.Clamp01(fraction);
+        Frame(new Rect(r.x - 3f, r.y - 3f, r.width + 6f, r.height + 6f), 0.65f, alpha, 5f);
+        float fw = r.width * fraction;
+        fill.a = 0.92f * alpha;
+        GUI.color = fill;
+        GUI.DrawTexture(new Rect(r.x, r.y, fw, r.height), Texture2D.whiteTexture);
+        GUI.color = new Color(1f, 1f, 1f, 0.28f * alpha);
+        GUI.DrawTexture(new Rect(r.x, r.y, fw, r.height * 0.55f), Gradient);
+        if (fw > 2f)
+        {
+            GUI.color = new Color(1f, 1f, 1f, 0.8f * alpha);
+            GUI.DrawTexture(new Rect(r.x + fw - 1.5f, r.y, 1.5f, r.height), Texture2D.whiteTexture);
+        }
+        GUI.color = new Color(0f, 0f, 0f, 0.7f * alpha);
+        for (int i = 1; i < segs; i++)
+            GUI.DrawTexture(new Rect(r.x + r.width * i / segs - 1f, r.y, 2f, r.height), Texture2D.whiteTexture);
+        GUI.color = prev;
+    }
+
+    // 십자(체력) 아이콘
+    public static void IconCross(Rect r, Color c)
+    {
+        var prev = GUI.color;
+        GUI.color = c;
+        float t = r.height * 0.3f;
+        GUI.DrawTexture(new Rect(r.center.x - t * 0.5f, r.y, t, r.height), Texture2D.whiteTexture);
+        GUI.DrawTexture(new Rect(r.x, r.center.y - t * 0.5f, r.width, t), Texture2D.whiteTexture);
+        GUI.color = prev;
+    }
+
+    // 겹쳐진 화살표(달리기/스태미나) 아이콘
+    public static void IconChevrons(Rect r, Color c)
+    {
+        var prev = GUI.color;
+        var m = GUI.matrix;
+        GUI.color = c;
+        float t = Mathf.Max(2f, r.height * 0.16f), len = r.width * 0.55f;
+        for (int k = 0; k < 2; k++)
+        {
+            float cx = r.x + r.width * (0.3f + 0.35f * k), cy = r.center.y;
+            GUIUtility.RotateAroundPivot(40f, new Vector2(cx, cy - len * 0.3f));
+            GUI.DrawTexture(new Rect(cx - t * 0.5f, cy - len * 0.65f, t, len * 0.7f), Texture2D.whiteTexture);
+            GUI.matrix = m;
+            GUIUtility.RotateAroundPivot(-40f, new Vector2(cx, cy + len * 0.3f));
+            GUI.DrawTexture(new Rect(cx - t * 0.5f, cy - len * 0.05f, t, len * 0.7f), Texture2D.whiteTexture);
+            GUI.matrix = m;
+        }
+        GUI.color = prev;
+    }
 }
