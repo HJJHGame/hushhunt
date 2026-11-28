@@ -5,7 +5,7 @@ using UnityEngine;
 public class AmbientSound : MonoBehaviour
 {
     public float windVolume = 0.14f; // 총소리가 더 크게 들리도록 낮춤
-    public float rainVolume = 0.05f; // 빗소리는 아주 작게 깔기만 한다 (발소리/총소리를 가리지 않게)
+    public float rainVolume = 0.18f; // 빗소리: 잡음이 아니라 비로 들리게 키움 (총소리보다는 훨씬 작게)
 
     AudioClip wind, rain;
     bool rainFromFile;
@@ -22,7 +22,8 @@ public class AmbientSound : MonoBehaviour
         windSource.playOnAwake = false;
         windSource.Play();
 
-        rain = Resources.Load<AudioClip>("Audio/rain_loop"); // 외부 녹음이 있으면 쓰고, 없으면 코드로 만든다
+        rain = Resources.Load<AudioClip>("Audio/rain_loop_v2"); // 저음/중음을 살린 새 파일 우선
+        if (rain == null) rain = Resources.Load<AudioClip>("Audio/rain_loop"); // 외부 녹음이 있으면 쓰고, 없으면 코드로 만든다
         rainFromFile = rain != null;
         if (!rainFromFile) rain = MakeRain();
         var rainSource = gameObject.AddComponent<AudioSource>();
