@@ -114,8 +114,8 @@ public class Zones : MonoBehaviour
         src = gameObject.AddComponent<AudioSource>();
         src.spatialBlend = 0f; // 2D: 방향 없음, 전원 같은 소리
         src.playOnAwake = false;
-        src.clip = Resources.Load<AudioClip>("Audio/stone_grind"); // 외부 녹음이 있으면 쓰고, 없으면 코드로 만든다
-        if (src.clip == null) src.clip = MakeGrindClip();
+        src.clip = FindGrindFile(); // 외부 녹음이 있으면 쓰고, 없으면 코드로 만든다
+        if (src.clip == null) { src.clip = MakeGrindClip(); Debug.Log("[Zones] 벽 소리: 파일 못 찾음, 코드로 만든 소리 사용 (Assets/Resources/Audio/stone_grind.mp3 확인)"); }
         src.volume = 1f;
         src.loop = false;
     }
@@ -131,7 +131,11 @@ public class Zones : MonoBehaviour
         if (p != GameManager.Phase.Seeking) return;
         foreach (var w in walls) if (w != null) Destroy(w);
         walls.Clear();
-        if (src != null) { src.Stop(); src.Play(); } // 같은 소리가 겹쳐 두 번 울리지 않게 처음부터
+        if (src != null)
+        {
+            src.Stop(); src.Play(); // 같은 소리가 겹쳐 두 번 울리지 않게 처음부터
+            if (src.clip != null && src.clip.length > GrindSeconds) src.SetScheduledEndTime(AudioSettings.dspTime + GrindSeconds); // 파일이 4초보다 길면 4초에서 끊는다
+        }
         bannerUntil = Time.unscaledTime + GrindSeconds;
 
         // 로컬 플레이어가 술래면 구역으로 옮기고 소리가 끝날 때까지 멈춘다.
@@ -162,6 +166,26 @@ public class Zones : MonoBehaviour
     // 맷돌 갈리는 소리: 무거운 돌이 돌 위를 천천히 도는 소리. 한 바퀴(약 0.8초)마다 긁히는 소리가 커졌다 줄고,
     // 바퀴마다 둔한 "쿵"이 한 번, 낮은 울림이 계속 깔린다. 울림은 100Hz 안팎 + 배음이라 작은 스피커에서도 들린다.
     // 모두 코드로 만든다 (파일 없음). 최대 크기 0.8로 맞춰 클리핑 없음.
+    // Resources/Audio 안에서 벽 소리 파일을 찾는다. 정해진 이름을 먼저 시도하고, 없으면 폴더의 모든 클립 중 이름에
+    // stone/grind/mill/맷돌이 들어간 것을 쓴다 (stone_grind.mp3.mp3, 대소문자 다름 같은 실수도 잡는다). 찾은 이름은 콘솔에 찍는다.
+    static AudioClip FindGrindFile()
+    {
+        string[] names = { "Audio/stone_grind", "Audio/Stone_Grind", "Audio/stone_grind.mp3", "Audio/stone-mill-grinding-02", "stone_grind" };
+        foreach (var n in names)
+        {
+            var c = Resources.Load<AudioClip>(n);
+            if (c != null) { Debug.Log("[Zones] 벽 소리 파일 로드: " + n); return c; }
+        }
+        var all = Resources.LoadAll<AudioClip>("Audio");
+        Debug.Log("[Zones] Resources/Audio 안의 클립 " + all.Length + "개: " + string.Join(", ", System.Array.ConvertAll(all, x => x.name)));
+        foreach (var c in all)
+        {
+            string l = c.name.ToLowerInvariant();
+            if (l.Contains("stone") || l.Contains("grind") || l.Contains("mill") || l.Contains("맷돌")) { Debug.Log("[Zones] 벽 소리 파일 로드(이름 검색): " + c.name); return c; }
+        }
+        return null;
+    }
+
     static AudioClip MakeGrindClip()
     {
         int rate = 22050, n = (int)(rate * GrindSeconds);
