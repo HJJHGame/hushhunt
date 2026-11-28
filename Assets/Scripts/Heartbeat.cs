@@ -5,6 +5,8 @@ using UnityEngine;
 public class Heartbeat : MonoBehaviour
 {
     public const float Range = 15f; // 이 안에 술래가 오면 들리기 시작
+    public const float MinVolume = 0.6f; // 15m 끝에서의 볼륨 (전에는 0.25). 바로 옆은 1.0
+    const float Gain = 1.8f;             // 소리 자체를 키우는 배율 (전에는 0.9 상당). 1을 넘는 부분은 잘라서 묵직하게 들린다
 
     FirstPersonController fpc;
     Health me;
@@ -50,7 +52,7 @@ public class Heartbeat : MonoBehaviour
         if (d >= Range) return;
         float near = 1f - d / Range;            // 0(15m) ~ 1(바로 옆)
         if (Time.time < nextBeat) return;
-        src.PlayOneShot(thump, 0.25f + 0.75f * near);
+        src.PlayOneShot(thump, MinVolume + (1f - MinVolume) * near);
         // 15m에서 약 1.0초 간격, 바로 옆에서 0.4초 간격
         nextBeat = Time.time + Mathf.Lerp(1.0f, 0.4f, near);
     }
@@ -66,7 +68,7 @@ public class Heartbeat : MonoBehaviour
             float a = Mathf.Sin(2f * Mathf.PI * 55f * t) * Mathf.Exp(-t * 22f);
             float t2 = t - 0.14f;
             float b = t2 > 0f ? Mathf.Sin(2f * Mathf.PI * 48f * t2) * Mathf.Exp(-t2 * 26f) * 0.8f : 0f;
-            d[i] = (a + b) * 0.9f;
+            d[i] = Mathf.Clamp((a + b) * Gain, -1f, 1f);
         }
         var clip = AudioClip.Create("Heartbeat", n, 1, rate, false);
         clip.SetData(d, 0);
