@@ -73,7 +73,12 @@ public class PlayerHud : MonoBehaviour
                 Color fill = fpc.IsExhausted
                     ? new Color(0.85f, 0.2f, 0.15f)
                     : Color.Lerp(new Color(0.9f, 0.6f, 0.2f), new Color(0.6f, 0.9f, 0.4f), fpc.Stamina01);
-                UiTheme.Bar(new Rect(x, y, w, h), fpc.Stamina01, fill, visibility);
+                // 체력과 같은 배치: 왼쪽 아이콘 + 오른쪽 눈금 막대
+                float ic = 18f * scale;
+                var icon = new Rect(x, y + h * 0.5f - ic * 0.5f, ic, ic);
+                if (fpc.IsExhausted) fill = Color.Lerp(fill, Color.white, 0.25f * (0.5f + 0.5f * Mathf.Sin(Time.unscaledTime * 10f)));
+                UiTheme.IconChevrons(icon, new Color(fill.r, fill.g, fill.b, 0.95f * visibility));
+                UiTheme.SegBar(new Rect(x + ic + 10f * scale, y, w - ic - 10f * scale, h), fpc.Stamina01, fill, 10, visibility);
             }
         }
 
@@ -142,17 +147,20 @@ public class PlayerHud : MonoBehaviour
             hpStyle = new GUIStyle(GUI.skin.label) { alignment = TextAnchor.LowerLeft, fontStyle = FontStyle.Bold };
         hpStyle.fontSize = Mathf.RoundToInt(19f * scale);
 
-        if (Time.unscaledTime < flashUntil)
-        {
-            float a = 0.35f * (flashUntil - Time.unscaledTime) / FlashSeconds;
-            GUI.color = new Color(0.8f, 0f, 0f, a);
-            GUI.DrawTexture(new Rect(0f, 0f, Screen.width, Screen.height), Texture2D.whiteTexture);
-        }
+        // 피격: 가장자리가 붉게 번졌다 사라지는 비네트. 체력이 30% 아래면 심장 뛰듯 약하게 계속 깜빡인다.
+        float vig = 0f;
+        if (Time.unscaledTime < flashUntil) vig = 0.9f * (flashUntil - Time.unscaledTime) / FlashSeconds;
+        if (!health.IsDead && health.Hp01 < 0.3f)
+            vig = Mathf.Max(vig, (0.3f - health.Hp01) / 0.3f * (0.25f + 0.2f * Mathf.Sin(Time.unscaledTime * 5f)) + 0.15f);
+        if (vig > 0.01f) UiTheme.DrawVignette(new Color(0.75f, 0.02f, 0.02f, Mathf.Clamp01(vig)));
 
         float w = 220f * scale, h = 12f * scale;
         float x = 16f * scale, y = Screen.height - 62f * scale; // 스태미나 막대가 바로 아래(Screen.height - 36)에 온다
         HudText.Label(new Rect(x, y - 34f * scale, w, 30f * scale), "체력 " + Mathf.CeilToInt(health.Hp), hpStyle);
-        UiTheme.Bar(new Rect(x, y, w, h), health.Hp01, Color.Lerp(new Color(0.85f, 0.15f, 0.1f), new Color(0.75f, 0.85f, 0.7f), health.Hp01));
+        Color hc = Color.Lerp(new Color(0.85f, 0.15f, 0.1f), new Color(0.75f, 0.85f, 0.7f), health.Hp01);
+        float ic = 18f * scale;
+        UiTheme.IconCross(new Rect(x, y + h * 0.5f - ic * 0.5f, ic, ic), hc);
+        UiTheme.SegBar(new Rect(x + ic + 10f * scale, y, w - ic - 10f * scale, h), health.Hp01, hc, 10);
 
         if (health.IsDead)
         {
